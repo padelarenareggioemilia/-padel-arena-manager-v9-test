@@ -30,3 +30,8 @@ grant execute on function public.public_team_by_captain_invite(text) to anon,aut
 grant execute on function public.public_team_by_player_invite(text) to anon,authenticated;
 grant execute on function public.submit_roster_request(text,jsonb) to anon,authenticated;
 commit; notify pgrst,'reload schema';
+
+-- V9.1.1: programmazione partite casalinghe
+alter table public.teams add column if not exists home_match_day text;
+alter table public.teams add column if not exists home_match_time time;
+notify pgrst,'reload schema';
