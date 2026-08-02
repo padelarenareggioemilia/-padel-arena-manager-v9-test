@@ -1,0 +1,9 @@
+Funzione,Admin,Collaboratore,Capitano,Giocatore senza account,Giocatore con account
+Gestione completa tornei,SI,NO,NO,NO,NO
+Risultati tornei,SI,SOLO ASSEGNATI,NO,NO,NO
+Gettoni e aste,SI,SOLO ASSEGNATI,NO,NO,SOLO LETTURA
+Modifica partecipanti,SI,NO,NO,NO,NO
+Gestione propria squadra,SI,NO,SI,NO,NO
+Gestione rosa,SI,NO,SI,ISCRIZIONE VIA LINK,PROPRIO PROFILO
+Formazioni campionato,SI,NO,SI,NO,CONSULTAZIONE
+Creazione squadre,SI,NO,NO,NO,NO
