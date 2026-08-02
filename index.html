@@ -1,154 +1,42 @@
-<!doctype html>
-<html lang="it">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07111f">
-<title>Padel Arena Manager V9 DEV</title>
-<link rel="manifest" href="manifest.webmanifest">
-<style>
-:root{--bg:#07111f;--panel:#10233b;--panel2:#0a1a2c;--line:#294262;--text:#f8fafc;--muted:#a9bacd;--accent:#9dff25;--blue:#16a8ff;--warn:#facc15;--danger:#ef4444}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 85% 0%,#123f61,transparent 35%),linear-gradient(180deg,#06101d,#07111f);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input{font:inherit}.app{max-width:1100px;margin:auto;padding:16px 14px 90px}.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;background:linear-gradient(180deg,#07111f 70%,transparent)}.brand{display:flex;align-items:center;gap:12px}.logo{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--blue));color:#07111f;font-weight:1000}.badge{border:1px solid #446587;background:#0a1a2c;border-radius:999px;padding:7px 10px;color:var(--accent);font-size:12px;font-weight:900}.card{background:linear-gradient(180deg,#132845,#10233b);border:1px solid var(--line);border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 16px 40px rgba(0,0,0,.24)}.notice{padding:13px 15px;border:1px solid #4b7897;background:#0b2437;border-radius:15px;color:#dffcff}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.tile{background:#09182a;border:1px solid #315271;border-radius:17px;padding:16px;min-height:155px}.tile h3{margin:8px 0}.pill{display:inline-flex;padding:7px 9px;border-radius:999px;background:#17304e;border:1px solid #355b80;font-size:12px;font-weight:850;margin:3px}.primary,.secondary{border:0;border-radius:13px;padding:13px 15px;font-weight:950;cursor:pointer}.primary{background:var(--accent);color:#07111f}.secondary{background:#17304e;color:#fff;border:1px solid #3c5d7d}.actions{display:flex;gap:10px;flex-wrap:wrap}.actions>*{flex:1}.login{max-width:460px;margin:8vh auto}.field{margin:12px 0}.field label{display:block;margin-bottom:6px;color:var(--muted);font-weight:800}.field input{width:100%;padding:13px;border-radius:12px;border:1px solid #365474;background:#071523;color:#fff}.hidden{display:none!important}.role-list{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.role-btn{padding:12px;border-radius:13px;border:1px solid #365474;background:#0b1d31;color:#fff;font-weight:900}.role-btn.on{outline:3px solid var(--accent);color:var(--accent)}.nav{display:flex;gap:8px;overflow:auto;margin:12px 0}.nav button{white-space:nowrap}.kpi{font-size:30px;font-weight:1000;color:var(--accent)}@media(max-width:780px){.grid{grid-template-columns:1fr}.role-list{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start}.actions{display:grid}.actions>*{width:100%}}
-</style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-</head>
-<body>
-<div class="app">
-  <header class="topbar">
-    <div class="brand"><div class="logo">V9</div><div><h1 style="margin:0;font-size:20px">Padel Arena Manager</h1><div class="muted">Supabase di prova separato dalla V8</div></div></div>
-    <div class="badge">AMBIENTE TEST</div>
-  </header>
-
-  <section id="setupView" class="card hidden">
-    <h2>Configurazione mancante</h2>
-    <p class="muted">Inserisci URL e Publishable Key del nuovo progetto Supabase di prova nel file <b>config.js</b>.</p>
-  </section>
-
-  <section id="authView" class="login card">
-    <h2>Accesso V9 di prova</h2>
-    <p class="muted">Capitani e collaboratori avranno un account obbligatorio. Il giocatore potrà scegliere se crearne uno.</p>
-    <div class="field"><label>Email</label><input id="email" type="email" autocomplete="email"></div>
-    <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
-    <div class="actions">
-      <button class="primary" id="loginBtn">Accedi</button>
-      <button class="secondary" id="signupBtn">Crea account di prova</button>
-    </div>
-    <div id="authMsg" class="notice hidden" style="margin-top:12px"></div>
-  </section>
-
-  <section id="dashboardView" class="hidden">
-    <div class="card">
-      <div class="actions">
-        <button class="secondary" onclick="history.back()">← Indietro</button>
-        <button class="secondary" onclick="showDashboard()">⌂ Home</button>
-        <button class="secondary" id="logoutBtn">Esci</button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="badge" id="roleBadge">RUOLO</div>
-      <h2 id="welcome">Benvenuto</h2>
-      <p class="muted" id="roleDescription"></p>
-    </div>
-    <div id="dashboardTiles" class="grid"></div>
-  </section>
-</div>
+<!doctype html><html lang="it"><head><title>V9 Campionato Admin</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#07111f">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
+:root{--bg:#07111f;--card:#10233b;--line:#294262;--text:#f8fafc;--muted:#a9bacd;--accent:#9dff25;--blue:#16a8ff;--danger:#ef4444}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 85% 0%,#123f61,transparent 35%),linear-gradient(180deg,#06101d,#07111f);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+main{max-width:1000px;margin:auto;padding:16px 14px 70px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.brand{display:flex;align-items:center;gap:10px}.logo{width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,var(--accent),var(--blue));display:grid;place-items:center;color:#07111f;font-weight:1000}.card{background:#10233bf5;border:1px solid var(--line);border-radius:20px;padding:18px;margin:12px 0}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{margin:10px 0}label{display:block;font-size:13px;font-weight:800;margin-bottom:5px;color:#c8d7e6}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #365474;background:#071523;color:#fff}button,a.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 14px;border:0;border-radius:12px;font-weight:900;text-decoration:none;cursor:pointer}.primary{background:var(--accent);color:#07111f}.secondary{background:#17304e;color:#fff;border:1px solid #3c5d7d}.danger{background:#7f1d1d;color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border-radius:13px;background:#09182a;border:1px solid var(--line);margin:10px 0}.success{border-color:#4ade80;background:#0b2a20}.error{border-color:#ef4444;background:#351316}.hidden{display:none!important}.team{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:14px;border:1px solid #315271;border-radius:15px;background:#09182a;margin:9px 0}.pill{padding:5px 9px;border-radius:999px;background:#203754;font-size:12px;font-weight:900}.nav{display:flex;gap:8px;margin-bottom:12px}.nav>*{flex:1}.request{padding:13px;border:1px solid #315271;border-radius:14px;background:#09182a;margin:8px 0}.request h3{margin:0 0 6px}.small{font-size:12px}
+@media(max-width:700px){.grid,.row{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.team{grid-template-columns:1fr}.actions button,.actions a{flex:1}}
+</style></head><body><main>
+<div class="top"><div class="brand"><div class="logo">V9</div><div><h1 style="margin:0">Campionato · Admin</h1><div class="muted">Ambiente separato dai Tornei V8</div></div></div><span class="pill">TEST</span></div>
+<div class="nav"><button class="secondary" onclick="history.back()">← Indietro</button><button class="secondary" onclick="location.href='index.html'">⌂ Home</button></div>
+<section id="setup" class="card hidden"><h2>Configurazione mancante</h2><p>Compila <b>config.js</b> con URL e Publishable Key del Supabase V9 Test.</p></section>
+<section id="auth" class="card"><h2>Accesso amministratore</h2><div class="row"><div class="field"><label>Email</label><input id="email" type="email" value="padelarenareggioemilia@gmail.com"></div><div class="field"><label>Password</label><input id="password" type="password"></div></div><div class="actions"><button id="login" class="primary">Accedi</button><button id="signup" class="secondary">Crea account admin</button></div><div id="msg" class="notice hidden"></div></section>
+<section id="app" class="hidden">
+<div class="card"><div class="actions"><button class="primary" id="newTeam">＋ Crea nuova squadra</button><button class="secondary" id="logout">Esci</button></div></div>
+<div id="teamForm" class="card hidden"><h2>Nuova squadra</h2>
+<div class="row"><div class="field"><label>Nome squadra *</label><input id="teamName"></div><div class="field"><label>Serie *</label><select id="series"><option>Serie A</option><option>Serie B</option><option>Serie C</option></select></div></div>
+<div class="row"><div class="field"><label>Club</label><input id="clubName"></div><div class="field"><label>Indirizzo completo</label><input id="clubAddress"></div></div>
+<div class="row"><div class="field"><label>Nome e cognome capitano *</label><input id="captainName"></div><div class="field"><label>Email capitano *</label><input id="captainEmail" type="email"></div></div>
+<div class="field"><label>Telefono capitano</label><input id="captainPhone"></div>
+<div class="actions"><button class="primary" id="saveTeam">Salva squadra</button><button class="secondary" id="cancelTeam">Annulla</button></div><div id="formMsg" class="notice hidden"></div></div>
+<div class="card"><h2>Squadre</h2><div id="teams"></div></div>
+</section>
 <script>
-const cfg = window.PAM_V9_CONFIG || {};
-const configured = cfg.supabaseUrl && cfg.supabasePublishableKey &&
-  !cfg.supabaseUrl.includes("INCOLLA_QUI") &&
-  !cfg.supabasePublishableKey.includes("INCOLLA_QUI");
-
-let sb = null;
-if (configured) {
-  sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-  });
-} else {
-  document.getElementById('setupView').classList.remove('hidden');
-  document.getElementById('authView').classList.add('hidden');
-}
-
-const byId = id => document.getElementById(id);
-function message(text, error=false){
-  const el=byId('authMsg');
-  el.textContent=text;
-  el.className='notice'+(error?' error':'');
-  el.classList.remove('hidden');
-}
-async function loadProfile(user){
-  const {data,error}=await sb.from('profiles').select('*').eq('id',user.id).single();
-  if(error) throw error;
-  return data;
-}
-function tilesFor(role){
-  const common = [{icon:'🏠',title:'Home pubblica',text:'Anteprima del futuro portale pubblico.'}];
-  if(role==='admin') return [
-    {icon:'🏆',title:'Tornei',text:'Copia protetta della V8: ancora non collegata.'},
-    {icon:'🛡️',title:'Campionato',text:'Squadre, capitani e permessi in ambiente test.'},
-    {icon:'👥',title:'Utenti',text:'Admin, collaboratori, capitani e giocatori.'},
-    ...common
-  ];
-  if(role==='captain') return [
-    {icon:'🛡️',title:'La mia squadra',text:'Gestione squadra e rosa assegnata.'},
-    {icon:'📋',title:'Formazioni',text:'Compilazione delle formazioni.'},
-    {icon:'📅',title:'Calendario',text:'Incontri e risultati.'},
-    ...common
-  ];
-  if(role==='collaborator') return [
-    {icon:'🎾',title:'Tornei assegnati',text:'Solo funzioni operative autorizzate.'},
-    {icon:'📊',title:'Risultati',text:'Inserimento risultati e classifiche.'},
-    ...common
-  ];
-  return [
-    {icon:'🎟️',title:'Le mie iscrizioni',text:'Funzione riservata ai giocatori con account.'},
-    {icon:'🪙',title:'I miei gettoni',text:'Sarà collegata solo dopo la copia protetta dei dati.'},
-    ...common
-  ];
-}
-function showDashboard(){ byId('dashboardView').scrollIntoView({behavior:'smooth'}); }
-async function enter(user){
-  const profile=await loadProfile(user);
-  byId('authView').classList.add('hidden');
-  byId('dashboardView').classList.remove('hidden');
-  byId('roleBadge').textContent=String(profile.role||'player').toUpperCase();
-  byId('welcome').textContent=`Ciao ${profile.first_name||profile.email||''}`;
-  const desc={
-    admin:'Amministratore: controllo completo nell’ambiente V9 di prova.',
-    collaborator:'Collaboratore: accesso solo alle risorse assegnate.',
-    captain:'Capitano: account obbligatorio collegato alla propria squadra.',
-    player:'Giocatore: account facoltativo per servizi e storico personale.'
-  };
-  byId('roleDescription').textContent=desc[profile.role]||desc.player;
-  byId('dashboardTiles').innerHTML=tilesFor(profile.role).map(x=>`
-    <div class="tile"><div style="font-size:28px">${x.icon}</div><h3>${x.title}</h3><p class="muted">${x.text}</p></div>
-  `).join('');
-}
+const cfg=window.PAM_V9_CONFIG||{}, configured=cfg.supabaseUrl&&!cfg.supabaseUrl.includes('INCOLLA_QUI')&&cfg.supabasePublishableKey&&!cfg.supabasePublishableKey.includes('INCOLLA_QUI');
+let sb=null,profile=null;
+const $=id=>document.getElementById(id);
+function showMsg(el,text,err=false){el.textContent=text;el.className='notice '+(err?'error':'success');el.classList.remove('hidden')}
+if(!configured){$('setup').classList.remove('hidden');$('auth').classList.add('hidden')}else sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+async function enter(user){const r=await sb.from('profiles').select('*').eq('id',user.id).single();if(r.error)throw r.error;profile=r.data;if(profile.role!=='admin')throw new Error('Questo accesso è riservato all’amministratore.');$('auth').classList.add('hidden');$('app').classList.remove('hidden');await loadTeams()}
+async function loadTeams(){const r=await sb.from('teams').select('*').order('created_at');if(r.error)throw r.error;$('teams').innerHTML=r.data.length?r.data.map(t=>`<div class="team"><div><b>${esc(t.name)}</b><div class="muted">${esc(t.series||'')} · ${esc(t.club_name||'')}</div><div class="small">${esc(t.captain_name||'')} · ${esc(t.captain_email||'')}</div></div><div class="actions"><button class="secondary" onclick="copyCaptain('${t.captain_invite_token}')">Link capitano</button><button class="secondary" onclick="copyPlayer('${t.player_invite_token}')">Link giocatori</button></div></div>`).join(''):'<div class="muted">Nessuna squadra.</div>'}
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function copyText(text){try{await navigator.clipboard.writeText(text);alert('Link copiato')}catch{prompt('Copia il link:',text)}}
+function copyCaptain(token){copyText(new URL('captain.html?invite='+encodeURIComponent(token),location.href).href)}
+function copyPlayer(token){copyText(new URL('player.html?team='+encodeURIComponent(token),location.href).href)}
 if(configured){
-  byId('loginBtn').onclick=async()=>{
-    try{
-      const {data,error}=await sb.auth.signInWithPassword({email:byId('email').value.trim(),password:byId('password').value});
-      if(error) throw error;
-      await enter(data.user);
-    }catch(e){message(e.message||'Accesso non riuscito',true)}
-  };
-  byId('signupBtn').onclick=async()=>{
-    try{
-      const email=byId('email').value.trim();
-      const password=byId('password').value;
-      if(!email||password.length<8) throw new Error('Inserisci email e una password di almeno 8 caratteri.');
-      const names=email.split('@')[0].split(/[._-]+/);
-      const {data,error}=await sb.auth.signUp({
-        email,password,
-        options:{data:{first_name:names[0]||'',last_name:names.slice(1).join(' ')}}
-      });
-      if(error) throw error;
-      message(data.session?'Account creato e accesso effettuato.':'Account creato. Controlla l’email per confermarlo.');
-      if(data.session) await enter(data.user);
-    }catch(e){message(e.message||'Registrazione non riuscita',true)}
-  };
-  byId('logoutBtn').onclick=async()=>{await sb.auth.signOut();location.reload()};
-  sb.auth.getSession().then(async({data})=>{if(data.session) await enter(data.session.user)});
+$('login').onclick=async()=>{try{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error)throw r.error;await enter(r.data.user)}catch(e){showMsg($('msg'),e.message,true)}};
+$('signup').onclick=async()=>{try{const r=await sb.auth.signUp({email:$('email').value.trim(),password:$('password').value,options:{data:{first_name:'Francesco',last_name:'Lignola'}}});if(r.error)throw r.error;showMsg($('msg'),r.data.session?'Account creato.':'Account creato: conferma l’email.');if(r.data.session)await enter(r.data.user)}catch(e){showMsg($('msg'),e.message,true)}};
+$('logout').onclick=async()=>{await sb.auth.signOut();location.reload()};
+$('newTeam').onclick=()=> $('teamForm').classList.remove('hidden');$('cancelTeam').onclick=()=> $('teamForm').classList.add('hidden');
+$('saveTeam').onclick=async()=>{try{const payload={name:$('teamName').value.trim(),series:$('series').value,club_name:$('clubName').value.trim(),club_address:$('clubAddress').value.trim(),captain_name:$('captainName').value.trim(),captain_email:$('captainEmail').value.trim().toLowerCase(),captain_phone:$('captainPhone').value.trim(),created_by:profile.id};if(!payload.name||!payload.captain_name||!payload.captain_email)throw new Error('Compila i campi obbligatori.');const r=await sb.from('teams').insert(payload);if(r.error)throw r.error;showMsg($('formMsg'),'Squadra salvata online.');setTimeout(()=>{$('teamForm').classList.add('hidden');loadTeams()},500)}catch(e){showMsg($('formMsg'),e.message,true)}};
+sb.auth.getSession().then(async r=>{if(r.data.session)try{await enter(r.data.session.user)}catch(e){showMsg($('msg'),e.message,true)}})
 }
-</script>
-</body></html>
+</script></main></body></html>
