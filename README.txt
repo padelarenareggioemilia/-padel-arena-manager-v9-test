@@ -1,13 +1,7 @@
-V9 CAMPIONATO USABILE
+PADEL ARENA MANAGER V9.1
 
-Questa versione realizza soltanto:
-1. salvataggio online delle squadre create dall'admin;
-2. link capitano con account obbligatorio;
-3. link giocatori senza account per richiesta di inserimento;
-4. approvazione/rifiuto da parte del capitano.
+1. Esegui SUPABASE_V9_1_UPDATE.sql nel progetto Supabase V9 Test.
+2. Nel repository V9 Test sostituisci completamente index.html, login.html, captain.html, player.html e config.js.
+3. Fai Commit changes e attendi circa un minuto.
 
-INSTALLAZIONE
-- Esegui SUPABASE_V9_CAMPIONATO_USABILE.sql nel progetto Supabase V9 Test.
-- Inserisci URL e Publishable Key V9 nel config.js.
-- Carica index.html, captain.html, player.html e config.js nel repository V9 Test.
-- Non modificare il repository o Supabase della V8.
+Questa versione conserva la base funzionante V9 e riporta una configurazione squadre molto più vicina alla qualità della V8.
