@@ -1,4 +1,14 @@
-<!doctype html><html lang="it"><head><title>Dettaglio squadra</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#164a95">
+<title>Scheda tecnica squadra</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+
 :root{--bg:#06111f;--card:#10233b;--line:#294262;--text:#f8fafc;--muted:#a9bacd;--accent:#9dff25;--blue:#16a8ff;--danger:#ef4444}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 85% 0%,#123f61,transparent 35%),linear-gradient(180deg,#06101d,#07111f);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
 .shell{max-width:1150px;margin:auto;padding:16px 14px 80px}.hero{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px}.brand{display:flex;align-items:center;gap:12px}.mark{width:58px;height:58px;border-radius:18px;background:linear-gradient(135deg,var(--accent),var(--blue));display:grid;place-items:center;color:#07111f;font-weight:1000}.muted{color:var(--muted)}
@@ -12,7 +22,8 @@
 @media(max-width:760px){.grid2,.kpis{grid-template-columns:1fr}.team{grid-template-columns:62px 1fr}.logo,.placeholder{width:58px;height:58px}.team-actions{grid-column:1/-1}.team-actions .btn{flex:1}.hero{align-items:flex-start}.filters .btn{flex:1}}
 
 .detail-grid{display:grid;grid-template-columns:240px 1fr;gap:16px}.big-logo{width:220px;height:220px;border-radius:22px;object-fit:contain;background:#fff;padding:8px}@media(max-width:760px){.detail-grid{grid-template-columns:1fr}.big-logo{width:150px;height:150px}}
-</style><style>
+
+
 :root{
   --aics-blue:#164a95;
   --aics-blue-dark:#082f68;
@@ -119,10 +130,207 @@ label{color:var(--aics-blue-dark)!important}
 @media(max-width:800px){
   .brand-logo{width:100px;height:62px}
 }
-</style></head><body><main class="shell"><div class="top"><div class="nav"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='index.html'">⌂ Home</button><button class="btn secondary" onclick="location.href='competitions.html'">Serie e Coppa Italia</button></div></div><section id="teamBox" class="card">Caricamento squadra...</section><script>
-const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),id=new URLSearchParams(location.search).get('id'),box=document.getElementById('teamBox');
-const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
-async function init(){let q=await s.auth.getSession();if(!q.data.session)return location.href='login.html';let r=await s.from('teams').select('*').eq('id',id).single();if(r.error)return box.innerHTML=`<div class="notice err">${esc(r.error.message)}</div>`;let t=r.data;let rr=await s.from('roster_requests').select('*').eq('team_id',id).order('created_at',{ascending:false});box.innerHTML=`<div class="detail-grid"><div>${t.logo_url?`<img class="big-logo" src="${esc(t.logo_url)}">`:`<div class="big-logo placeholder">🏆</div>`}</div><div><span class="notice">${esc(t.series||'')}</span><h1>${esc(t.name)}</h1><div class="meta"><b>Club:</b> ${esc(t.club_name||'')}<br><b>Indirizzo:</b> ${esc(t.club_address||'')} ${esc(t.club_city||'')} ${esc(t.club_province||'')}<br><b>Campo di casa:</b> ${esc(t.home_court||'')}<br><b>Partite in casa:</b> ${esc(t.home_match_day||'Da definire')}${t.home_match_time?' alle '+esc(String(t.home_match_time).slice(0,5)):''}<br><b>Capitano:</b> ${esc(t.captain_name||'')}<br><b>Email:</b> ${esc(t.captain_email||'')}<br><b>Telefono:</b> ${esc(t.captain_phone||'')}</div><div class="actions" style="margin-top:14px"><button class="btn primary" onclick="location.href='index.html?edit=${encodeURIComponent(t.id)}'">Gestisci squadra</button><button class="btn secondary" onclick="copyLink('${new URL(`captain.html?invite=${encodeURIComponent(t.captain_invite_token)}`,location.href).href}')">Copia link capitano</button><button class="btn secondary" onclick="copyLink('${new URL(`player.html?team=${encodeURIComponent(t.player_invite_token)}`,location.href).href}')">Copia link giocatori</button></div></div></div><hr><h2>Richieste giocatori</h2>${(rr.data||[]).map(x=>`<div class="request"><b>${esc(x.first_name)} ${esc(x.last_name)}</b><div class="meta">${esc(x.email)} · ${esc(x.phone)} · ${esc(x.status)}</div></div>`).join('')||'<div class="notice">Nessuna richiesta.</div>'}`}
-async function copyLink(u){try{await navigator.clipboard.writeText(u);alert('Link copiato')}catch{prompt('Copia il link:',u)}}
+
+.detail-grid{display:grid;grid-template-columns:240px 1fr;gap:18px;align-items:start}
+.big-logo{width:220px;height:220px;border-radius:22px;object-fit:contain;background:#fff;padding:8px;border:1px solid #dce6f2}
+.data-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.data-item{padding:12px;border:1px solid var(--line);border-radius:14px;background:#f8fbff}
+.data-item b{display:block;color:var(--aics-blue-dark);font-size:12px;margin-bottom:4px}
+.player-card{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;margin:8px 0}
+.player-photo{width:58px;height:74px;object-fit:cover;border-radius:10px;background:#edf4fb;border:1px solid var(--line)}
+@media(max-width:760px){
+  .detail-grid,.data-grid{grid-template-columns:1fr}
+  .big-logo{width:150px;height:150px}
+  .player-card{grid-template-columns:52px 1fr}
+  .player-card>.badge{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <div class="nav">
+      <button class="btn secondary" onclick="location.href='index.html'">← Elenco squadre</button>
+      <button class="btn secondary" onclick="location.href='competitions.html'">Competizioni</button>
+      <button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button>
+    </div>
+    <div class="tricolore"></div>
+  </div>
+
+  <header class="hero">
+    <div class="brand">
+      <img class="brand-logo" src="assets/aics-logo.png" alt="AICS">
+      <div>
+        <h1 style="margin:0">Scheda tecnica squadra</h1>
+        <div class="muted">AICS Padel Championship 2027</div>
+      </div>
+    </div>
+  </header>
+  <div class="tricolore"></div>
+
+  <section id="teamBox" class="card">
+    <div class="notice">Caricamento della squadra in corso…</div>
+  </section>
+</main>
+
+<script>
+const cfg = window.PAM_V9_CONFIG;
+const sb = supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey);
+const params = new URLSearchParams(window.location.search);
+const teamId = params.get('id');
+const box = document.getElementById('teamBox');
+
+const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[ch]));
+
+function formatDate(value) {
+  if (!value) return 'Non indicata';
+  const d = new Date(value + 'T12:00:00');
+  return Number.isNaN(d.getTime()) ? esc(value) : d.toLocaleDateString('it-IT');
+}
+
+function formatTime(value) {
+  return value ? String(value).slice(0,5) : 'Da definire';
+}
+
+async function copyLink(url) {
+  try {
+    await navigator.clipboard.writeText(url);
+    alert('Link copiato');
+  } catch {
+    prompt('Copia il link:', url);
+  }
+}
+
+async function init() {
+  if (!teamId) {
+    box.innerHTML = `
+      <div class="notice err">
+        <b>Identificativo della squadra mancante.</b><br>
+        Torna all’elenco e premi nuovamente “Apri”.
+      </div>
+      <button class="btn primary" onclick="location.href='index.html'">Torna alle squadre</button>`;
+    return;
+  }
+
+  const sessionResult = await sb.auth.getSession();
+  if (!sessionResult.data.session) {
+    const returnUrl = encodeURIComponent(window.location.href);
+    window.location.href = 'login.html?return=' + returnUrl;
+    return;
+  }
+
+  const teamResult = await sb
+    .from('teams')
+    .select('*')
+    .eq('id', teamId)
+    .maybeSingle();
+
+  if (teamResult.error) {
+    box.innerHTML = `
+      <div class="notice err">
+        <b>Non riesco ad aprire la scheda tecnica.</b><br>
+        ${esc(teamResult.error.message)}
+      </div>
+      <button class="btn primary" onclick="location.href='index.html'">Torna alle squadre</button>`;
+    return;
+  }
+
+  if (!teamResult.data) {
+    box.innerHTML = `
+      <div class="notice err">
+        <b>Squadra non trovata.</b><br>
+        La squadra potrebbe essere stata rimossa oppure il collegamento non è valido.
+      </div>
+      <button class="btn primary" onclick="location.href='index.html'">Torna alle squadre</button>`;
+    return;
+  }
+
+  const team = teamResult.data;
+
+  const rosterResult = await sb
+    .from('roster_requests')
+    .select('*')
+    .eq('team_id', teamId)
+    .order('created_at', { ascending:false });
+
+  const requests = rosterResult.error ? [] : (rosterResult.data || []);
+
+  const captainUrl = new URL(
+    'captain.html?invite=' + encodeURIComponent(team.captain_invite_token || ''),
+    window.location.href
+  ).href;
+
+  const playerUrl = new URL(
+    'player.html?team=' + encodeURIComponent(team.player_invite_token || ''),
+    window.location.href
+  ).href;
+
+  box.innerHTML = `
+    <div class="detail-grid">
+      <div>
+        ${team.logo_url
+          ? `<img class="big-logo" src="${esc(team.logo_url)}" alt="Logo ${esc(team.name)}">`
+          : `<div class="big-logo placeholder" style="display:grid;place-items:center;font-size:50px">🏆</div>`}
+      </div>
+
+      <div>
+        <span class="section-ribbon">${esc(team.series || 'Serie da definire')}</span>
+        <h1>${esc(team.name)}</h1>
+        <div class="muted">${esc(team.club_name || 'Società non indicata')}</div>
+
+        <div class="data-grid">
+          <div class="data-item"><b>Campo di casa</b>${esc(team.home_court || 'Da definire')}</div>
+          <div class="data-item"><b>Partite casalinghe</b>${esc(team.home_match_day || 'Da definire')} · ${formatTime(team.home_match_time)}</div>
+          <div class="data-item"><b>Indirizzo</b>${esc(team.club_address || '')} ${esc(team.club_city || '')} ${esc(team.club_province || '')}</div>
+          <div class="data-item"><b>Codice fiscale / P. IVA</b>${esc(team.club_fiscal_code || 'Non indicato')}</div>
+          <div class="data-item"><b>Capitano</b>${esc(team.captain_name || 'Non indicato')}</div>
+          <div class="data-item"><b>Email capitano</b>${esc(team.captain_email || 'Non indicata')}</div>
+          <div class="data-item"><b>Telefono capitano</b>${esc(team.captain_phone || 'Non indicato')}</div>
+          <div class="data-item"><b>Accesso capitano</b>${team.captain_access_enabled === false ? 'Disabilitato' : 'Attivo'}</div>
+        </div>
+
+        <div class="actions" style="margin-top:16px">
+          <button class="btn primary" onclick="location.href='index.html?edit=${encodeURIComponent(team.id)}'">Modifica squadra</button>
+          <button class="btn secondary" onclick='copyLink(${JSON.stringify(captainUrl)})'>Copia link capitano</button>
+          <button class="btn secondary" onclick='copyLink(${JSON.stringify(playerUrl)})'>Copia link giocatori</button>
+        </div>
+      </div>
+    </div>
+
+    <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+
+    <div class="section-title">
+      <div>
+        <h2 style="margin-bottom:3px">Giocatori e richieste</h2>
+        <div class="muted">${requests.length} richieste presenti</div>
+      </div>
+    </div>
+
+    ${requests.length
+      ? requests.map(player => `
+        <div class="player-card">
+          ${player.photo_url
+            ? `<img class="player-photo" src="${esc(player.photo_url)}" alt="Foto tessera">`
+            : `<div class="player-photo"></div>`}
+          <div>
+            <b>${esc(player.first_name)} ${esc(player.last_name)}</b>
+            <div class="muted small">${esc(player.email)} · ${esc(player.phone)}</div>
+            <div class="small">
+              FITP: <b>${esc(player.fitp_ranking || 'Non indicata')}</b> ·
+              Certificato: <b>${formatDate(player.medical_certificate_expiry)}</b>
+            </div>
+          </div>
+          <span class="badge">${esc(player.status || 'pending')}</span>
+        </div>
+      `).join('')
+      : `<div class="notice">Nessuna richiesta giocatore presente.</div>`}
+  `;
+}
+
+window.copyLink = copyLink;
 init();
-</script></main></body></html>
+</script>
+</body>
+</html>

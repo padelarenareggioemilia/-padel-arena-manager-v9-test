@@ -151,7 +151,7 @@ $('nSerieA').textContent=allTeams.filter(x=>x.series==='Serie A').length;
 $('nSerieB').textContent=allTeams.filter(x=>x.series==='Serie B').length;
 $('nSerieC').textContent=allTeams.filter(x=>x.series==='Serie C').length;
 $('nActive').textContent=allTeams.filter(x=>x.captain_access_enabled!==false).length;let q=await s.from('roster_requests').select('id',{count:'exact',head:true}).eq('status','pending');$('nReq').textContent=q.count||0;renderTeams()}
-function openTeam(id){location.href=`team.html?id=${encodeURIComponent(id)}`}
+function openTeam(id){location.href=`team.html?id=${encodeURIComponent(id)}&v=922`}
 async function copyLink(u){try{await navigator.clipboard.writeText(u);alert('Link copiato')}catch{prompt('Copia il link:',u)}}
 async function editTeam(id){closeAllMenus();let r=await s.from('teams').select('*').eq('id',id).single();if(r.error)alert(r.error.message);else openForm(r.data)}
 function toggleMore(ev,id){ev.stopPropagation();let target=$(`more-${id}`);document.querySelectorAll('.more-menu').forEach(m=>{if(m!==target)m.classList.add('hidden')});target.classList.toggle('hidden')}
@@ -163,5 +163,14 @@ async function confirmDelete(){let id=$('deleteTeamId').value,name=$('deleteTeam
 async function logout(){await s.auth.signOut();location.href='login.html'}
 window.openForm=openForm;window.openTeam=openTeam;window.copyLink=copyLink;window.editTeam=editTeam;window.toggleMore=toggleMore;window.requestDelete=requestDelete;window.closeDelete=closeDelete;window.checkDeleteName=checkDeleteName;window.confirmDelete=confirmDelete;window.setFilter=setFilter;
 $('form').onsubmit=e=>{e.preventDefault();saveTeam()};$('logoFile').onchange=e=>{file=e.target.files[0]||null;if(file)$('preview').innerHTML=`<img src="${URL.createObjectURL(file)}">`};document.addEventListener('click',closeAllMenus);
-(async()=>{if(await guard())await loadTeams()})();
+(async()=>{
+  if(await guard()){
+    await loadTeams();
+    const editFromUrl = new URLSearchParams(location.search).get('edit');
+    if(editFromUrl){
+      const r = await s.from('teams').select('*').eq('id',editFromUrl).maybeSingle();
+      if(!r.error && r.data) openForm(r.data);
+    }
+  }
+})();
 </script></main></body></html>
