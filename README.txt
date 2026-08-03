@@ -1,31 +1,31 @@
-PADEL ARENA MANAGER V9.4.5 — FIX IMPORTAZIONE REALE
+PADEL ARENA MANAGER V9.5.0 — CALENDARIO CORRETTO
 
-CORREZIONI
-- Il selettore file usa ora un listener stabile, non più il solo onchange scritto nell'HTML.
-- Mostra immediatamente:
-  1. nome e dimensione del file;
-  2. stato di lettura;
-  3. foglio, righe e colonne trovate;
-  4. riconoscimento del formato;
-  5. risultato dell'analisi.
-- Gli errori non restano più invisibili.
-- Supporto specifico al file:
-  ELENCO SQUADRE AICS PADEL CHAMPIONSHIP 2027.xlsx
-- Riconoscimento automatico del modulo Google AICS tramite le intestazioni reali.
-- Possibilità di riselezionare subito lo stesso file.
-- Nella scheda Squadre il filtro Stato giocatore è completamente nascosto.
-- Nella scheda Giocatori il filtro Stato giocatore torna visibile.
-- Nessun dato viene salvato prima della conferma.
+CORREZIONI PRINCIPALI
+- Risolto lo scarto di 2 ore causato dalla visualizzazione UTC.
+- Le partite usano giorno, ora e campo della squadra di casa.
+- Nessun orario predefinito viene inventato.
+- Se giorno, ora o campo mancano, la generazione viene bloccata.
+- Scelta esplicita:
+  - Solo andata
+  - Andata e ritorno
+- Date di festività, prefestivi e sospensione personalizzabili.
+- Calendario e Coppa Italia saltano automaticamente le date escluse.
+- Pulsante per inserire le principali festività italiane 2026–2027.
+- Playoff e playout all’Eden:
+  - soltanto 2 semifinali;
+  - soltanto la finale;
+  - 4 squadre qualificate dalla fase precedente.
+- Coppa Italia all’Eden:
+  - soltanto semifinali e finale.
+- Date e orari restano modificabili dall’amministratore.
 
 INSTALLAZIONE
-Su GitHub sostituisci integralmente:
-- data-exchange.html
+1. Esegui integralmente SUPABASE_V9_5_UPDATE.sql in Supabase V9 Test.
+2. Su GitHub sostituisci integralmente calendar.html.
+3. Fai Commit changes.
+4. Apri calendar.html?v=950.
+5. Rigenera i calendari già creati: quelli vecchi non vengono corretti automaticamente.
 
-Non serve eseguire SQL.
-
-TEST
-Apri:
-data-exchange.html?v=945
-
-Seleziona il file originale. Deve comparire subito una sequenza di messaggi:
-File selezionato → Lettura → Righe/colonne → Modulo Google AICS riconosciuto → Anteprima.
+IMPORTANTE
+Le ore già presenti nel database potrebbero essere corrette ma visualizzate in UTC.
+La V9.5.0 visualizza e modifica sempre l’ora locale italiana.
