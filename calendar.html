@@ -442,6 +442,7 @@ function scheduleHomeFixture(baseDate,homeTeam,roundOffset,competitionCode,inter
 
 
 function assertHomeRule(match){
+  if(match?._manual_exception===true)return true;
   const home=teamById(match.home_team_id);
   const away=teamById(match.away_team_id);
 
@@ -911,9 +912,9 @@ function applySuggestedConflictSolution(index){
     attempt.candidate.scheduledAt,
     attempt.title
   );
-  assistantMsg('Soluzione applicata. Sto rigenerando l’anteprima…');
+  assistantMsg('Soluzione applicata.');
   closeConflictAssistant();
-  setTimeout(previewCalendar,100);
+  setTimeout(completeConflictPayload,100);
 }
 function applyManualConflictSolution(){
   if(!activeConflict)return;
@@ -944,7 +945,8 @@ function applyManualConflictSolution(){
   test._local_time=manualLocal.time;
   test._local_weekday=manualLocal.weekday;
   test._duration_minutes=matchDurationMinutes(home);
-  test._resolution='Eccezione manuale';
+  test._resolution='ECCEZIONE AMMINISTRATORE';
+  test._manual_exception=true;
   test.venue=$('manualVenue').value.trim();
   test._facility_key=facilityKey(home,test.venue);
   test._facility_label=[test.venue,home.club_address,home.club_city].filter(Boolean).join(' · ');
@@ -958,9 +960,9 @@ function applyManualConflictSolution(){
   }
 
   Object.assign(activeConflict.match,test);
-  assistantMsg('Eccezione manuale applicata.');
+  assistantMsg('Eccezione manuale applicata e mantenuta nell’anteprima.');
   closeConflictAssistant();
-  setTimeout(previewCalendar,100);
+  setTimeout(completeConflictPayload,100);
 }
 function openHomeTeamEditor(){
   if(!activeConflict)return;
@@ -1083,44 +1085,72 @@ async function buildCalendarPayload(){
   return payload;
 }
 
+
+function renderPendingCalendar(){
+  $('calendarPreview').innerHTML=pendingCalendar.map(match=>`
+    <div class="fixture">
+      <span class="badge">G${match.round_number}</span>
+      <div>
+        <b>${esc(match._home_name)}</b>
+        <span class="muted"> contro </span>
+        <b>${esc(match._away_name)}</b>
+        <div class="small">
+          ${match._manual_exception
+            ? `<b>ECCEZIONE AMMINISTRATORE</b><br>`
+            : `Scheda casa: <b>${esc(match._configured_day)} ${esc(match._configured_time)}</b><br>`}
+          Calendario: <b>${esc(match._local_weekday)} ${new Date(match._local_date+'T12:00:00').toLocaleDateString('it-IT')} ore ${esc(match._local_time)}</b><br>
+          Campo: <b>${esc(match.venue)}</b><br>
+          Impianto/indirizzo controllato: <b>${esc(match._facility_label||match.venue)}</b><br>
+          Durata considerata: <b>${match._duration_minutes} minuti</b>
+        </div>
+      </div>
+      <div class="notice ${match._resolution?'warn':'ok'}">
+        ${match._resolution?esc(match._resolution):'COINCIDE · NESSUN CONFLITTO'}
+      </div>
+    </div>
+  `).join('');
+
+  $('calendarPreviewCard').classList.remove('hidden');
+  $('confirmCalendarBtn').classList.remove('hidden');
+  const solved=pendingCalendar.filter(match=>match._resolution).length;
+  msg(`Anteprima pronta: ${pendingCalendar.length} partite. ${solved} variazioni applicate. Premi “Conferma e salva calendario” per renderle definitive.`);
+  $('calendarPreviewCard').scrollIntoView({behavior:'smooth'});
+}
+
+function completeConflictPayload(){
+  if(!activeConflict)return false;
+  const payload=activeConflict.payload;
+  const existing=activeConflict.existing||[];
+  const code=$('competition').value;
+
+  const resolution=autoResolveConflicts(payload,code);
+  if(
+    resolution.unresolved.length ||
+    resolution.remainingFacilityConflicts.length ||
+    resolution.remainingTeamConflicts.length
+  ){
+    const next=
+      resolution.unresolved.find(x=>x!==activeConflict.match) ||
+      resolution.remainingTeamConflicts.find(x=>x!==activeConflict.match) ||
+      resolution.remainingFacilityConflicts.find(x=>x.a!==activeConflict.match)?.a;
+
+    if(next){
+      const attempts=createSuggestionAttempts(next,payload,existing,code);
+      openConflictAssistant(next,payload,existing,attempts);
+      return false;
+    }
+  }
+
+  pendingCalendar=payload;
+  renderPendingCalendar();
+  return true;
+}
+
 async function previewCalendar(){
   try{
     pendingCalendar=await buildCalendarPayload();
 
-    $('calendarPreview').innerHTML=pendingCalendar.map(match=>`
-      <div class="fixture">
-        <span class="badge">G${match.round_number}</span>
-        <div>
-          <b>${esc(match._home_name)}</b>
-          <span class="muted"> contro </span>
-          <b>${esc(match._away_name)}</b>
-          <div class="small">
-            Scheda casa: <b>${esc(match._configured_day)} ${esc(match._configured_time)}</b><br>
-            Calendario: <b>${esc(match._local_weekday)} ${new Date(match._local_date+'T12:00:00').toLocaleDateString('it-IT')} ore ${esc(match._local_time)}</b><br>
-            Campo: <b>${esc(match.venue)}</b><br>
-            Impianto/indirizzo controllato: <b>${esc(match._facility_label||match.venue)}</b><br>
-            Durata considerata: <b>${match._duration_minutes} minuti</b>
-          </div>
-        </div>
-        <div class="notice ${match._resolution?'warn':'ok'}">
-          ${match._resolution
-            ? `SOLUZIONE AUTOMATICA: ${esc(match._resolution)}`
-            : 'COINCIDE · NESSUN CONFLITTO'}
-          <br><b>REGOLA CASA VERIFICATA:</b>
-          ${esc(match._home_name)} determina ${esc(match._local_weekday)} ${esc(match._local_time)} · ${esc(match.venue)}.
-          ${esc(match._away_name)} si adatta.
-        </div>
-      </div>
-    `).join('');
-
-    $('calendarPreviewCard').classList.remove('hidden');
-    $('confirmCalendarBtn').classList.remove('hidden');
-    const solved=pendingCalendar.filter(match=>match._resolution).length;
-    msg(
-      `Anteprima pronta: ${pendingCalendar.length} partite. `+
-      `${solved} conflitti risolti automaticamente. Nessuna partita è stata ancora salvata.`
-    );
-    $('calendarPreviewCard').scrollIntoView({behavior:'smooth'});
+    renderPendingCalendar();
   }catch(error){
     pendingCalendar=[];
     $('calendarPreviewCard').classList.add('hidden');
@@ -1360,9 +1390,36 @@ async function updateFixture(id,key,value){
         Number(value.slice(14,16))
       ).toISOString()
     : value;
-  const r=await s.from('fixtures').update(payload).eq('id',id);
-  if(r.error) alert(r.error.message);
-  else loadFixtures();
+
+  const r=await s.from('fixtures')
+    .update(payload)
+    .eq('id',id)
+    .select('id,scheduled_at,venue')
+    .maybeSingle();
+
+  if(r.error){
+    alert('Modifica non salvata: '+r.error.message);
+    return loadFixtures();
+  }
+  if(!r.data?.id){
+    alert('Modifica non salvata: il database non ha confermato l’aggiornamento. Verifica i permessi amministratore.');
+    return loadFixtures();
+  }
+
+  const expected=payload[key];
+  const actual=r.data[key];
+  const matches=key==='scheduled_at'
+    ? Math.abs(new Date(actual).getTime()-new Date(expected).getTime())<60000
+    : String(actual||'')===String(expected||'');
+
+  if(!matches){
+    alert('Il database ha restituito un valore diverso da quello inserito. La modifica non è stata accettata.');
+    return loadFixtures();
+  }
+
+  msg('Modifica della partita salvata correttamente.');
+  const local=fixtures.find(f=>f.id===id);
+  if(local)Object.assign(local,r.data);
 }
 
 async function deleteFixture(id){

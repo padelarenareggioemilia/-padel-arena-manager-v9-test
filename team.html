@@ -150,6 +150,12 @@ label{color:var(--aics-blue-dark)!important}
   .player-card{grid-template-columns:52px 1fr}
   .player-card>.badge{grid-column:1/-1}
 }
+
+.manual-player-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.manual-player-panel{border:1px solid var(--line);border-radius:16px;padding:14px;background:#f8fbfe}
+.roster-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px;border-bottom:1px solid #dce6f0}
+.roster-row:last-child{border-bottom:0}
+@media(max-width:800px){.manual-player-grid{grid-template-columns:1fr}}
 </style>
 
 <link rel="icon" type="image/png" sizes="32x32" href="assets/aics-icon-32.png">
@@ -524,6 +530,75 @@ window.openInlineEditor = openInlineEditor;
 window.closeInlineEditor = closeInlineEditor;
 window.saveInlineEditor = saveInlineEditor;
 
+
+function adminPlayerMessage(text,error=false){
+  const el=document.getElementById('adminPlayerMsg');
+  el.textContent=text;
+  el.className='notice '+(error?'err':'ok');
+  el.classList.remove('hidden');
+}
+function renderAdminRoster(items){
+  const host=document.getElementById('adminRosterList');
+  if(!host)return;
+  host.innerHTML=(items||[]).map(p=>`
+    <div class="roster-row">
+      <div>
+        <b>${esc(p.first_name||'')} ${esc(p.last_name||'')}</b>
+        <div class="muted small">${esc(p.email||'Nessuna email')} · ${esc(p.fitp_ranking||'FITP non indicata')}</div>
+      </div>
+      <span class="badge">${esc(p.status||'approved')}</span>
+    </div>`).join('')||'<div class="notice">Nessun giocatore presente.</div>';
+}
+async function reloadAdminRoster(){
+  if(!currentTeam?.id)return;
+  const r=await sb.from('roster_requests')
+    .select('*')
+    .eq('team_id',currentTeam.id)
+    .order('last_name',{ascending:true});
+  if(r.error)return adminPlayerMessage(r.error.message,true);
+  renderAdminRoster(r.data||[]);
+}
+async function adminAddPlayer(){
+  if(!currentTeam?.id)return adminPlayerMessage('Squadra non caricata.',true);
+  const firstName=document.getElementById('adminPlayerFirstName').value.trim();
+  const lastName=document.getElementById('adminPlayerLastName').value.trim();
+  if(!firstName||!lastName)return adminPlayerMessage('Nome e cognome sono obbligatori.',true);
+
+  const button=document.getElementById('adminAddPlayerBtn');
+  button.disabled=true;
+  button.textContent='Inserimento in corso…';
+  try{
+    const payload={
+      team_id:currentTeam.id,
+      first_name:firstName,
+      last_name:lastName,
+      email:document.getElementById('adminPlayerEmail').value.trim().toLowerCase()||null,
+      phone:document.getElementById('adminPlayerPhone').value.trim()||null,
+      fitp_ranking:document.getElementById('adminPlayerFitp').value.trim()||null,
+      medical_certificate_expiry:document.getElementById('adminPlayerMedical').value||null,
+      status:'approved',
+      decided_at:new Date().toISOString(),
+      created_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    };
+    const r=await sb.from('roster_requests').insert(payload).select('id').maybeSingle();
+    if(r.error)throw r.error;
+    if(!r.data?.id)throw new Error('Inserimento non confermato dal database.');
+
+    ['adminPlayerFirstName','adminPlayerLastName','adminPlayerEmail','adminPlayerPhone','adminPlayerFitp','adminPlayerMedical']
+      .forEach(id=>document.getElementById(id).value='');
+
+    adminPlayerMessage(`${firstName} ${lastName} inserito correttamente nella rosa.`);
+    await reloadAdminRoster();
+  }catch(error){
+    adminPlayerMessage(error.message||String(error),true);
+  }finally{
+    button.disabled=false;
+    button.textContent='Inserisci giocatore';
+  }
+}
+window.adminAddPlayer=adminAddPlayer;
+
 async function copyLink(url) {
   try {
     await navigator.clipboard.writeText(url);
@@ -624,11 +699,35 @@ async function init() {
 
         <div class="actions" style="margin-top:16px">
           <button class="btn primary" onclick="openInlineEditor()">Modifica squadra</button>
+          <button class="btn success" onclick="document.getElementById('manualPlayerPanel').scrollIntoView({behavior:'smooth'})">Aggiungi giocatore</button>
           <button class="btn secondary" onclick='copyLink(${JSON.stringify(captainUrl)})'>Copia link capitano</button>
           <button class="btn secondary" onclick='copyLink(${JSON.stringify(playerUrl)})'>Copia link giocatori</button>
         </div>
       </div>
     </div>
+
+    <section id="manualPlayerPanel" class="card manual-player-panel" style="margin-top:18px">
+      <div class="section-title">
+        <div>
+          <h2 style="margin:0">Inserisci giocatore manualmente</h2>
+          <div class="muted">Il giocatore viene inserito direttamente nella rosa come approvato.</div>
+        </div>
+      </div>
+      <div class="manual-player-grid">
+        <div class="field"><label>Nome *</label><input id="adminPlayerFirstName"></div>
+        <div class="field"><label>Cognome *</label><input id="adminPlayerLastName"></div>
+        <div class="field"><label>Email</label><input id="adminPlayerEmail" type="email"></div>
+        <div class="field"><label>Telefono</label><input id="adminPlayerPhone"></div>
+        <div class="field"><label>Classifica FITP</label><input id="adminPlayerFitp"></div>
+        <div class="field"><label>Scadenza certificato medico</label><input id="adminPlayerMedical" type="date"></div>
+      </div>
+      <div class="actions">
+        <button id="adminAddPlayerBtn" class="btn success" onclick="adminAddPlayer()">Inserisci giocatore</button>
+      </div>
+      <div id="adminPlayerMsg" class="notice hidden"></div>
+      <h3>Rosa attuale</h3>
+      <div id="adminRosterList"></div>
+    </section>
 
     <section id="inlineEditor" class="card hidden" style="margin-top:18px">
       <div class="section-title">
@@ -744,6 +843,7 @@ async function init() {
 }
 
 window.copyLink = copyLink;
+setTimeout(()=>renderAdminRoster(typeof requests!=='undefined'?requests:[]),0);
 init();
 </script>
 
