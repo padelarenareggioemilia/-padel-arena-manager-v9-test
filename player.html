@@ -10,9 +10,116 @@
 display:grid;place-items:center;overflow:hidden;background:#071522;color:var(--muted)}
 .photo-preview img{width:100%;height:100%;object-fit:cover}
 .doc-note{font-size:12px;color:var(--muted);line-height:1.45;margin-top:6px}
+</style><style>
+:root{
+  --aics-blue:#164a95;
+  --aics-blue-dark:#082f68;
+  --aics-blue-soft:#2e6fba;
+  --italy-green:#009246;
+  --italy-red:#ce2b37;
+  --bg:#f4f8fc;
+  --panel:#ffffff;
+  --panel-soft:#edf4fb;
+  --text:#0a2e5e;
+  --muted:#627b97;
+  --line:#b9cde3;
+  --shadow:0 14px 34px rgba(8,47,104,.13);
+}
+html{background:var(--bg)}
+body{
+  color:var(--text)!important;
+  background:
+    linear-gradient(90deg,rgba(0,146,70,.05),transparent 23%,transparent 77%,rgba(206,43,55,.05)),
+    radial-gradient(circle at 50% 0%,rgba(22,74,149,.12),transparent 34%),
+    var(--bg)!important;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0 0 auto 0;
+  height:6px;
+  z-index:9999;
+  background:linear-gradient(90deg,var(--italy-green) 0 33.333%,#fff 33.333% 66.666%,var(--italy-red) 66.666%);
+}
+.hero{
+  background:linear-gradient(135deg,var(--aics-blue),var(--aics-blue-dark))!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.25)!important;
+  border-radius:24px!important;
+  padding:18px!important;
+  box-shadow:var(--shadow)!important;
+}
+.hero .muted{color:#d9e6f5!important}
+.brand-logo{
+  width:132px;
+  height:78px;
+  object-fit:contain;
+  padding:8px;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 10px 24px rgba(0,0,0,.14);
+}
+.mark{display:none!important}
+.top,.card,.comp,.group,.comp-card{
+  background:rgba(255,255,255,.98)!important;
+  color:var(--text)!important;
+  border:1px solid var(--line)!important;
+  box-shadow:var(--shadow)!important;
+}
+.primary{background:linear-gradient(135deg,var(--aics-blue-soft),var(--aics-blue))!important;color:#fff!important}
+.secondary{background:#fff!important;color:var(--aics-blue-dark)!important;border:1px solid var(--aics-blue-soft)!important}
+.blue{background:var(--aics-blue)!important;color:#fff!important}
+.danger{background:var(--italy-red)!important;color:#fff!important}
+.ghost{background:#fff!important;color:var(--aics-blue)!important;border:1px solid var(--line)!important}
+input,select,textarea{
+  background:#fff!important;
+  color:var(--text)!important;
+  border-color:var(--line)!important;
+}
+label{color:var(--aics-blue-dark)!important}
+.notice{background:var(--panel-soft)!important;color:var(--text)!important;border-color:var(--line)!important}
+.ok{background:#eaf8f0!important;border-color:var(--italy-green)!important}
+.err{background:#fdecef!important;border-color:var(--italy-red)!important}
+.kpi,.team,.fixture,.team-pill,.mini-team,.request{
+  background:#fff!important;
+  color:var(--text)!important;
+  border-color:var(--line)!important;
+  box-shadow:0 8px 20px rgba(8,47,104,.07)!important;
+}
+.kpi strong{color:var(--aics-blue)!important}
+.filter{background:#fff!important;color:var(--aics-blue-dark)!important;border:1px solid var(--line)!important}
+.filter.active{
+  color:#fff!important;
+  border-color:var(--aics-blue)!important;
+  background:linear-gradient(90deg,var(--italy-green),var(--aics-blue),var(--italy-red))!important;
+}
+.badge{background:#e8f1fb!important;color:var(--aics-blue-dark)!important;border-color:var(--line)!important}
+.logo,.big-logo,.mini-logo,.comp-logo,.comp img{background:#fff!important;border-color:#dce6f2!important}
+.placeholder{background:linear-gradient(135deg,#e8f1fb,#fff)!important;color:var(--aics-blue)!important}
+.more-menu,.dialog-card{background:#fff!important;color:var(--text)!important;border-color:var(--line)!important}
+.more-menu .delete-item{background:#fff4f5!important;color:var(--italy-red)!important}
+.tricolore{
+  height:5px;
+  border-radius:999px;
+  margin:10px 0 0;
+  background:linear-gradient(90deg,var(--italy-green) 0 33.333%,#fff 33.333% 66.666%,var(--italy-red) 66.666%);
+  border:1px solid #d7e3ef;
+}
+.section-ribbon{
+  display:inline-flex;
+  padding:7px 12px;
+  border-radius:999px;
+  font-weight:900;
+  color:var(--aics-blue-dark);
+  border:1px solid #d7e3ef;
+  background:linear-gradient(90deg,rgba(0,146,70,.12),rgba(255,255,255,.95),rgba(206,43,55,.12));
+}
+@media(max-width:800px){
+  .brand-logo{width:100px;height:62px}
+}
 </style></head><body><main class="shell" style="max-width:900px">
-<header class="hero"><div class="brand"><div class="mark">🎾</div><div><h1>Iscrizione alla squadra</h1>
-<div class="muted">Dati anagrafici e sportivi del giocatore</div></div></div></header>
+<header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png" alt="AICS"><div><h1>Iscrizione alla squadra</h1>
+<div class="muted">Dati anagrafici e sportivi del giocatore</div></div></div></header><div class="tricolore"></div>
 <section id="box" class="card">Verifica squadra...</section>
 <script>
 const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),

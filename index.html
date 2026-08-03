@@ -10,10 +10,124 @@
 .team-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.more-wrap{position:relative}.more-menu{position:absolute;right:0;top:44px;min-width:210px;background:#0b1a2b;border:1px solid #3f6385;border-radius:14px;padding:8px;z-index:15;box-shadow:0 16px 38px rgba(0,0,0,.35)}.more-menu button{width:100%;text-align:left;margin:3px 0}.more-menu .delete-item{font-size:12px;padding:8px 10px;background:transparent;color:#ff9ca6;border:1px solid rgba(239,68,68,.35)}
 .dialog{position:fixed;inset:0;background:rgba(0,0,0,.72);display:grid;place-items:center;padding:16px;z-index:100}.dialog-card{width:min(520px,100%);background:#10233b;border:1px solid #4c6b89;border-radius:20px;padding:18px}.dialog-card h2{margin-top:0}
 @media(max-width:760px){.grid2,.kpis{grid-template-columns:1fr}.team{grid-template-columns:62px 1fr}.logo,.placeholder{width:58px;height:58px}.team-actions{grid-column:1/-1}.team-actions .btn{flex:1}.hero{align-items:flex-start}.filters .btn{flex:1}}
+</style><style>
+:root{
+  --aics-blue:#164a95;
+  --aics-blue-dark:#082f68;
+  --aics-blue-soft:#2e6fba;
+  --italy-green:#009246;
+  --italy-red:#ce2b37;
+  --bg:#f4f8fc;
+  --panel:#ffffff;
+  --panel-soft:#edf4fb;
+  --text:#0a2e5e;
+  --muted:#627b97;
+  --line:#b9cde3;
+  --shadow:0 14px 34px rgba(8,47,104,.13);
+}
+html{background:var(--bg)}
+body{
+  color:var(--text)!important;
+  background:
+    linear-gradient(90deg,rgba(0,146,70,.05),transparent 23%,transparent 77%,rgba(206,43,55,.05)),
+    radial-gradient(circle at 50% 0%,rgba(22,74,149,.12),transparent 34%),
+    var(--bg)!important;
+}
+body::before{
+  content:"";
+  position:fixed;
+  inset:0 0 auto 0;
+  height:6px;
+  z-index:9999;
+  background:linear-gradient(90deg,var(--italy-green) 0 33.333%,#fff 33.333% 66.666%,var(--italy-red) 66.666%);
+}
+.hero{
+  background:linear-gradient(135deg,var(--aics-blue),var(--aics-blue-dark))!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.25)!important;
+  border-radius:24px!important;
+  padding:18px!important;
+  box-shadow:var(--shadow)!important;
+}
+.hero .muted{color:#d9e6f5!important}
+.brand-logo{
+  width:132px;
+  height:78px;
+  object-fit:contain;
+  padding:8px;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 10px 24px rgba(0,0,0,.14);
+}
+.mark{display:none!important}
+.top,.card,.comp,.group,.comp-card{
+  background:rgba(255,255,255,.98)!important;
+  color:var(--text)!important;
+  border:1px solid var(--line)!important;
+  box-shadow:var(--shadow)!important;
+}
+.primary{background:linear-gradient(135deg,var(--aics-blue-soft),var(--aics-blue))!important;color:#fff!important}
+.secondary{background:#fff!important;color:var(--aics-blue-dark)!important;border:1px solid var(--aics-blue-soft)!important}
+.blue{background:var(--aics-blue)!important;color:#fff!important}
+.danger{background:var(--italy-red)!important;color:#fff!important}
+.ghost{background:#fff!important;color:var(--aics-blue)!important;border:1px solid var(--line)!important}
+input,select,textarea{
+  background:#fff!important;
+  color:var(--text)!important;
+  border-color:var(--line)!important;
+}
+label{color:var(--aics-blue-dark)!important}
+.notice{background:var(--panel-soft)!important;color:var(--text)!important;border-color:var(--line)!important}
+.ok{background:#eaf8f0!important;border-color:var(--italy-green)!important}
+.err{background:#fdecef!important;border-color:var(--italy-red)!important}
+.kpi,.team,.fixture,.team-pill,.mini-team,.request{
+  background:#fff!important;
+  color:var(--text)!important;
+  border-color:var(--line)!important;
+  box-shadow:0 8px 20px rgba(8,47,104,.07)!important;
+}
+.kpi strong{color:var(--aics-blue)!important}
+.filter{background:#fff!important;color:var(--aics-blue-dark)!important;border:1px solid var(--line)!important}
+.filter.active{
+  color:#fff!important;
+  border-color:var(--aics-blue)!important;
+  background:linear-gradient(90deg,var(--italy-green),var(--aics-blue),var(--italy-red))!important;
+}
+.badge{background:#e8f1fb!important;color:var(--aics-blue-dark)!important;border-color:var(--line)!important}
+.logo,.big-logo,.mini-logo,.comp-logo,.comp img{background:#fff!important;border-color:#dce6f2!important}
+.placeholder{background:linear-gradient(135deg,#e8f1fb,#fff)!important;color:var(--aics-blue)!important}
+.more-menu,.dialog-card{background:#fff!important;color:var(--text)!important;border-color:var(--line)!important}
+.more-menu .delete-item{background:#fff4f5!important;color:var(--italy-red)!important}
+.tricolore{
+  height:5px;
+  border-radius:999px;
+  margin:10px 0 0;
+  background:linear-gradient(90deg,var(--italy-green) 0 33.333%,#fff 33.333% 66.666%,var(--italy-red) 66.666%);
+  border:1px solid #d7e3ef;
+}
+.section-ribbon{
+  display:inline-flex;
+  padding:7px 12px;
+  border-radius:999px;
+  font-weight:900;
+  color:var(--aics-blue-dark);
+  border:1px solid #d7e3ef;
+  background:linear-gradient(90deg,rgba(0,146,70,.12),rgba(255,255,255,.95),rgba(206,43,55,.12));
+}
+@media(max-width:800px){
+  .brand-logo{width:100px;height:62px}
+}
 </style></head><body><main class="shell">
-<header class="hero"><div class="brand"><div class="mark">V9.1</div><div><h1 style="margin:0">Campionato · Admin</h1><div class="muted">Squadre, serie e accessi</div></div></div><span class="notice">SUPABASE CONNESSO</span></header>
+<header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png" alt="AICS"><div><h1 style="margin:0">Campionato · Admin</h1><div class="muted">Squadre, serie e accessi</div></div></div><span class="notice">SUPABASE CONNESSO</span></header><div class="tricolore"></div>
 <div class="top"><div class="nav"><button class="btn secondary" onclick="history.length>1?history.back():location.href='index.html'">← Indietro</button><button class="btn secondary" onclick="location.href='index.html'">⌂ Home</button><button class="btn secondary" onclick="menu.classList.toggle('hidden')">☰ Menu</button></div><div id="menu" class="actions hidden" style="margin-top:8px"><button class="btn primary" onclick="openForm()">Nuova squadra</button><button class="btn secondary" onclick="location.href='competitions.html'">Competizioni</button><button class="btn secondary" onclick="location.href='groups.html'">Gironi</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button><button class="btn secondary" onclick="loadTeams()">Aggiorna</button><button class="btn danger" onclick="logout()">Esci</button></div></div>
-<section class="kpis"><div class="kpi"><strong id="nTeams">0</strong>Squadre</div><div class="kpi"><strong id="nActive">0</strong>Accessi capitano attivi</div><div class="kpi"><strong id="nReq">0</strong>Richieste in attesa</div></section>
+<section class="kpis">
+<div class="kpi"><strong id="nTeams">0</strong>Squadre totali</div>
+<div class="kpi"><strong id="nSerieA">0</strong>Serie A</div>
+<div class="kpi"><strong id="nSerieB">0</strong>Serie B</div>
+<div class="kpi"><strong id="nSerieC">0</strong>Serie C</div>
+<div class="kpi"><strong id="nActive">0</strong>Accessi capitano attivi</div>
+<div class="kpi"><strong id="nReq">0</strong>Richieste in attesa</div>
+</section>
 <section class="card"><div class="actions" style="justify-content:space-between;align-items:center"><div><h2 style="margin:0">Tutte le squadre</h2><div class="muted">Elenco generale con filtro per serie.</div></div><div class="actions"><button class="btn secondary" onclick="location.href='competitions.html'">Vista Serie e Coppa Italia</button><button class="btn primary" onclick="openForm()">＋ Crea nuova squadra</button></div></div><div class="filters" style="margin-top:14px"><button class="btn filter active" data-filter="Tutte" onclick="setFilter('Tutte')">Tutte</button><button class="btn filter" data-filter="Serie A" onclick="setFilter('Serie A')">Serie A</button><button class="btn filter" data-filter="Serie B" onclick="setFilter('Serie B')">Serie B</button><button class="btn filter" data-filter="Serie C" onclick="setFilter('Serie C')">Serie C</button></div></section>
 <section id="editor" class="card hidden"><div class="actions" style="justify-content:space-between"><h2 id="title">Crea nuova squadra</h2><button class="btn secondary" onclick="closeForm()">Chiudi</button></div><form id="form"><div class="grid2"><div><h3>Dati squadra</h3><div class="field"><label>Nome squadra *</label><input id="name" required></div><div class="grid2"><div class="field"><label>Serie *</label><select id="series"><option>Serie A</option><option>Serie B</option><option selected>Serie C</option></select></div><div class="field"><label>Colori sociali</label><input id="colors"></div></div><div class="field"><label>Club / società</label><input id="club"></div><div class="field"><label>Codice fiscale / P. IVA</label><input id="fiscal"></div><div class="field"><label>Indirizzo club</label><input id="address"></div><div class="grid2"><div class="field"><label>Comune</label><input id="city"></div><div class="field"><label>Provincia</label><input id="province" maxlength="2"></div></div><div class="field"><label>Campo di casa</label><input id="court"></div></div><div><h3>Logo e capitano</h3><div class="actions" style="align-items:center"><div id="preview" class="preview">LOGO</div><input id="logoFile" type="file" accept="image/png,image/jpeg,image/webp"></div><div class="field"><label>Nome capitano *</label><input id="captain" required></div><div class="field"><label>Email capitano *</label><input id="captainEmail" type="email" required></div><div class="field"><label>Telefono capitano</label><input id="phone"></div><div class="grid2"><div class="field"><label>Giorno partite in casa</label><select id="homeDay"><option value="">Seleziona</option><option>Lunedì</option><option>Martedì</option><option>Mercoledì</option><option>Giovedì</option><option>Venerdì</option><option>Sabato</option><option>Domenica</option></select></div><div class="field"><label>Orario partite in casa</label><input id="homeTime" type="time"></div></div><label class="notice"><input id="enabled" type="checkbox" checked style="width:auto"> Abilita accesso capitano</label></div></div><div class="field"><label>Note</label><textarea id="notes"></textarea></div><div id="formMsg" class="notice hidden"></div><div class="actions"><button class="btn primary" type="submit" id="save">Salva squadra</button><button class="btn secondary" type="button" onclick="closeForm()">Annulla</button></div></form></section>
 <section class="card"><div id="teams"></div></section>
@@ -31,7 +145,12 @@ async function upload(id){if(!file)return null;let ext=file.name.split('.').pop(
 async function saveTeam(){let p={name:$('name').value.trim(),series:$('series').value,club_name:$('club').value.trim(),club_address:$('address').value.trim(),club_city:$('city').value.trim(),club_province:$('province').value.trim().toUpperCase(),club_fiscal_code:$('fiscal').value.trim(),home_court:$('court').value.trim(),team_colors:$('colors').value.trim(),captain_name:$('captain').value.trim(),captain_email:$('captainEmail').value.trim().toLowerCase(),captain_phone:$('phone').value.trim(),home_match_day:$('homeDay').value,home_match_time:$('homeTime').value||null,notes:$('notes').value.trim(),captain_access_enabled:$('enabled').checked,created_by:me.id,updated_at:new Date().toISOString()};if(!p.name||!p.captain_name||!p.captain_email)return note('Compila i campi obbligatori.',true);try{let teamId=editId;if(editId){let r=await s.from('teams').update(p).eq('id',editId);if(r.error)throw r.error}else{let r=await s.from('teams').insert(p).select('id').maybeSingle();if(r.error)throw r.error;if(!r.data||!r.data.id)throw new Error('La squadra è stata salvata ma non è stato restituito il suo identificativo.');teamId=r.data.id}let url=await upload(teamId);if(url){let u=await s.from('teams').update({logo_url:url}).eq('id',teamId);if(u.error)throw u.error}note(editId?'Squadra aggiornata correttamente.':'Squadra salvata online.');await loadTeams();setTimeout(closeForm,600)}catch(e){note(e?.message||'Errore durante il salvataggio.',true)}}
 function setFilter(filter){currentFilter=filter;document.querySelectorAll('.filter').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));renderTeams()}
 function renderTeams(){let a=currentFilter==='Tutte'?allTeams:allTeams.filter(t=>t.series===currentFilter);$('teams').innerHTML=a.length?a.map(t=>{let cap=new URL(`captain.html?invite=${encodeURIComponent(t.captain_invite_token)}`,location.href).href,player=new URL(`player.html?team=${encodeURIComponent(t.player_invite_token)}`,location.href).href;return `<article class="team">${t.logo_url?`<img class="logo" src="${esc(t.logo_url)}">`:`<div class="placeholder">🏆</div>`}<div><b style="font-size:20px">${esc(t.name)}</b><div class="meta"><b>${esc(t.series||'')}</b> · ${esc(t.club_name||'')}<br>${esc(t.club_city||'')} ${t.club_province?'('+esc(t.club_province)+')':''}<br>Capitano: <b>${esc(t.captain_name||'')}</b> · ${esc(t.captain_email||'')}<br>Partite in casa: <b>${esc(t.home_match_day||'Da definire')}</b>${t.home_match_time?' alle '+esc(String(t.home_match_time).slice(0,5)):''}</div></div><div class="team-actions"><button class="btn primary" onclick='openTeam(${JSON.stringify(t.id)})'>Apri</button><button class="btn secondary" onclick='copyLink(${JSON.stringify(cap)})'>Link capitano</button><button class="btn secondary" onclick='copyLink(${JSON.stringify(player)})'>Link giocatori</button><div class="more-wrap"><button class="btn ghost" onclick='toggleMore(event,${JSON.stringify(t.id)})'>⋮</button><div id="more-${t.id}" class="more-menu hidden"><button class="btn ghost tiny" onclick='editTeam(${JSON.stringify(t.id)})'>✏️ Modifica squadra</button><button class="btn delete-item" onclick='requestDelete(${JSON.stringify(t.id)},${JSON.stringify(t.name)})'>🗑️ Elimina squadra</button></div></div></div></article>`}).join(''):'<div class="notice">Nessuna squadra in questa serie.</div>'}
-async function loadTeams(){let r=await s.from('teams').select('*').order('series').order('name');if(r.error)return $('teams').innerHTML=`<div class="notice err">${esc(r.error.message)}</div>`;allTeams=r.data||[];$('nTeams').textContent=allTeams.length;$('nActive').textContent=allTeams.filter(x=>x.captain_access_enabled!==false).length;let q=await s.from('roster_requests').select('id',{count:'exact',head:true}).eq('status','pending');$('nReq').textContent=q.count||0;renderTeams()}
+async function loadTeams(){let r=await s.from('teams').select('*').order('series').order('name');if(r.error)return $('teams').innerHTML=`<div class="notice err">${esc(r.error.message)}</div>`;allTeams=r.data||[];
+$('nTeams').textContent=allTeams.length;
+$('nSerieA').textContent=allTeams.filter(x=>x.series==='Serie A').length;
+$('nSerieB').textContent=allTeams.filter(x=>x.series==='Serie B').length;
+$('nSerieC').textContent=allTeams.filter(x=>x.series==='Serie C').length;
+$('nActive').textContent=allTeams.filter(x=>x.captain_access_enabled!==false).length;let q=await s.from('roster_requests').select('id',{count:'exact',head:true}).eq('status','pending');$('nReq').textContent=q.count||0;renderTeams()}
 function openTeam(id){location.href=`team.html?id=${encodeURIComponent(id)}`}
 async function copyLink(u){try{await navigator.clipboard.writeText(u);alert('Link copiato')}catch{prompt('Copia il link:',u)}}
 async function editTeam(id){closeAllMenus();let r=await s.from('teams').select('*').eq('id',id).single();if(r.error)alert(r.error.message);else openForm(r.data)}
