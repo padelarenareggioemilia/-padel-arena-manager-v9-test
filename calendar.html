@@ -193,6 +193,14 @@ label{color:var(--aics-blue-dark)!important}
       <label>Controllo dati squadre</label>
       <button class="btn secondary" style="width:100%" onclick="validateTeams()">Controlla giorno, ora e campo</button>
     </div>
+    <div class="field">
+      <label>Durata predefinita gara</label>
+      <select id="defaultSlotMinutes">
+        <option value="90">90 minuti</option>
+        <option value="120" selected>120 minuti</option>
+        <option value="150">150 minuti</option>
+      </select>
+    </div>
   </div>
 
   <div class="actions">
@@ -286,9 +294,9 @@ label{color:var(--aics-blue-dark)!important}
 
 <section class="card">
   <div class="notice">
-    <b>Regola fondamentale:</b> ogni gara del girone utilizza il giorno, l’ora e il campo
-    presenti nella scheda della <b>squadra di casa</b>. Se uno di questi dati manca,
-    la generazione viene bloccata e viene indicata la squadra da correggere.
+    <b>Regole fondamentali:</b> ogni gara utilizza giorno, ora e campo della squadra di casa.
+    Prima del salvataggio l’app controlla che non esistano due gare sovrapposte nello stesso
+    impianto o indirizzo. In presenza di un conflitto il calendario viene bloccato.
   </div>
   <div id="fixtures"></div>
 </section>
@@ -443,6 +451,41 @@ function validateTeams(showSuccess=true){
   return true;
 }
 
+
+function normalizeFacility(value){
+  return String(value||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z0-9]+/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+function facilityKey(team,venue){
+  const address=[team?.club_address,team?.club_city,team?.club_province]
+    .map(normalizeFacility).filter(Boolean).join('|');
+  return address || normalizeFacility(venue||team?.home_court);
+}
+function matchDurationMinutes(team){
+  const specific=Number(team?.match_slot_minutes||0);
+  return specific>0?specific:Number($('defaultSlotMinutes').value||120);
+}
+function detectFacilityConflicts(matches){
+  const conflicts=[];
+  for(let i=0;i<matches.length;i++){
+    for(let j=i+1;j<matches.length;j++){
+      const a=matches[i],b=matches[j];
+      if(!a._facility_key||a._facility_key!==b._facility_key) continue;
+      const aStart=new Date(a.scheduled_at).getTime();
+      const bStart=new Date(b.scheduled_at).getTime();
+      const aEnd=aStart+a._duration_minutes*60000;
+      const bEnd=bStart+b._duration_minutes*60000;
+      if(aStart<bEnd&&bStart<aEnd) conflicts.push({a,b});
+    }
+  }
+  return conflicts;
+}
+function conflictDescription(c){
+  return `${c.a._home_name} – ${c.a._away_name} (${c.a._local_weekday} ${c.a._local_date} ${c.a._local_time}) si sovrappone a ${c.b._home_name} – ${c.b._away_name} (${c.b._local_weekday} ${c.b._local_date} ${c.b._local_time}) nello stesso impianto/indirizzo.`;
+}
+
 async function buildCalendarPayload(){
   if(!$('startDate').value) throw new Error('Inserisci la data di partenza.');
   await fetchData();
@@ -499,7 +542,10 @@ async function buildCalendarPayload(){
           _configured_time:configuredTime,
           _local_date:local.date,
           _local_time:local.time,
-          _local_weekday:local.weekday
+          _local_weekday:local.weekday,
+          _facility_key:facilityKey(home,home.home_court),
+          _facility_label:[home.home_court,home.club_address,home.club_city].filter(Boolean).join(' · '),
+          _duration_minutes:matchDurationMinutes(home)
         });
       });
     };
@@ -515,6 +561,10 @@ async function buildCalendarPayload(){
     }
   }
 
+  const conflicts=detectFacilityConflicts(payload);
+  if(conflicts.length){
+    throw new Error('Conflitti di impianto rilevati:\n'+conflicts.map((c,i)=>`${i+1}. ${conflictDescription(c)}`).join('\n'));
+  }
   return payload;
 }
 
@@ -532,10 +582,12 @@ async function previewCalendar(){
           <div class="small">
             Scheda casa: <b>${esc(match._configured_day)} ${esc(match._configured_time)}</b><br>
             Calendario: <b>${esc(match._local_weekday)} ${new Date(match._local_date+'T12:00:00').toLocaleDateString('it-IT')} ore ${esc(match._local_time)}</b><br>
-            Campo: <b>${esc(match.venue)}</b>
+            Campo: <b>${esc(match.venue)}</b><br>
+            Impianto/indirizzo controllato: <b>${esc(match._facility_label||match.venue)}</b><br>
+            Durata considerata: <b>${match._duration_minutes} minuti</b>
           </div>
         </div>
-        <div class="notice ok">COINCIDE</div>
+        <div class="notice ok">COINCIDE · NESSUN CONFLITTO</div>
       </div>
     `).join('');
 

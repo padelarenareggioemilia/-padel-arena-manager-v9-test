@@ -158,7 +158,11 @@ function render(){
  $('unassigned').innerHTML=teams.filter(t=>!assigned.has(t.id)).map(t=>teamRow(t,null)).join('')||'<div class="notice">Tutte le squadre sono assegnate.</div>';
  $('groups').innerHTML=groups.map(g=>`<section class="card"><div class="section-title"><h2>${esc(g.group_name)}</h2><span class="badge">${members.filter(m=>m.group_id===g.id).length} squadre</span></div>${members.filter(m=>m.group_id===g.id).map(m=>teamRow(teams.find(t=>t.id===m.team_id),g.id)).join('')||'<div class="notice">Girone vuoto.</div>'}</section>`).join('')
 }
-function teamRow(t,current){if(!t)return '';return `<div class="team-pill"><div><b>${esc(t.name)}</b><div class="muted small">${esc(t.club_city||'')} ${esc(t.club_province||'')} · ${t.latitude!=null?'Coordinate presenti':'Coordinate mancanti'}</div></div><select onchange="moveTeam('${t.id}',this.value)"><option value="">Non assegnata</option>${groups.map(g=>`<option value="${g.id}" ${current===g.id?'selected':''}>${esc(g.group_name)}</option>`).join('')}</select></div>`}
+function teamRow(t,current){
+  if(!t)return '';
+  const isCup=$('competition').value==='COPPA_ITALIA';
+  return `<div class="team-pill"><div><b>${esc(t.name)}</b><div class="muted small">${esc(t.club_city||'')} ${esc(t.club_province||'')} · ${t.latitude!=null?'Coordinate presenti':'Coordinate mancanti'}</div></div><div class="actions"><select onchange="moveTeam('${t.id}',this.value)"><option value="">Non assegnata</option>${groups.map(g=>`<option value="${g.id}" ${current===g.id?'selected':''}>${esc(g.group_name)}</option>`).join('')}</select>${isCup?`<button class="btn danger tiny" onclick="removeFromCup('${t.id}',${JSON.stringify(t.name)})">Rimuovi dalla Coppa Italia</button>`:''}</div></div>`
+}
 async function createEmptyGroups(){
  let n=Math.max(1,parseInt($('groupCount').value||'1'));let code=$('competition').value;
  let del=await s.from('competition_groups').delete().eq('competition_code',code);if(del.error)return msg(del.error.message,true);
@@ -195,6 +199,44 @@ async function geocodeMissing(){
  }
  msg('Geolocalizzazione completata.');loadAll()
 }
+
+async function removeFromCup(teamId,teamName){
+  if($('competition').value!=='COPPA_ITALIA') return;
+  if(!confirm(`Rimuovere “${teamName}” soltanto dalla Coppa Italia?\n\nLa squadra resterà iscritta alla propria Serie.`)) return;
+
+  const cupGroupIds=groups.map(g=>g.id);
+  const fixturesResult=await s.from('fixtures')
+    .select('id,status')
+    .eq('competition_code','COPPA_ITALIA')
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+
+  if(fixturesResult.error) return msg(fixturesResult.error.message,true);
+
+  const protectedMatch=(fixturesResult.data||[]).some(f=>
+    ['giocata','omologata','homologated','completed'].includes(String(f.status||'').toLowerCase())
+  );
+  if(protectedMatch){
+    return msg('Rimozione bloccata: la squadra ha già gare giocate o omologate in Coppa Italia.',true);
+  }
+
+  const delFixtures=await s.from('fixtures')
+    .delete()
+    .eq('competition_code','COPPA_ITALIA')
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+  if(delFixtures.error) return msg(delFixtures.error.message,true);
+
+  if(cupGroupIds.length){
+    const delMembership=await s.from('competition_group_teams')
+      .delete()
+      .eq('team_id',teamId)
+      .in('group_id',cupGroupIds);
+    if(delMembership.error) return msg(delMembership.error.message,true);
+  }
+
+  msg(`${teamName} è stata rimossa soltanto dalla Coppa Italia.`);
+  loadAll();
+}
+window.removeFromCup=removeFromCup;
 $('competition').onchange=loadAll;guard().then(loadAll);
 </script></main>
 <script>
