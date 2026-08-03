@@ -1,5 +1,6 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AICS Padel Championship Manager</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+<script>window.addEventListener('load',()=>{ if(typeof loadPublication==='function') loadPublication(); });</script><script src="config.js"></script><style>
 :root{
  --blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;
  --bg:#f4f8fc;--panel:#fff;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;
@@ -121,4 +122,5 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
 </body></html>

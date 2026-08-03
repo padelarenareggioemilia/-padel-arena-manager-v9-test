@@ -218,16 +218,18 @@ async function init(){
       sb.from('public_championship_status').select('*'),
       sb.from('public_championship_publication').select('*')
     ]);
-    const mandatoryError=t.error||g.error||m.error||f.error||w.error;if(mandatoryError)throw mandatoryError;
+    const mandatoryError=t.error||g.error||m.error||f.error;
+    if(mandatoryError)throw mandatoryError;
     teams=t.data||[];groups=g.data||[];members=m.data||[];fixtures=f.data||[];statuses=w.data||[];
-    publication=p.error?[]:(p.data||[]);
+    publication=p.error?[]:(p.data||[]);statuses=w.error?[]:(w.data||[]);
     renderCards();renderDay();renderCompetition();
   }catch(e){
-    $('errorBox').textContent='Portale pubblico non disponibile: '+(e.message||e);
+    $('errorBox').textContent='Errore di collegamento al portale: '+(e.message||e);
     $('errorBox').classList.remove('hidden');
   }
 }
 window.setDayView=setDayView;window.renderCompetition=renderCompetition;window.selectCompetition=selectCompetition;
 init();
 </script>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
 </body></html>
