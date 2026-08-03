@@ -7,6 +7,21 @@
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:12px 13px;border-radius:12px;border:1px solid #365474;background:#071523;color:#fff;font:inherit}.notice{padding:12px;border-radius:13px;background:#09182a;border:1px solid var(--line);margin:10px 0}.ok{border-color:#4ade80;background:#0b2a20}.err{border-color:#ef4444;background:#351316}
 .comp-logo{width:125px;height:125px;object-fit:contain;background:#fff;border-radius:18px;padding:4px}.group{border:1px solid #3b5e80;background:#09182a;border-radius:18px;padding:14px;margin:10px 0}.team-pill{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:12px;background:#10233b;border:1px solid #315676;margin:7px 0}.fixture{display:grid;grid-template-columns:130px 1fr 180px 150px auto;gap:10px;align-items:center;padding:11px;border:1px solid #315676;border-radius:14px;background:#09182a;margin:8px 0}.small{font-size:12px}.badge{display:inline-flex;padding:6px 9px;border-radius:999px;background:#17304e;border:1px solid #416b91;font-size:12px;font-weight:900}.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}
 @media(max-width:850px){.grid2,.grid3{grid-template-columns:1fr}.fixture{grid-template-columns:1fr}.fixture .btn{width:100%}.hero{align-items:flex-start}.comp-logo{width:95px;height:95px}}
+
+.cup-actions{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.cup-more{position:relative}
+.cup-more-btn{width:38px;height:38px;padding:0!important;border-radius:10px!important;font-size:22px!important;line-height:1!important}
+.cup-menu{position:absolute;right:0;top:44px;z-index:40;min-width:230px;background:#fff;border:1px solid #c9d8e8;border-radius:14px;box-shadow:0 16px 36px rgba(8,47,104,.18);padding:7px}
+.cup-menu button{width:100%;text-align:left;border:0;background:transparent;padding:10px 11px;border-radius:10px;font:inherit;font-weight:800;cursor:pointer;color:#0b2d59}
+.cup-menu button:hover{background:#edf4fb}
+.cup-menu .danger-item{color:#b51f2e;font-size:13px}
+.confirm-overlay{position:fixed;inset:0;background:rgba(4,24,50,.58);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px}
+.confirm-card{width:min(520px,100%);background:#fff;border-radius:20px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.confirm-card h2{margin-top:0}
+.confirm-team{font-size:18px;font-weight:1000;color:#0b2d59;padding:12px;border-radius:12px;background:#edf4fb;border:1px solid #c9d8e8}
+.confirm-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
+.btn-small-danger{background:#ce2b37;color:white;border:0;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer;font-size:13px}
+@media(max-width:760px){.cup-menu{right:-4px;min-width:210px}.cup-actions{width:100%}}
 </style><style>
 :root{
   --aics-blue:#164a95;
@@ -161,7 +176,26 @@ function render(){
 function teamRow(t,current){
   if(!t)return '';
   const isCup=$('competition').value==='COPPA_ITALIA';
-  return `<div class="team-pill"><div><b>${esc(t.name)}</b><div class="muted small">${esc(t.club_city||'')} ${esc(t.club_province||'')} · ${t.latitude!=null?'Coordinate presenti':'Coordinate mancanti'}</div></div><div class="actions"><select onchange="moveTeam('${t.id}',this.value)"><option value="">Non assegnata</option>${groups.map(g=>`<option value="${g.id}" ${current===g.id?'selected':''}>${esc(g.group_name)}</option>`).join('')}</select>${isCup?`<button class="btn danger tiny" onclick="removeFromCup('${t.id}',${JSON.stringify(t.name)})">Rimuovi dalla Coppa Italia</button>`:''}</div></div>`
+  return `<div class="team-pill">
+    <div>
+      <b>${esc(t.name)}</b>
+      <div class="muted small">${esc(t.club_city||'')} ${esc(t.club_province||'')} · ${t.latitude!=null?'Coordinate presenti':'Coordinate mancanti'}</div>
+    </div>
+    <div class="cup-actions">
+      <select onchange="moveTeam('${t.id}',this.value)">
+        <option value="">Non assegnata</option>
+        ${groups.map(g=>`<option value="${g.id}" ${current===g.id?'selected':''}>${esc(g.group_name)}</option>`).join('')}
+      </select>
+      ${isCup?`
+      <div class="cup-more">
+        <button class="btn secondary cup-more-btn" aria-label="Altre azioni" title="Altre azioni" onclick="toggleCupMenu(event,'${t.id}')">⋮</button>
+        <div id="cup-menu-${t.id}" class="cup-menu hidden">
+          <button onclick="focusTeamGroup('${t.id}')">✏️ Cambia girone</button>
+          <button class="danger-item" onclick="openCupRemoval('${t.id}',${JSON.stringify(t.name)})">🚫 Escludi dalla Coppa Italia…</button>
+        </div>
+      </div>`:''}
+    </div>
+  </div>`;
 }
 async function createEmptyGroups(){
  let n=Math.max(1,parseInt($('groupCount').value||'1'));let code=$('competition').value;
@@ -200,45 +234,117 @@ async function geocodeMissing(){
  msg('Geolocalizzazione completata.');loadAll()
 }
 
-async function removeFromCup(teamId,teamName){
-  if($('competition').value!=='COPPA_ITALIA') return;
-  if(!confirm(`Rimuovere “${teamName}” soltanto dalla Coppa Italia?\n\nLa squadra resterà iscritta alla propria Serie.`)) return;
 
-  const cupGroupIds=groups.map(g=>g.id);
-  const fixturesResult=await s.from('fixtures')
-    .select('id,status')
-    .eq('competition_code','COPPA_ITALIA')
-    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
-
-  if(fixturesResult.error) return msg(fixturesResult.error.message,true);
-
-  const protectedMatch=(fixturesResult.data||[]).some(f=>
-    ['giocata','omologata','homologated','completed'].includes(String(f.status||'').toLowerCase())
-  );
-  if(protectedMatch){
-    return msg('Rimozione bloccata: la squadra ha già gare giocate o omologate in Coppa Italia.',true);
-  }
-
-  const delFixtures=await s.from('fixtures')
-    .delete()
-    .eq('competition_code','COPPA_ITALIA')
-    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
-  if(delFixtures.error) return msg(delFixtures.error.message,true);
-
-  if(cupGroupIds.length){
-    const delMembership=await s.from('competition_group_teams')
-      .delete()
-      .eq('team_id',teamId)
-      .in('group_id',cupGroupIds);
-    if(delMembership.error) return msg(delMembership.error.message,true);
-  }
-
-  msg(`${teamName} è stata rimossa soltanto dalla Coppa Italia.`);
-  loadAll();
+function closeCupMenus(){
+  document.querySelectorAll('.cup-menu').forEach(menu=>menu.classList.add('hidden'));
 }
-window.removeFromCup=removeFromCup;
+function toggleCupMenu(event,teamId){
+  event.stopPropagation();
+  const target=$(`cup-menu-${teamId}`);
+  const willOpen=target.classList.contains('hidden');
+  closeCupMenus();
+  if(willOpen)target.classList.remove('hidden');
+}
+function focusTeamGroup(teamId){
+  closeCupMenus();
+  const select=document.querySelector(`select[onchange*="${teamId}"]`);
+  if(select){select.focus();select.scrollIntoView({behavior:'smooth',block:'center'});}
+}
+function openCupRemoval(teamId,teamName){
+  closeCupMenus();
+  $('cupRemovalTeamId').value=teamId;
+  $('cupRemovalTeamName').textContent=teamName;
+  $('cupRemovalMsg').classList.add('hidden');
+  $('confirmCupRemovalBtn').disabled=false;
+  $('confirmCupRemovalBtn').textContent='Conferma esclusione';
+  $('cupRemovalDialog').classList.remove('hidden');
+}
+function closeCupRemoval(){
+  $('cupRemovalDialog').classList.add('hidden');
+}
+function cupRemovalMessage(text,error=false){
+  $('cupRemovalMsg').textContent=text;
+  $('cupRemovalMsg').className='notice '+(error?'err':'ok');
+  $('cupRemovalMsg').classList.remove('hidden');
+}
+async function confirmCupRemoval(){
+  const teamId=$('cupRemovalTeamId').value;
+  const teamName=$('cupRemovalTeamName').textContent;
+  if(!teamId)return;
+
+  $('confirmCupRemovalBtn').disabled=true;
+  $('confirmCupRemovalBtn').textContent='Controllo in corso…';
+
+  try{
+    const cupGroupIds=groups.map(g=>g.id);
+
+    const fixtureCheck=await s.from('fixtures')
+      .select('id,status')
+      .eq('competition_code','COPPA_ITALIA')
+      .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+
+    if(fixtureCheck.error)throw fixtureCheck.error;
+
+    const protectedMatches=(fixtureCheck.data||[]).filter(f=>
+      ['giocata','omologata','homologated','completed'].includes(String(f.status||'').toLowerCase())
+    );
+
+    if(protectedMatches.length){
+      throw new Error(`Esclusione bloccata: risultano ${protectedMatches.length} partite già giocate o omologate.`);
+    }
+
+    const fixtureIds=(fixtureCheck.data||[]).map(f=>f.id);
+    if(fixtureIds.length){
+      const delFixtures=await s.from('fixtures').delete().in('id',fixtureIds);
+      if(delFixtures.error)throw delFixtures.error;
+    }
+
+    if(cupGroupIds.length){
+      const delMembership=await s.from('competition_group_teams')
+        .delete()
+        .eq('team_id',teamId)
+        .in('group_id',cupGroupIds);
+      if(delMembership.error)throw delMembership.error;
+    }
+
+    cupRemovalMessage(`${teamName} è stata esclusa soltanto dalla Coppa Italia.`);
+    setTimeout(async()=>{
+      closeCupRemoval();
+      await loadAll();
+    },700);
+
+  }catch(error){
+    cupRemovalMessage(error?.message||'Errore durante l’esclusione.',true);
+    $('confirmCupRemovalBtn').disabled=false;
+  }finally{
+    $('confirmCupRemovalBtn').textContent='Conferma esclusione';
+  }
+}
+document.addEventListener('click',event=>{
+  if(!event.target.closest('.cup-more'))closeCupMenus();
+});
+window.toggleCupMenu=toggleCupMenu;
+window.focusTeamGroup=focusTeamGroup;
+window.openCupRemoval=openCupRemoval;
+window.closeCupRemoval=closeCupRemoval;
+window.confirmCupRemoval=confirmCupRemoval;
 $('competition').onchange=loadAll;guard().then(loadAll);
-</script></main>
+</script>
+<div id="cupRemovalDialog" class="confirm-overlay hidden">
+  <div class="confirm-card">
+    <h2>Escludere dalla Coppa Italia?</h2>
+    <p>La squadra verrà rimossa esclusivamente dalla Coppa Italia e resterà regolarmente iscritta alla propria Serie.</p>
+    <div id="cupRemovalTeamName" class="confirm-team"></div>
+    <div id="cupRemovalMsg" class="notice hidden"></div>
+    <input type="hidden" id="cupRemovalTeamId">
+    <div class="confirm-actions">
+      <button class="btn secondary" onclick="closeCupRemoval()">Annulla</button>
+      <button id="confirmCupRemovalBtn" class="btn-small-danger" onclick="confirmCupRemoval()">Conferma esclusione</button>
+    </div>
+  </div>
+</div>
+
+</main>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
