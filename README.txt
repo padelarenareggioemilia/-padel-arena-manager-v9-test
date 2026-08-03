@@ -1,22 +1,12 @@
-AICS PADEL CHAMPIONSHIP V9.6.3 — FIX ESCLUSIONE COPPA ITALIA
+AICS PADEL CHAMPIONSHIP V9.7.0 — COPPA ITALIA 32
 
-PROBLEMA INDIVIDUATO
-Il pulsante non reagiva perché il nome della squadra veniva inserito direttamente
-nell'attributo onclick. Nomi con virgolette, apostrofi o caratteri particolari
-rompevano il comando JavaScript.
-
-CORREZIONE
-- Il pulsante passa ora soltanto l'ID della squadra.
-- Il nome viene recuperato in sicurezza dai dati già caricati.
-- Il menu ⋮ apre sempre la finestra di conferma.
-- I pulsanti sono type="button" e non possono inviare accidentalmente moduli.
-- Al clic compare subito un messaggio visibile.
-- La conferma continua a rimuovere la squadra soltanto dalla Coppa Italia.
+- 32 qualificate dalla fase a gironi.
+- Sedicesimi, ottavi e quarti in casa della meglio piazzata nei gironi.
+- Semifinali e finale all’Eden Padel Club.
+- Ripresa a febbraio 2027.
+- Date preimpostate ma modificabili: 7, 14, 21, 28 febbraio; finale 7 marzo 2027.
 
 INSTALLAZIONE
-Su GitHub sostituisci soltanto:
-- groups.html
-
-Non serve SQL.
-Apri:
-groups.html?v=963
+1. Esegui SUPABASE_V9_7_UPDATE.sql.
+2. Carica cup-italia.html e sostituisci index.html e competitions.html.
+3. Apri cup-italia.html?v=970.
