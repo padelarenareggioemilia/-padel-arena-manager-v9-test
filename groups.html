@@ -1,0 +1,72 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gestione gironi</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
+:root{--bg:#06111f;--panel:#10233b;--panel2:#09182a;--line:#315676;--text:#f8fafc;--muted:#a9bacd;--lime:#9dff25;--blue:#16a8ff;--red:#ef4444;--amber:#f6c453}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 90% 0%,#123f61,transparent 34%),linear-gradient(180deg,#06111f,#040b14);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+.shell{max-width:1200px;margin:auto;padding:16px 14px 90px}.hero{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{display:flex;align-items:center;gap:13px}.mark{width:62px;height:62px;border-radius:18px;background:linear-gradient(135deg,var(--lime),var(--blue));display:grid;place-items:center;color:#07111f;font-weight:1000}.muted{color:var(--muted)}
+.card,.top{background:rgba(16,35,59,.97);border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0}.nav,.actions,.filters{display:flex;gap:8px;flex-wrap:wrap}.btn{font:inherit;border:0;border-radius:12px;padding:12px 14px;font-weight:900;cursor:pointer}.primary{background:var(--lime);color:#07111f}.secondary{background:#17304e;color:#fff;border:1px solid #3c5d7d}.danger{background:#7f1d1d;color:#fff}.ghost{background:transparent;color:#fff;border:1px solid #3c5d7d}.blue{background:var(--blue);color:#06111f}.hidden{display:none!important}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:12px 13px;border-radius:12px;border:1px solid #365474;background:#071523;color:#fff;font:inherit}.notice{padding:12px;border-radius:13px;background:#09182a;border:1px solid var(--line);margin:10px 0}.ok{border-color:#4ade80;background:#0b2a20}.err{border-color:#ef4444;background:#351316}
+.comp-logo{width:125px;height:125px;object-fit:contain;background:#fff;border-radius:18px;padding:4px}.group{border:1px solid #3b5e80;background:#09182a;border-radius:18px;padding:14px;margin:10px 0}.team-pill{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:12px;background:#10233b;border:1px solid #315676;margin:7px 0}.fixture{display:grid;grid-template-columns:130px 1fr 180px 150px auto;gap:10px;align-items:center;padding:11px;border:1px solid #315676;border-radius:14px;background:#09182a;margin:8px 0}.small{font-size:12px}.badge{display:inline-flex;padding:6px 9px;border-radius:999px;background:#17304e;border:1px solid #416b91;font-size:12px;font-weight:900}.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}
+@media(max-width:850px){.grid2,.grid3{grid-template-columns:1fr}.fixture{grid-template-columns:1fr}.fixture .btn{width:100%}.hero{align-items:flex-start}.comp-logo{width:95px;height:95px}}
+</style></head><body><main class="shell">
+<div class="top"><div class="nav"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='index.html'">⌂ Home</button><button class="btn secondary" onclick="location.href='competitions.html'">Competizioni</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button></div></div>
+<header class="hero"><div class="brand"><div class="mark">G</div><div><h1 style="margin:0">Gestione gironi</h1><div class="muted">Divisione manuale o automatica per vicinanza geografica</div></div></div></header>
+<section class="card"><div class="grid3"><div class="field"><label>Competizione</label><select id="competition"><option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option><option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option></select></div><div class="field"><label>Numero gironi</label><input id="groupCount" type="number" min="1" value="1"></div><div class="field"><label>Modalità automatica</label><select id="autoMode"><option value="geo">Geografica</option><option value="balanced">Bilanciata</option></select></div></div>
+<div class="actions"><button class="btn primary" onclick="createEmptyGroups()">Crea/aggiorna gironi</button><button class="btn blue" onclick="autoAssign()">Assegna automaticamente</button><button class="btn secondary" onclick="geocodeMissing()">Geolocalizza club mancanti</button><button class="btn secondary" onclick="loadAll()">Aggiorna</button></div><div id="msg" class="notice hidden"></div></section>
+<section class="card"><div class="section-title"><div><h2 style="margin:0">Squadre non assegnate</h2><div class="muted small">Trascina con i pulsanti nella sezione desiderata.</div></div></div><div id="unassigned"></div></section>
+<section id="groups"></section>
+<script>
+const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),$=i=>document.getElementById(i);let teams=[],groups=[],members=[];
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+function msg(t,e=false){$('msg').textContent=t;$('msg').className='notice '+(e?'err':'ok');$('msg').classList.remove('hidden')}
+async function guard(){let q=await s.auth.getSession();if(!q.data.session)return location.href='login.html';let p=await s.from('profiles').select('role').eq('id',q.data.session.user.id).single();if(p.error||p.data.role!=='admin')return location.href='login.html'}
+function compSeries(){let v=$('competition').value;return v==='SERIE_A'?'Serie A':v==='SERIE_B'?'Serie B':v==='SERIE_C'?'Serie C':null}
+async function loadAll(){
+ let series=compSeries();let tq=s.from('teams').select('*').order('name');if(series)tq=tq.eq('series',series);
+ let [tr,gr,mr]=await Promise.all([tq,s.from('competition_groups').select('*').eq('competition_code',$('competition').value).order('sort_order'),s.from('competition_group_teams').select('*')]);
+ if(tr.error||gr.error||mr.error)return msg((tr.error||gr.error||mr.error).message,true);
+ teams=tr.data||[];groups=gr.data||[];members=(mr.data||[]).filter(m=>groups.some(g=>g.id===m.group_id));render()
+}
+function render(){
+ let assigned=new Set(members.map(m=>m.team_id));
+ $('unassigned').innerHTML=teams.filter(t=>!assigned.has(t.id)).map(t=>teamRow(t,null)).join('')||'<div class="notice">Tutte le squadre sono assegnate.</div>';
+ $('groups').innerHTML=groups.map(g=>`<section class="card"><div class="section-title"><h2>${esc(g.group_name)}</h2><span class="badge">${members.filter(m=>m.group_id===g.id).length} squadre</span></div>${members.filter(m=>m.group_id===g.id).map(m=>teamRow(teams.find(t=>t.id===m.team_id),g.id)).join('')||'<div class="notice">Girone vuoto.</div>'}</section>`).join('')
+}
+function teamRow(t,current){if(!t)return '';return `<div class="team-pill"><div><b>${esc(t.name)}</b><div class="muted small">${esc(t.club_city||'')} ${esc(t.club_province||'')} · ${t.latitude!=null?'Coordinate presenti':'Coordinate mancanti'}</div></div><select onchange="moveTeam('${t.id}',this.value)"><option value="">Non assegnata</option>${groups.map(g=>`<option value="${g.id}" ${current===g.id?'selected':''}>${esc(g.group_name)}</option>`).join('')}</select></div>`}
+async function createEmptyGroups(){
+ let n=Math.max(1,parseInt($('groupCount').value||'1'));let code=$('competition').value;
+ let del=await s.from('competition_groups').delete().eq('competition_code',code);if(del.error)return msg(del.error.message,true);
+ let payload=Array.from({length:n},(_,i)=>({competition_code:code,group_name:'Girone '+String.fromCharCode(65+i),sort_order:i+1}));
+ let r=await s.from('competition_groups').insert(payload);if(r.error)return msg(r.error.message,true);
+ await s.from('competition_settings').upsert({competition_code:code,competition_name:code.replaceAll('_',' '),group_count:n,updated_at:new Date().toISOString()},{onConflict:'competition_code'});
+ msg('Gironi creati.');loadAll()
+}
+async function moveTeam(teamId,groupId){
+ await s.from('competition_group_teams').delete().eq('team_id',teamId).in('group_id',groups.map(g=>g.id));
+ if(groupId){let r=await s.from('competition_group_teams').insert({group_id:groupId,team_id:teamId});if(r.error)return msg(r.error.message,true)}
+ loadAll()
+}
+function distance(a,b){if(a.latitude==null||b.latitude==null)return 9999;let R=6371,dLat=(b.latitude-a.latitude)*Math.PI/180,dLon=(b.longitude-a.longitude)*Math.PI/180,x=Math.sin(dLat/2)**2+Math.cos(a.latitude*Math.PI/180)*Math.cos(b.latitude*Math.PI/180)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+async function autoAssign(){
+ if(!groups.length)return msg('Prima crea i gironi.',true);
+ await s.from('competition_group_teams').delete().in('group_id',groups.map(g=>g.id));
+ let buckets=groups.map(g=>({g,items:[]}));let sorted=[...teams];
+ if($('autoMode').value==='geo')sorted.sort((a,b)=>(a.latitude??999)-(b.latitude??999)||(a.longitude??999)-(b.longitude??999)||(a.club_province||'').localeCompare(b.club_province||''));
+ else sorted.sort((a,b)=>a.name.localeCompare(b.name));
+ sorted.forEach((t,i)=>buckets[i%buckets.length].items.push(t));
+ let payload=buckets.flatMap(b=>b.items.map((t,i)=>({group_id:b.g.id,team_id:t.id,seed:i+1})));
+ if(payload.length){let r=await s.from('competition_group_teams').insert(payload);if(r.error)return msg(r.error.message,true)}
+ msg('Squadre assegnate automaticamente.');loadAll()
+}
+async function geocodeMissing(){
+ let missing=teams.filter(t=>t.latitude==null&&((t.club_address||'')||(t.home_court||'')));
+ if(!missing.length)return msg('Tutte le squadre hanno già le coordinate.');
+ msg('Geolocalizzazione in corso: non chiudere la pagina.');
+ for(let i=0;i<missing.length;i++){
+  let t=missing[i],q=[t.club_address,t.club_city,t.club_province,'Italia'].filter(Boolean).join(', ');
+  try{let r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q),{headers:{'Accept-Language':'it'}});let j=await r.json();if(j[0])await s.from('teams').update({latitude:parseFloat(j[0].lat),longitude:parseFloat(j[0].lon),geocoded_at:new Date().toISOString()}).eq('id',t.id)}catch(e){}
+  await new Promise(res=>setTimeout(res,1100))
+ }
+ msg('Geolocalizzazione completata.');loadAll()
+}
+$('competition').onchange=loadAll;guard().then(loadAll);
+</script></main></body></html>
