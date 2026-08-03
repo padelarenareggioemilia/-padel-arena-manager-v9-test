@@ -13,7 +13,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 .shell{max-width:1250px;margin:auto;padding:18px 13px 80px}.hero,.card{border:1px solid var(--line);border-radius:22px;box-shadow:0 14px 32px rgba(8,47,104,.11)}
 .hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:18px;display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{display:flex;align-items:center;gap:15px}.logo{width:126px;height:76px;object-fit:contain;background:#fff;padding:7px;border-radius:15px}.hero h1{margin:0;font-size:clamp(24px,4vw,42px);letter-spacing:.03em}.hero p{margin:4px 0 0;color:#dce9f7}.card{background:#fff;padding:16px;margin:13px 0}
 .nav,.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}.btn,.tab{border:0;border-radius:12px;padding:11px 14px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue2);border:1px solid var(--blue)}.tab{background:#edf4fb;color:var(--blue2);border:1px solid var(--line)}.tab.active{background:var(--blue);color:#fff}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#e6eff9;border:1px solid var(--line);font-size:12px;font-weight:900}.muted{color:var(--muted)}.small{font-size:12px}.hidden{display:none!important}
-.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.comp{padding:15px;border:1px solid var(--line);border-radius:17px;background:#fff;text-align:center}.comp strong{font-size:23px;display:block;margin-top:5px}.tricolore{height:5px;border-radius:999px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);border:1px solid #dbe5ef;margin:10px 0}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.comp{padding:12px;border:1px solid var(--line);border-radius:17px;background:#fff;text-align:center;cursor:pointer;transition:.18s;min-height:150px}.comp:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(8,47,104,.13)}.comp.active{outline:3px solid var(--green);background:#f4fff8}.comp img{width:82px;height:82px;object-fit:contain;display:block;margin:0 auto 6px}.comp strong{font-size:18px;display:block;margin-top:5px}.tricolore{height:5px;border-radius:999px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);border:1px solid #dbe5ef;margin:10px 0}
 .fixture{display:grid;grid-template-columns:115px 1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #dce6f0}.fixture:last-child{border-bottom:0}.score{font-size:19px;font-weight:1000;color:var(--blue2)}.round{font-weight:900}.status-live{background:#fff3cd;border-color:#e5c04d}.status-done{background:#e9f8ef;border-color:#67bd85}
 .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:15px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{padding:10px;border-bottom:1px solid #dde7f1;text-align:center}th{background:var(--blue);color:#fff;position:sticky;top:0}td:nth-child(2),th:nth-child(2){text-align:left}.leader td{font-weight:900;background:#fff9e7}
 .group-title{margin:18px 0 8px;padding:10px 13px;border-left:5px solid var(--green);background:var(--soft);border-radius:0 12px 12px 0}
@@ -33,6 +33,9 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 <div class="tricolore"></div>
 
 <section class="card">
+  <div class="notice">
+    Seleziona una competizione cliccando sul relativo stemma.
+  </div>
   <div class="grid5" id="competitionCards"></div>
 </section>
 
@@ -48,7 +51,8 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 <section class="card">
   <div class="actions" style="justify-content:space-between;align-items:center">
     <div><h2 style="margin:0">Struttura e classifiche</h2><div class="muted">Serie A, Serie B, Serie C, Coppa Italia e Supercoppa.</div></div>
-    <select id="competitionFilter" onchange="renderCompetition()" style="padding:11px;border-radius:12px;border:1px solid var(--line)">
+    <div id="selectedCompetitionTitle" class="badge">Serie A</div>
+    <select id="competitionFilter" class="hidden" onchange="renderCompetition()">
       <option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option><option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option><option value="SUPERCOPPA">Supercoppa</option>
     </select>
   </div>
@@ -61,12 +65,31 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 const cfg=window.PAM_V9_CONFIG;
 const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 const $=id=>document.getElementById(id);
-let teams=[],groups=[],members=[],fixtures=[],statuses=[];
+let teams=[],groups=[],members=[],fixtures=[],statuses=[],publication=[];
+const competitionLogos={
+  SERIE_A:'assets/aics-serie-a-2027.png',
+  SERIE_B:'assets/aics-serie-b-2027.png',
+  SERIE_C:'assets/aics-serie-c-2027.png',
+  COPPA_ITALIA:'assets/aics-coppa-italia-2027.png',
+  SUPERCOPPA:'assets/aics-supercoppa-2027.png'
+};
 let selectedDayView='current';
 
 const codeLabels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 function teamName(id,placeholder){return teams.find(t=>t.id===id)?.name||placeholder||'Da definire'}
+function isPublished(code){
+  const row=publication.find(p=>p.competition_code===code);
+  return row ? row.is_published!==false : true;
+}
+function selectCompetition(code){
+  if(!isPublished(code))return;
+  $('competitionFilter').value=code;
+  $('selectedCompetitionTitle').textContent=codeLabels[code];
+  renderCards();
+  renderCompetition();
+  document.querySelector('#competitionContent').scrollIntoView({behavior:'smooth',block:'start'});
+}
 function groupName(id){return groups.find(g=>g.id===id)?.group_name||'Girone unico'}
 function statusFor(id){return statuses.find(s=>s.fixture_id===id)?.workflow_data||{}}
 function resultObject(id){
@@ -122,7 +145,7 @@ function setDayView(view){
   renderDay();
 }
 function renderDay(){
-  const codes=['SERIE_A','SERIE_B','SERIE_C','COPPA_ITALIA'];
+  const codes=['SERIE_A','SERIE_B','SERIE_C','COPPA_ITALIA'].filter(isPublished);
   const sections=[];
   codes.forEach(code=>{
     const round=chosenRound(code);
@@ -151,6 +174,10 @@ function tableHtml(rows){
 }
 function renderCompetition(){
   const code=$('competitionFilter').value;
+  if(!isPublished(code)){
+    $('competitionContent').innerHTML='<div class="notice">Questa competizione non è ancora stata pubblicata dall’organizzazione.</div>';
+    return;
+  }
   if(code==='SUPERCOPPA'){
     const list=fixtures.filter(f=>f.competition_code==='SUPERCOPPA');
     $('competitionContent').innerHTML=list.length?list.map(fixtureHtml).join(''):'<div class="notice">Supercoppa non ancora programmata.</div>';return;
@@ -167,31 +194,40 @@ function renderCompetition(){
 }
 function renderCards(){
   const codes=['SERIE_A','SERIE_B','SERIE_C','COPPA_ITALIA','SUPERCOPPA'];
+  const selected=$('competitionFilter').value;
   $('competitionCards').innerHTML=codes.map(code=>{
     const teamIds=new Set();
     groups.filter(g=>g.competition_code===code).forEach(g=>members.filter(m=>m.group_id===g.id).forEach(m=>teamIds.add(m.team_id)));
     const games=fixtures.filter(f=>f.competition_code===code);
-    return `<div class="comp"><span class="badge">${codeLabels[code]}</span><strong>${code==='SUPERCOPPA'?games.length:teamIds.size}</strong><div class="muted small">${code==='SUPERCOPPA'?'gara programmata':'squadre'}</div></div>`;
+    const published=isPublished(code);
+    return `<button class="comp ${selected===code?'active':''}" ${published?`onclick="selectCompetition('${code}')"`:'disabled'} title="${published?'Apri '+codeLabels[code]:'Non ancora pubblicata'}">
+      <img src="${competitionLogos[code]}" alt="${codeLabels[code]}" onerror="this.style.display='none'">
+      <span class="badge">${published?'PUBBLICATA':'NON PUBBLICATA'}</span>
+      <strong>${codeLabels[code]}</strong>
+      <div class="muted small">${code==='SUPERCOPPA'?games.length+' gara':teamIds.size+' squadre'}</div>
+    </button>`;
   }).join('');
 }
 async function init(){
   try{
-    const [t,g,m,f,w]=await Promise.all([
+    const [t,g,m,f,w,p]=await Promise.all([
       sb.from('public_championship_teams').select('*'),
       sb.from('public_championship_groups').select('*'),
       sb.from('public_championship_group_teams').select('*'),
       sb.from('public_championship_fixtures').select('*').order('scheduled_at'),
-      sb.from('public_championship_status').select('*')
+      sb.from('public_championship_status').select('*'),
+      sb.from('public_championship_publication').select('*')
     ]);
-    const error=t.error||g.error||m.error||f.error||w.error;if(error)throw error;
+    const mandatoryError=t.error||g.error||m.error||f.error||w.error;if(mandatoryError)throw mandatoryError;
     teams=t.data||[];groups=g.data||[];members=m.data||[];fixtures=f.data||[];statuses=w.data||[];
+    publication=p.error?[]:(p.data||[]);
     renderCards();renderDay();renderCompetition();
   }catch(e){
     $('errorBox').textContent='Portale pubblico non disponibile: '+(e.message||e);
     $('errorBox').classList.remove('hidden');
   }
 }
-window.setDayView=setDayView;window.renderCompetition=renderCompetition;
+window.setDayView=setDayView;window.renderCompetition=renderCompetition;window.selectCompetition=selectCompetition;
 init();
 </script>
 </body></html>

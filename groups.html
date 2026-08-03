@@ -188,10 +188,10 @@ function teamRow(t,current){
       </select>
       ${isCup?`
       <div class="cup-more">
-        <button class="btn secondary cup-more-btn" aria-label="Altre azioni" title="Altre azioni" onclick="toggleCupMenu(event,'${t.id}')">⋮</button>
+        <button type="button" class="btn secondary cup-more-btn" aria-label="Altre azioni" title="Altre azioni" onclick="toggleCupMenu(event,'${t.id}')">⋮</button>
         <div id="cup-menu-${t.id}" class="cup-menu hidden">
           <button onclick="focusTeamGroup('${t.id}')">✏️ Cambia girone</button>
-          <button class="danger-item" onclick="openCupRemoval('${t.id}',${JSON.stringify(t.name)})">🚫 Escludi dalla Coppa Italia…</button>
+          <button type="button" class="danger-item" onclick="openCupRemoval('${t.id}')">🚫 Escludi dalla Coppa Italia…</button>
         </div>
       </div>`:''}
     </div>
@@ -250,11 +250,18 @@ function focusTeamGroup(teamId){
   const select=document.querySelector(`select[onchange*="${teamId}"]`);
   if(select){select.focus();select.scrollIntoView({behavior:'smooth',block:'center'});}
 }
-function openCupRemoval(teamId,teamName){
+function openCupRemoval(teamId){
   closeCupMenus();
+  const team=teams.find(item=>item.id===teamId);
+  if(!team){
+    msg('Squadra non trovata. Aggiorna la pagina e riprova.',true);
+    return;
+  }
   $('cupRemovalTeamId').value=teamId;
-  $('cupRemovalTeamName').textContent=teamName;
-  $('cupRemovalMsg').classList.add('hidden');
+  $('cupRemovalTeamName').textContent=team.name;
+  $('cupRemovalMsg').textContent='Conferma l’esclusione della squadra dalla sola Coppa Italia.';
+  $('cupRemovalMsg').className='notice';
+  $('cupRemovalMsg').classList.remove('hidden');
   $('confirmCupRemovalBtn').disabled=false;
   $('confirmCupRemovalBtn').textContent='Conferma esclusione';
   $('cupRemovalDialog').classList.remove('hidden');
@@ -338,8 +345,8 @@ $('competition').onchange=loadAll;guard().then(loadAll);
     <div id="cupRemovalMsg" class="notice hidden"></div>
     <input type="hidden" id="cupRemovalTeamId">
     <div class="confirm-actions">
-      <button class="btn secondary" onclick="closeCupRemoval()">Annulla</button>
-      <button id="confirmCupRemovalBtn" class="btn-small-danger" onclick="confirmCupRemoval()">Conferma esclusione</button>
+      <button type="button" class="btn secondary" onclick="closeCupRemoval()">Annulla</button>
+      <button type="button" id="confirmCupRemovalBtn" class="btn-small-danger" onclick="confirmCupRemoval()">Conferma esclusione</button>
     </div>
   </div>
 </div>

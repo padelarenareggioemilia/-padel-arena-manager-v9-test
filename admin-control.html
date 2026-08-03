@@ -54,16 +54,64 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 <section class="card"><div class="grid2"><div class="field"><label>Competizione da pubblicare</label><select id="competition"><option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option><option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option></select></div><div class="field"><label>Pubblicazione calendario</label><button class="btn success" style="width:100%" onclick="publishCalendar()">Pubblica e avvia prima formazione</button></div></div>
 <div class="notice warn"><b>Prima giornata:</b> la selezione della formazione si apre al momento della pubblicazione del calendario. Per le giornate successive si apre quando omologhi la precedente partita della squadra.</div></section>
 <section class="card"><h2>Partite da omologare</h2><div id="matches"></div></section>
+
+<section class="card" id="publicationPanel">
+  <div class="section-title">
+    <div>
+      <h2 style="margin:0">Pubblicazione portale pubblico</h2>
+      <div class="muted small">Decidi cosa rendere visibile agli utenti liberi. L’amministratore vede sempre tutto.</div>
+    </div>
+    <button class="btn secondary" onclick="loadPublication()">Aggiorna</button>
+  </div>
+  <div id="publicationControls" class="grid3"></div>
+  <div id="publicationMsg" class="notice hidden"></div>
+</section>
+
 <script>
 const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=i=>document.getElementById(i);
 function show(t,e=false){$('msg').textContent=t;$('msg').className='notice '+(e?'err':'ok');$('msg').classList.remove('hidden')}
+
+function publicationMessage(text,error=false){
+  const box=$('publicationMsg');
+  box.textContent=text;
+  box.className='notice '+(error?'err':'ok');
+  box.classList.remove('hidden');
+}
+async function loadPublication(){
+  const result=await s.from('championship_publication').select('*').order('competition_code');
+  if(result.error)return publicationMessage(result.error.message,true);
+  const map=Object.fromEntries((result.data||[]).map(r=>[r.competition_code,r]));
+  const codes=['SERIE_A','SERIE_B','SERIE_C','COPPA_ITALIA','SUPERCOPPA'];
+  $('publicationControls').innerHTML=codes.map(code=>{
+    const active=map[code]?.is_published!==false;
+    return `<div class="card" style="margin:0;padding:12px;text-align:center">
+      <img src="${publicationLogos[code]}" alt="${publicationLabels[code]}" style="width:72px;height:72px;object-fit:contain" onerror="this.style.display='none'">
+      <b style="display:block">${publicationLabels[code]}</b>
+      <label style="display:flex;justify-content:center;gap:8px;margin-top:10px">
+        <input type="checkbox" ${active?'checked':''} onchange="setPublication('${code}',this.checked)">
+        <span>${active?'Pubblicata':'Non pubblicata'}</span>
+      </label>
+    </div>`;
+  }).join('');
+}
+async function setPublication(code,isPublished){
+  const result=await s.from('championship_publication').upsert({
+    competition_code:code,
+    is_published:isPublished,
+    published_at:isPublished?new Date().toISOString():null,
+    updated_at:new Date().toISOString()
+  },{onConflict:'competition_code'});
+  if(result.error)return publicationMessage(result.error.message,true);
+  publicationMessage(`${publicationLabels[code]}: ${isPublished?'pubblicata':'nascosta'} sul portale pubblico.`);
+  loadPublication();
+}
 async function guard(){let q=await sb.auth.getSession();if(!q.data.session)return location.href='login.html';let p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).single();if(p.error||p.data.role!=='admin')location.href='index.html'}
 async function loadControls(){let r=await sb.from('championship_controls').select('*').eq('id',1).single();if(r.error)return show(r.error.message,true);captains.checked=r.data.captains_enabled;players.checked=r.data.players_enabled;formations.checked=r.data.formations_enabled;results.checked=r.data.results_enabled}
 async function saveControls(){let q=await sb.auth.getSession();let r=await sb.from('championship_controls').update({captains_enabled:captains.checked,players_enabled:players.checked,formations_enabled:formations.checked,results_enabled:results.checked,updated_at:new Date().toISOString(),updated_by:q.data.session.user.id}).eq('id',1);if(r.error)return show(r.error.message,true);show('Impostazioni aggiornate.')}
 async function publishCalendar(){if(!confirm('Pubblicare il calendario e aprire la prima formazione di ogni squadra?'))return;let r=await sb.rpc('publish_competition_calendar',{p_competition_code:competition.value});if(r.error)return show(r.error.message,true);show('Calendario pubblicato: '+r.data+' partite attivate.');loadMatches()}
 async function loadMatches(){let [f,w,t]=await Promise.all([sb.from('fixtures').select('*').order('scheduled_at',{ascending:false}).limit(80),sb.from('match_workflows').select('*'),sb.from('teams').select('id,name')]);let names=Object.fromEntries((t.data||[]).map(x=>[x.id,x.name])),wf=Object.fromEntries((w.data||[]).map(x=>[x.fixture_id,x]));$('matches').innerHTML=(f.data||[]).map(x=>{let z=wf[x.id]||{};return `<div class="match"><div class="match-head"><div><b>${names[x.home_team_id]||x.home_placeholder||'Da definire'} – ${names[x.away_team_id]||x.away_placeholder||'Da definire'}</b><div class="muted small">${x.scheduled_at?new Date(x.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${x.venue||''}</div></div><span class="badge">${z.homologated_at?'Omologata':'Non omologata'}</span></div><div class="actions" style="margin-top:10px"><button class="btn secondary" onclick="location.href='match-center.html?id=${x.id}'">Apri gara</button>${z.homologated_at?'':`<button class="btn success" onclick="homologate('${x.id}')">Omologa e apri formazione successiva</button>`}</div></div>`}).join('')||'<div class="notice">Nessuna partita.</div>'}
 async function homologate(id){if(!confirm('Omologare la partita? Si aprirà automaticamente la formazione della gara successiva per le squadre interessate.'))return;let r=await sb.rpc('homologate_match',{p_fixture_id:id});if(r.error)return show(r.error.message,true);show('Partita omologata.');loadMatches()}
-guard().then(()=>Promise.all([loadControls(),loadMatches()]));
+guard().then(()=>{loadPublication();return ()=>Promise.all([loadControls(),loadMatches()]));
 </script></main>
 <script>
 if ('serviceWorker' in navigator) {
