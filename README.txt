@@ -1,25 +1,20 @@
-PADEL ARENA MANAGER V9.4.0 — IMPORTA / ESPORTA EXCEL E CSV
+PADEL ARENA MANAGER V9.4.1 — FILTRO SQUADRA EXPORT
 
-FUNZIONE RISERVATA ALL'AMMINISTRATORE
-- Esportazione squadre in Excel o CSV.
-- Esportazione giocatori in Excel o CSV.
-- File Excel con intestazioni e filtro automatico.
-- Filtri per Serie A, Serie B, Serie C e stato del giocatore.
-- Modelli vuoti pronti per l'importazione.
-- Importazione Excel e CSV con anteprima.
-- Riconoscimento dei duplicati tramite ID, nome squadra o email giocatore.
-- Scelta tra aggiornare o saltare i record già presenti.
-- Nessun dato viene salvato prima della conferma finale.
-- Messaggi di errore con numero della riga del file.
-- Le colonne esportate sono pensate per essere ordinate e filtrate in Excel.
+MODIFICA
+- Nei filtri di esportazione è ora selezionabile anche la singola squadra.
+- Il filtro squadra funziona sia per:
+  - esportazione squadre;
+  - esportazione giocatori.
+- Cambiando la serie, l'elenco squadre si aggiorna automaticamente.
+- È ancora possibile esportare:
+  - tutte le squadre;
+  - tutte le squadre di una serie;
+  - una sola squadra;
+  - i soli giocatori di una squadra.
 
 INSTALLAZIONE
-1. Esegui integralmente SUPABASE_V9_4_UPDATE.sql nel Supabase V9 Test.
-2. Su GitHub carica:
-   - data-exchange.html
-   - index.html
-   oppure sostituisci tutti i file del pacchetto.
-3. Fai Commit changes e attendi circa un minuto.
+Su GitHub sostituisci integralmente:
+- data-exchange.html
 
-Il file Excel viene elaborato direttamente nel browser.
-Nessuna squadra o giocatore viene cancellato automaticamente.
+Non serve eseguire SQL.
+Nessun dato viene modificato o cancellato.

@@ -81,11 +81,17 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
       </div>
       <div class="field">
         <label>Serie</label>
-        <select id="seriesFilter">
+        <select id="seriesFilter" onchange="loadTeamFilter()">
           <option value="">Tutte</option>
           <option>Serie A</option>
           <option>Serie B</option>
           <option>Serie C</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Squadra</label>
+        <select id="teamFilter">
+          <option value="">Tutte le squadre</option>
         </select>
       </div>
       <div class="field">
@@ -237,9 +243,36 @@ function safeFilename(name){
   return name.replace(/[^a-z0-9_-]+/gi,'_');
 }
 
+
+async function loadTeamFilter(){
+  const select=$('teamFilter');
+  const current=select.value;
+
+  let query=sb.from('teams').select('id,name,series').order('series').order('name');
+  if($('seriesFilter').value){
+    query=query.eq('series',$('seriesFilter').value);
+  }
+
+  const result=await query;
+  if(result.error){
+    show('exportMsg',result.error.message,true);
+    return;
+  }
+
+  select.innerHTML='<option value="">Tutte le squadre</option>'+
+    (result.data||[]).map(team =>
+      `<option value="${team.id}">${team.name} · ${team.series||''}</option>`
+    ).join('');
+
+  if((result.data||[]).some(team=>team.id===current)){
+    select.value=current;
+  }
+}
+
 async function getTeams(){
   let query=sb.from('teams').select('*').order('series').order('name');
   if($('seriesFilter').value) query=query.eq('series',$('seriesFilter').value);
+  if($('teamFilter').value) query=query.eq('id',$('teamFilter').value);
   const r=await query;
   if(r.error) throw r.error;
   return r.data||[];
@@ -248,6 +281,7 @@ async function getTeams(){
 async function getPlayers(){
   let teamsQuery=sb.from('teams').select('id,name,series');
   if($('seriesFilter').value) teamsQuery=teamsQuery.eq('series',$('seriesFilter').value);
+  if($('teamFilter').value) teamsQuery=teamsQuery.eq('id',$('teamFilter').value);
   const tr=await teamsQuery;
   if(tr.error) throw tr.error;
   const allowed=new Set((tr.data||[]).map(t=>t.id));
@@ -535,7 +569,7 @@ function clearPreview(resetFile=true){
 
 $('duplicateMode').onchange=()=>importedRows.length&&analyzeRows();
 $('duplicateKey').onchange=()=>importedRows.length&&analyzeRows();
-guard();
+guard().then(loadTeamFilter);
 </script>
 </body>
 </html>
