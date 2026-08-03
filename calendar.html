@@ -207,7 +207,13 @@ label{color:var(--aics-blue-dark)!important}
     <button class="btn primary" onclick="previewCalendar()">Anteprima calendario</button><button id="confirmCalendarBtn" class="btn success hidden" onclick="confirmCalendar()">Conferma e salva calendario</button>
     <button class="btn secondary" onclick="loadFixtures()">Aggiorna elenco</button>
   </div>
-  <div id="msg" class="notice hidden"></div>
+  <div class="notice">
+In caso di sovrapposizione l’app prova automaticamente, nell’ordine:
+<b>inversione casa/trasferta</b>, <b>settimana precedente</b>,
+<b>settimana successiva</b> e poi fino a quattro settimane di distanza,
+controllando anche le partite già presenti nelle altre competizioni.
+</div>
+<div id="msg" class="notice hidden"></div>
 </section>
 
 <section class="card">
@@ -305,7 +311,7 @@ label{color:var(--aics-blue-dark)!important}
 const c=window.PAM_V9_CONFIG;
 const s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);
 const $=id=>document.getElementById(id);
-let teams=[],groups=[],members=[],fixtures=[],blackouts=[],pendingCalendar=[];
+let teams=[],groups=[],members=[],fixtures=[],allFixtures=[],blackouts=[],pendingCalendar=[];
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 
@@ -413,18 +419,20 @@ function roundRobin(arr){
 
 async function fetchData(){
   const code=$('competition').value;
-  const [tr,gr,mr,fr,br]=await Promise.all([
+  const [tr,gr,mr,fr,afr,br]=await Promise.all([
     s.from('teams').select('*'),
     s.from('competition_groups').select('*').eq('competition_code',code).order('sort_order'),
     s.from('competition_group_teams').select('*'),
     s.from('fixtures').select('*').eq('competition_code',code).order('scheduled_at'),
+    s.from('fixtures').select('*').order('scheduled_at'),
     s.from('calendar_blackouts').select('*').order('blackout_date')
   ]);
-  if(tr.error||gr.error||mr.error||fr.error||br.error) throw (tr.error||gr.error||mr.error||fr.error||br.error);
+  if(tr.error||gr.error||mr.error||fr.error||afr.error||br.error) throw (tr.error||gr.error||mr.error||fr.error||afr.error||br.error);
   teams=tr.data||[];
   groups=gr.data||[];
   members=(mr.data||[]).filter(m=>groups.some(g=>g.id===m.group_id));
   fixtures=fr.data||[];
+  allFixtures=afr.data||[];
   blackouts=br.data||[];
 }
 
@@ -484,6 +492,195 @@ function detectFacilityConflicts(matches){
 }
 function conflictDescription(c){
   return `${c.a._home_name} – ${c.a._away_name} (${c.a._local_weekday} ${c.a._local_date} ${c.a._local_time}) si sovrappone a ${c.b._home_name} – ${c.b._away_name} (${c.b._local_weekday} ${c.b._local_date} ${c.b._local_time}) nello stesso impianto/indirizzo.`;
+}
+
+
+function teamById(id){
+  return teams.find(team=>team.id===id);
+}
+
+function enrichExistingFixture(fixture){
+  const home=teamById(fixture.home_team_id);
+  const away=teamById(fixture.away_team_id);
+  const local=fixture.scheduled_at?localPartsFromISO(fixture.scheduled_at):{date:'',time:'',weekday:''};
+  return {
+    ...fixture,
+    _home_name:home?.name||fixture.home_placeholder||'Squadra',
+    _away_name:away?.name||fixture.away_placeholder||'Squadra',
+    _facility_key:facilityKey(home,fixture.venue),
+    _facility_label:[fixture.venue,home?.club_address,home?.club_city].filter(Boolean).join(' · '),
+    _duration_minutes:matchDurationMinutes(home),
+    _local_date:local.date,
+    _local_time:local.time,
+    _local_weekday:local.weekday
+  };
+}
+
+function overlaps(a,b){
+  if(!a.scheduled_at||!b.scheduled_at) return false;
+  const aStart=new Date(a.scheduled_at).getTime();
+  const bStart=new Date(b.scheduled_at).getTime();
+  const aEnd=aStart+(a._duration_minutes||120)*60000;
+  const bEnd=bStart+(b._duration_minutes||120)*60000;
+  return aStart<bEnd && bStart<aEnd;
+}
+
+function hasFacilityConflict(match,others){
+  return others.some(other=>
+    other!==match &&
+    match._facility_key &&
+    match._facility_key===other._facility_key &&
+    overlaps(match,other)
+  );
+}
+
+function hasTeamConflict(match,others){
+  return others.some(other=>{
+    if(other===match||!overlaps(match,other)) return false;
+    const ids=[match.home_team_id,match.away_team_id].filter(Boolean);
+    return ids.includes(other.home_team_id)||ids.includes(other.away_team_id);
+  });
+}
+
+function updateMatchSchedule(match,home,away,scheduledAt,resolution){
+  const local=localPartsFromISO(scheduledAt);
+  match.home_team_id=home.id;
+  match.away_team_id=away.id;
+  match.scheduled_at=scheduledAt;
+  match.venue=home.home_court;
+  match._home_name=home.name;
+  match._away_name=away.name;
+  match._configured_day=home.home_match_day;
+  match._configured_time=normalizeTime(home.home_match_time);
+  match._local_date=local.date;
+  match._local_time=local.time;
+  match._local_weekday=local.weekday;
+  match._facility_key=facilityKey(home,home.home_court);
+  match._facility_label=[home.home_court,home.club_address,home.club_city].filter(Boolean).join(' · ');
+  match._duration_minutes=matchDurationMinutes(home);
+  match._resolution=resolution;
+}
+
+function candidateAtWeekOffset(match,home,away,weekOffset,competitionCode){
+  const current=new Date(match.scheduled_at);
+  current.setDate(current.getDate()+weekOffset*7);
+  const base=dateKey(current);
+  const scheduledAt=nextAllowedHomeDate(base,home,0,competitionCode,1);
+  return {home,away,scheduledAt};
+}
+
+function candidateSwapHome(match,competitionCode){
+  const newHome=teamById(match.away_team_id);
+  const newAway=teamById(match.home_team_id);
+  if(!newHome||!newAway) return null;
+
+  const current=new Date(match.scheduled_at);
+  const roundBase=dateKey(current);
+  const scheduledAt=nextAllowedHomeDate(roundBase,newHome,0,competitionCode,1);
+  return {home:newHome,away:newAway,scheduledAt};
+}
+
+function candidateIsValid(candidate,match,working,existing){
+  if(!candidate) return false;
+  const test={...match};
+  updateMatchSchedule(test,candidate.home,candidate.away,candidate.scheduledAt,'test');
+  const others=[
+    ...working.filter(item=>item!==match),
+    ...existing
+  ];
+  return !hasFacilityConflict(test,others) && !hasTeamConflict(test,others);
+}
+
+function autoResolveConflicts(payload,competitionCode){
+  // Le gare di girone della competizione corrente verranno sostituite:
+  // non devono quindi essere considerate come occupazioni già esistenti.
+  const existing=allFixtures
+    .filter(f=>!(f.competition_code===competitionCode && f.phase==='Girone'))
+    .map(enrichExistingFixture);
+
+  const resolved=[];
+  const unresolved=[];
+
+  for(const match of payload){
+    const others=[...payload.filter(item=>item!==match),...existing];
+    if(!hasFacilityConflict(match,others) && !hasTeamConflict(match,others)) continue;
+
+    const originalHome=teamById(match.home_team_id);
+    const originalAway=teamById(match.away_team_id);
+    let solution=null;
+
+    // 1. Prima soluzione: invertire casa/trasferta.
+    const swapped=candidateSwapHome(match,competitionCode);
+    if(candidateIsValid(swapped,match,payload,existing)){
+      solution={
+        ...swapped,
+        label:`Casa/trasferta invertite: ${originalAway.name} gioca in casa`
+      };
+    }
+
+    // 2. Seconda soluzione: settimana precedente.
+    if(!solution){
+      const previous=candidateAtWeekOffset(match,originalHome,originalAway,-1,competitionCode);
+      if(candidateIsValid(previous,match,payload,existing)){
+        solution={...previous,label:'Partita anticipata di una settimana'};
+      }
+    }
+
+    // 3. Terza soluzione: settimana successiva.
+    if(!solution){
+      const next=candidateAtWeekOffset(match,originalHome,originalAway,1,competitionCode);
+      if(candidateIsValid(next,match,payload,existing)){
+        solution={...next,label:'Partita posticipata di una settimana'};
+      }
+    }
+
+    // 4. Ricerca estesa: fino a quattro settimane prima/dopo.
+    if(!solution){
+      for(let distance=2;distance<=4&&!solution;distance++){
+        for(const offset of [-distance,distance]){
+          const candidate=candidateAtWeekOffset(match,originalHome,originalAway,offset,competitionCode);
+          if(candidateIsValid(candidate,match,payload,existing)){
+            solution={
+              ...candidate,
+              label:offset<0
+                ? `Partita anticipata di ${Math.abs(offset)} settimane`
+                : `Partita posticipata di ${offset} settimane`
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    if(solution){
+      updateMatchSchedule(
+        match,
+        solution.home,
+        solution.away,
+        solution.scheduledAt,
+        solution.label
+      );
+      resolved.push(match);
+    }else{
+      unresolved.push(match);
+    }
+  }
+
+  // Verifica finale completa dopo tutte le correzioni.
+  const finalFacility=detectFacilityConflicts([...payload,...existing]);
+  const finalTeam=payload.filter(match=>
+    hasTeamConflict(match,[
+      ...payload.filter(item=>item!==match),
+      ...existing
+    ])
+  );
+
+  return {
+    resolved,
+    unresolved,
+    remainingFacilityConflicts:finalFacility.filter(c=>payload.includes(c.a)||payload.includes(c.b)),
+    remainingTeamConflicts:finalTeam
+  };
 }
 
 async function buildCalendarPayload(){
@@ -561,10 +758,24 @@ async function buildCalendarPayload(){
     }
   }
 
-  const conflicts=detectFacilityConflicts(payload);
-  if(conflicts.length){
-    throw new Error('Conflitti di impianto rilevati:\n'+conflicts.map((c,i)=>`${i+1}. ${conflictDescription(c)}`).join('\n'));
+  const resolution=autoResolveConflicts(payload,code);
+  if(
+    resolution.unresolved.length ||
+    resolution.remainingFacilityConflicts.length ||
+    resolution.remainingTeamConflicts.length
+  ){
+    const names=[...new Set([
+      ...resolution.unresolved.map(m=>`${m._home_name} – ${m._away_name}`),
+      ...resolution.remainingTeamConflicts.map(m=>`${m._home_name} – ${m._away_name}`)
+    ])];
+    throw new Error(
+      'L’app ha provato automaticamente inversione casa/trasferta e spostamenti fino a quattro settimane, '+
+      'ma non ha trovato una soluzione libera per: '+names.join(', ')+
+      '. Modifica manualmente una disponibilità oppure una data esclusa.'
+    );
   }
+
+  payload._resolvedCount=resolution.resolved.length;
   return payload;
 }
 
@@ -587,13 +798,21 @@ async function previewCalendar(){
             Durata considerata: <b>${match._duration_minutes} minuti</b>
           </div>
         </div>
-        <div class="notice ok">COINCIDE · NESSUN CONFLITTO</div>
+        <div class="notice ${match._resolution?'warn':'ok'}">
+          ${match._resolution
+            ? `SOLUZIONE AUTOMATICA: ${esc(match._resolution)}`
+            : 'COINCIDE · NESSUN CONFLITTO'}
+        </div>
       </div>
     `).join('');
 
     $('calendarPreviewCard').classList.remove('hidden');
     $('confirmCalendarBtn').classList.remove('hidden');
-    msg(`Anteprima pronta: ${pendingCalendar.length} partite. Nessuna partita è stata ancora salvata.`);
+    const solved=pendingCalendar.filter(match=>match._resolution).length;
+    msg(
+      `Anteprima pronta: ${pendingCalendar.length} partite. `+
+      `${solved} conflitti risolti automaticamente. Nessuna partita è stata ancora salvata.`
+    );
     $('calendarPreviewCard').scrollIntoView({behavior:'smooth'});
   }catch(error){
     pendingCalendar=[];
