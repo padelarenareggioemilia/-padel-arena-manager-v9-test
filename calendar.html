@@ -316,11 +316,12 @@ controllando anche le partite già presenti nelle altre competizioni.
 
 <section class="card">
   <div class="notice">
-    <b>Regola casa/trasferta:</b> giorno, ora e campo vengono letti esclusivamente dalla squadra di casa.
-    La squadra ospite si adatta sempre alla disponibilità dell’avversaria.
-    HORMIGA PADEL CLUB gioca la domenica alle 11 soltanto quando è in casa;
-    in trasferta segue giorno e ora della squadra ospitante.
-    Prima del salvataggio l’app controlla anche le sovrapposizioni di impianto.
+    <b>REGOLA BASE — VALE PER TUTTE LE SQUADRE:</b>
+    giorno, ora e campo sono sempre quelli registrati nella scheda della squadra di casa.
+    La squadra in trasferta non impone mai il proprio giorno, il proprio orario o il proprio campo:
+    si adatta interamente alla squadra ospitante.
+    La regola viene verificata partita per partita durante la generazione,
+    dopo ogni soluzione automatica e nuovamente prima del salvataggio.
   </div>
   <div id="fixtures"></div>
 </section>
@@ -437,6 +438,62 @@ function scheduleHomeFixture(baseDate,homeTeam,roundOffset,competitionCode,inter
     configuredDay: homeTeam.home_match_day,
     configuredTime: normalizeTime(homeTeam.home_match_time)
   };
+}
+
+
+function assertHomeRule(match){
+  const home=teamById(match.home_team_id);
+  const away=teamById(match.away_team_id);
+
+  if(!home) throw new Error('Regola casa/trasferta: squadra di casa non trovata.');
+  if(!away) throw new Error('Regola casa/trasferta: squadra ospite non trovata.');
+
+  const local=localPartsFromISO(match.scheduled_at);
+  const expectedDay=home.home_match_day;
+  const expectedTime=normalizeTime(home.home_match_time);
+  const expectedVenue=String(home.home_court||'').trim();
+
+  if(local.weekday!==expectedDay){
+    throw new Error(
+      `ERRORE REGOLA BASE: ${home.name} è in casa, quindi deve giocare ${expectedDay}. `+
+      `Il calendario ha invece impostato ${local.weekday}.`
+    );
+  }
+
+  if(local.time!==expectedTime){
+    throw new Error(
+      `ERRORE REGOLA BASE: ${home.name} è in casa, quindi deve giocare alle ${expectedTime}. `+
+      `Il calendario ha invece impostato ${local.time}.`
+    );
+  }
+
+  if(String(match.venue||'').trim()!==expectedVenue){
+    throw new Error(
+      `ERRORE REGOLA BASE: il campo deve essere quello della squadra di casa ${home.name}: `+
+      `${expectedVenue||'non indicato'}.`
+    );
+  }
+
+  // Nessun controllo viene effettuato sul giorno/orario abituale della squadra ospite:
+  // in trasferta si adatta sempre alla squadra di casa.
+  return true;
+}
+
+function auditHomeAwayRules(matches){
+  const rows=[];
+  matches.forEach(match=>{
+    assertHomeRule(match);
+    const home=teamById(match.home_team_id);
+    const away=teamById(match.away_team_id);
+    rows.push({
+      match:`${home.name} – ${away.name}`,
+      home:home.name,
+      away:away.name,
+      rule:`${home.home_match_day} ${normalizeTime(home.home_match_time)} · ${home.home_court}`,
+      result:'OK'
+    });
+  });
+  return rows;
 }
 
 function roundRobin(arr){
@@ -597,6 +654,7 @@ function updateMatchSchedule(match,home,away,scheduledAt,resolution){
   match._facility_label=[home.home_court,home.club_address,home.club_city].filter(Boolean).join(' · ');
   match._duration_minutes=matchDurationMinutes(home);
   match._resolution=resolution;
+  assertHomeRule(match);
 }
 
 function candidateAtWeekOffset(match,home,away,weekOffset,competitionCode){
@@ -873,7 +931,20 @@ function applyManualConflictSolution(){
 
   const scheduledAt=localDateTimeToISO($('manualDate').value,$('manualTime').value);
   const test={...activeConflict.match};
-  updateMatchSchedule(test,home,away,scheduledAt,'Eccezione manuale');
+  // Eccezione amministratore: data/ora/campo possono essere scelti manualmente.
+  test.home_team_id=home.id;
+  test.away_team_id=away.id;
+  test.scheduled_at=scheduledAt;
+  test._home_name=home.name;
+  test._away_name=away.name;
+  test._configured_day=home.home_match_day;
+  test._configured_time=normalizeTime(home.home_match_time);
+  const manualLocal=localPartsFromISO(scheduledAt);
+  test._local_date=manualLocal.date;
+  test._local_time=manualLocal.time;
+  test._local_weekday=manualLocal.weekday;
+  test._duration_minutes=matchDurationMinutes(home);
+  test._resolution='Eccezione manuale';
   test.venue=$('manualVenue').value.trim();
   test._facility_key=facilityKey(home,test.venue);
   test._facility_label=[test.venue,home.club_address,home.club_city].filter(Boolean).join(' · ');
@@ -939,14 +1010,6 @@ async function buildCalendarPayload(){
         const scheduledAt=homeSchedule.scheduledAt;
         const local=localPartsFromISO(scheduledAt);
 
-        // Controllo definitivo: il calendario generato deve coincidere con la scheda di casa.
-        if(local.weekday!==home.home_match_day || local.time!==configuredTime){
-          throw new Error(
-            `Incongruenza per ${home.name}: scheda ${home.home_match_day} ${configuredTime}, `+
-            `calendario ${local.weekday} ${local.time}. Nessuna partita è stata salvata.`
-          );
-        }
-
         payload.push({
           competition_code:code,
           phase:'Girone',
@@ -967,6 +1030,9 @@ async function buildCalendarPayload(){
           _facility_label:[home.home_court,home.club_address,home.club_city].filter(Boolean).join(' · '),
           _duration_minutes:matchDurationMinutes(home)
         });
+
+        // Controllo obbligatorio per ogni singola partita.
+        assertHomeRule(payload[payload.length-1]);
       });
     };
 
@@ -1011,6 +1077,8 @@ async function buildCalendarPayload(){
     throw err;
   }
 
+  // Verifica finale dell'intero calendario: vale per tutte le squadre e tutte le competizioni.
+  auditHomeAwayRules(payload);
   payload._resolvedCount=resolution.resolved.length;
   return payload;
 }
@@ -1038,6 +1106,9 @@ async function previewCalendar(){
           ${match._resolution
             ? `SOLUZIONE AUTOMATICA: ${esc(match._resolution)}`
             : 'COINCIDE · NESSUN CONFLITTO'}
+          <br><b>REGOLA CASA VERIFICATA:</b>
+          ${esc(match._home_name)} determina ${esc(match._local_weekday)} ${esc(match._local_time)} · ${esc(match.venue)}.
+          ${esc(match._away_name)} si adatta.
         </div>
       </div>
     `).join('');
