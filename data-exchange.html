@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AICS Padel Championship Manager</title>
+<title>AICS Padel Championship Manager · Import V9.4.5</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="config.js"></script>
@@ -116,7 +116,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
           <option value="">Tutte le squadre</option>
         </select>
       </div>
-      <div class="field">
+      <div id="playerStatusField" class="field hidden">
         <label>Stato giocatore</label>
         <select id="playerStatusFilter">
           <option value="">Tutti</option>
@@ -136,7 +136,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
   <section class="card">
     <h2>Importa dati</h2>
     <div class="dropzone">
-      <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" onchange="readFile(event)">
+      <input id="fileInput" type="file" accept=".xlsx,.xls,.csv">
       <p><b>Seleziona un file Excel o CSV</b></p>
       <div class="muted small">
         Prima viene mostrata un’anteprima. Nessun dato viene salvato finché non premi “Conferma importazione”.
@@ -165,6 +165,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
       <button id="confirmImportBtn" class="btn success" onclick="confirmImport()" disabled>Conferma importazione</button>
       <button class="btn secondary" onclick="clearPreview()">Annulla</button>
     </div>
+    <div id="importProgress" class="notice hidden"></div>
     <div id="importMsg" class="notice hidden"></div>
   </section>
 
@@ -215,12 +216,13 @@ async function guard(){
   }
 }
 
-function setEntity(value){
+function setEntity(value, preserveFile=false){
   entity=value;
   $('tabTeams').classList.toggle('active',value==='teams');
   $('tabPlayers').classList.toggle('active',value==='players');
+  $('playerStatusField').classList.toggle('hidden',value!=='players');
   $('playerStatusFilter').disabled=value!=='players';
-  clearPreview();
+  if(!preserveFile) clearPreview();
 }
 
 function norm(value){
@@ -416,37 +418,133 @@ function downloadTemplate(){
   XLSX.writeFile(wb,entity==='teams'?'MODELLO_IMPORT_SQUADRE.xlsx':'MODELLO_IMPORT_GIOCATORI.xlsx');
 }
 
+
+function importStage(text, error=false){
+  const box=$('importProgress');
+  box.textContent=text;
+  box.className='notice '+(error?'err':'warn');
+  box.classList.remove('hidden');
+}
+
+function readWorkbookFromArrayBuffer(buffer, fileName){
+  const extension=(fileName.split('.').pop()||'').toLowerCase();
+
+  if(extension==='csv'){
+    const decoded=new TextDecoder('utf-8').decode(buffer);
+    return XLSX.read(decoded,{type:'string',raw:true,cellDates:true});
+  }
+
+  return XLSX.read(buffer,{
+    type:'array',
+    raw:true,
+    cellDates:true,
+    cellText:false,
+    dense:false
+  });
+}
+
+function detectGoogleAicsHeaders(headers){
+  const normalized=headers.map(normalizedKey);
+  return normalized.some(h=>h.includes('nome della squadra'))
+    && normalized.some(h=>h.includes('ragione sociale del club'))
+    && normalized.some(h=>h.includes('iscrivo la mia squadra al campionato'));
+}
+
 async function readFile(event){
-  clearPreview();
-  const file=event.target.files?.[0];
-  if(!file) return;
+  clearPreview(false);
+
+  const file=event?.target?.files?.[0] || $('fileInput').files?.[0];
+  if(!file){
+    importStage('Nessun file selezionato.',true);
+    return;
+  }
+
   try{
-    const buffer=await file.arrayBuffer();
-    const wb=XLSX.read(buffer,{type:'array',cellDates:true});
-    const ws=wb.Sheets[wb.SheetNames[0]];
-    importedRows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
-    if(!importedRows.length) throw new Error('Il file non contiene righe dati.');
-
-    const firstHeaders=Object.keys(importedRows[0]||{});
-    const looksLikeGoogleForm=firstHeaders.some(h=>normalizedKey(h).includes('nome della squadra'))
-      && firstHeaders.some(h=>normalizedKey(h).includes('ragione sociale del club'));
-
-    if(entity!=='teams' && looksLikeGoogleForm){
-      setEntity('teams');
-      importedRows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
+    if(typeof XLSX==='undefined'){
+      throw new Error('La libreria Excel non è disponibile. Ricarica la pagina e riprova.');
     }
 
-    show(
-      'importMsg',
-      looksLikeGoogleForm
-        ? `File Google Forms AICS riconosciuto: ${importedRows.length} squadre lette.`
-        : `${importedRows.length} righe lette dal file.`
+    importStage(`1/4 · File selezionato: ${file.name} · ${(file.size/1024).toFixed(1)} KB`);
+
+    const extension=(file.name.split('.').pop()||'').toLowerCase();
+    if(!['xlsx','xls','csv'].includes(extension)){
+      throw new Error('Formato non supportato. Usa un file XLSX, XLS oppure CSV.');
+    }
+
+    importStage('2/4 · Lettura del file Excel in corso…');
+    const buffer=await file.arrayBuffer();
+    const wb=readWorkbookFromArrayBuffer(buffer,file.name);
+
+    if(!wb.SheetNames?.length){
+      throw new Error('Il file non contiene fogli leggibili.');
+    }
+
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const matrix=XLSX.utils.sheet_to_json(ws,{
+      header:1,
+      defval:'',
+      raw:true,
+      blankrows:false
+    });
+
+    if(!matrix.length){
+      throw new Error('Il primo foglio è vuoto.');
+    }
+
+    const headers=(matrix[0]||[]).map(v=>norm(v));
+    const googleAics=detectGoogleAicsHeaders(headers);
+
+    importStage(
+      `3/4 · Foglio “${wb.SheetNames[0]}” letto: ${Math.max(0,matrix.length-1)} righe dati · ${headers.length} colonne`
+    );
+
+    importedRows=XLSX.utils.sheet_to_json(ws,{
+      defval:'',
+      raw:true,
+      blankrows:false
+    });
+
+    // Rimuove righe completamente vuote.
+    importedRows=importedRows.filter(row=>
+      Object.values(row).some(value=>norm(value)!=='')
+    );
+
+    if(!importedRows.length){
+      throw new Error('Il file non contiene righe dati utilizzabili.');
+    }
+
+    if(googleAics && entity!=='teams'){
+      setEntity('teams',true);
+    }
+
+    importStage(
+      googleAics
+        ? `4/4 · Modulo Google AICS riconosciuto. Analisi di ${importedRows.length} squadre…`
+        : `4/4 · File riconosciuto. Analisi di ${importedRows.length} righe…`
     );
 
     await analyzeRows();
-  }catch(error){show('importMsg',error.message||String(error),true)}
-}
 
+    const newCount=analyzedRows.filter(x=>x.action==='insert').length;
+    const updateCount=analyzedRows.filter(x=>x.action==='update').length;
+    const skipCount=analyzedRows.filter(x=>x.action==='skip').length;
+    const errorCount=analyzedRows.filter(x=>x.action==='error').length;
+
+    importStage(
+      `Analisi completata · Nuove: ${newCount} · Da aggiornare: ${updateCount} · Duplicati saltati: ${skipCount} · Errori: ${errorCount}`,
+      errorCount>0
+    );
+
+  }catch(error){
+    console.error('Errore importazione:',error);
+    importStage(error?.message || String(error),true);
+    show('importMsg','Il file non è stato importato. Leggi il messaggio sopra.',true);
+    $('confirmImportBtn').disabled=true;
+  }finally{
+    // Consente di riselezionare immediatamente lo stesso file.
+    $('fileInput').value='';
+  }
+}
 function getField(row,names){
   for(const name of names){
     if(Object.prototype.hasOwnProperty.call(row,name)) return row[name];
@@ -630,7 +728,7 @@ async function analyzeRows(){
 
   const byId=new Map(existing.map(x=>[x.id,x]));
   const byKey=new Map(existing.map(x=>[
-    entity==='teams'?normalizedKey(x.name):`${x.team_id}|${lower(x.email)}`,x
+    entity==='teams'?normalizedKey(x.name):`${x.team_id||normalizedKey(x.team_name)}|${lower(x.email)}`,x
   ]));
 
   analyzedRows=mapped.map(item=>{
@@ -653,7 +751,7 @@ async function analyzeRows(){
     const keyMode=$('duplicateKey').value;
     if((keyMode==='id'||keyMode==='auto')&&d.id) found=byId.get(d.id)||null;
     if(!found&&(keyMode==='name'||keyMode==='auto')){
-      const key=entity==='teams'?normalizedKey(d.name):`${d.team_id}|${lower(d.email)}`;
+      const key=entity==='teams'?normalizedKey(d.name):`${d.team_id||normalizedKey(d.team_name)}|${lower(d.email)}`;
       found=byKey.get(key)||null;
     }
 
@@ -750,11 +848,17 @@ function clearPreview(resetFile=true){
   $('confirmImportBtn').disabled=true;
   ['kTotal','kNew','kUpdate','kErrors'].forEach(id=>$(id).textContent='0');
   if(resetFile)$('fileInput').value='';
+  if(resetFile)$('importProgress').classList.add('hidden');
 }
 
 $('duplicateMode').onchange=()=>importedRows.length&&analyzeRows();
 $('duplicateKey').onchange=()=>importedRows.length&&analyzeRows();
-guard().then(loadTeamFilter);
+document.addEventListener('DOMContentLoaded',()=>{
+  const input=$('fileInput');
+  input.addEventListener('change',readFile);
+  setEntity('teams',true);
+  guard().then(loadTeamFilter);
+});
 </script>
 
 <script>

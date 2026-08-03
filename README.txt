@@ -1,26 +1,31 @@
-PADEL ARENA MANAGER V9.4.4 — IMPORT MODULO GOOGLE AICS
+PADEL ARENA MANAGER V9.4.5 — FIX IMPORTAZIONE REALE
 
-CORREZIONE
-- L'importatore riconosce direttamente il file:
-  “ELENCO SQUADRE AICS PADEL CHAMPIONSHIP 2027.xlsx”.
-- Non è necessario rinominare o spostare le colonne.
-- Riconosce le intestazioni originali di Google Forms.
-- Traduce automaticamente:
-  - Serie A con limite 3ª fascia → Serie A;
-  - Serie B con limite 4ª fascia → Serie B;
-  - Serie C non classificati → Serie C.
-- Estrae l'orario da testi come “15:00 SOLO SABATO E DOMENICA”.
-- Riconosce giorno, club, indirizzo, CAP, comune, provincia,
-  campo di casa, referente, email e telefono.
-- I duplicati vengono confrontati ignorando maiuscole, accenti,
-  apostrofi, punteggiatura e spazi superflui.
-- Il file caricato contiene 38 squadre:
-  se le prime 37 sono già presenti, l'anteprima deve mostrare
-  ASD Happy Time come unica nuova squadra.
-- Nessun dato viene inserito prima della conferma finale.
+CORREZIONI
+- Il selettore file usa ora un listener stabile, non più il solo onchange scritto nell'HTML.
+- Mostra immediatamente:
+  1. nome e dimensione del file;
+  2. stato di lettura;
+  3. foglio, righe e colonne trovate;
+  4. riconoscimento del formato;
+  5. risultato dell'analisi.
+- Gli errori non restano più invisibili.
+- Supporto specifico al file:
+  ELENCO SQUADRE AICS PADEL CHAMPIONSHIP 2027.xlsx
+- Riconoscimento automatico del modulo Google AICS tramite le intestazioni reali.
+- Possibilità di riselezionare subito lo stesso file.
+- Nella scheda Squadre il filtro Stato giocatore è completamente nascosto.
+- Nella scheda Giocatori il filtro Stato giocatore torna visibile.
+- Nessun dato viene salvato prima della conferma.
 
 INSTALLAZIONE
 Su GitHub sostituisci integralmente:
 - data-exchange.html
 
 Non serve eseguire SQL.
+
+TEST
+Apri:
+data-exchange.html?v=945
+
+Seleziona il file originale. Deve comparire subito una sequenza di messaggi:
+File selezionato → Lettura → Righe/colonne → Modulo Google AICS riconosciuto → Anteprima.
