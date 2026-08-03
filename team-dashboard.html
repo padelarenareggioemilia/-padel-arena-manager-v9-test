@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS PADEL CHAMPIONSHIP · Squadra</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--green:#009246;--red:#ce2b37;--bg:#f4f8fc;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;--line:#b9cde3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}.shell{max-width:1150px;margin:auto;padding:18px 12px 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:15px;margin:12px 0}.hero{display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(135deg,#164a95,#082f68);color:#fff}.brand{display:flex;align-items:center;gap:13px}.team-logo,.mini-logo{object-fit:contain;background:#fff;border-radius:12px;border:1px solid var(--line)}.team-logo{width:92px;height:92px;padding:5px}.mini-logo{width:34px;height:34px;padding:2px;vertical-align:middle;margin-right:7px}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}.tab{border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:11px;padding:10px 12px;font-weight:900;cursor:pointer}.tab.active{background:var(--blue);color:#fff}.fixture{display:grid;grid-template-columns:120px 1fr auto;gap:12px;padding:12px;border-bottom:1px solid #dce6f0;align-items:center}.score{font-size:19px;font-weight:1000}.muted{color:var(--muted)}.small{font-size:12px}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}.hidden{display:none!important}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:720px}th,td{padding:10px;border-bottom:1px solid #dce6f0;text-align:center}th{background:var(--blue);color:#fff}td:nth-child(2),th:nth-child(2){text-align:left}.export-wrap{position:relative}.export-menu{position:absolute;right:0;top:42px;z-index:30;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;min-width:190px;box-shadow:0 12px 28px rgba(0,0,0,.15)}.export-menu button{width:100%;border:0;background:#fff;text-align:left;padding:9px;border-radius:8px;font-weight:800;cursor:pointer}.export-menu button:hover{background:var(--soft)}
+@media(max-width:760px){.fixture{grid-template-columns:1fr}.hero{align-items:flex-start}.team-logo{width:70px;height:70px}}
+</style>
+</head>
+<body><main class="shell">
+<div class="actions"><button class="btn secondary" onclick="history.back()">← Indietro</button></div>
+<header class="hero"><div class="brand"><img id="mainLogo" class="team-logo" src="assets/aics-logo.png"><div><h1 id="teamTitle" style="margin:0">Squadra</h1><div id="teamSubtitle"></div></div></div>
+<div id="exportBox" class="export-wrap hidden"><button class="btn secondary" onclick="toggleExport()">⋮ Esporta</button><div id="exportMenu" class="export-menu hidden"><button onclick="exportCalendarPdf()">📄 Calendario PDF</button><button onclick="exportCalendarExcel()">📊 Calendario Excel</button><button onclick="exportStandingsPdf()">📄 Classifica PDF</button><button onclick="exportStandingsExcel()">📊 Classifica Excel</button></div></div></header>
+
+<section class="card"><div class="tabs"><button class="tab active" data-view="matches" onclick="setView('matches')">Partite squadra</button><button class="tab" data-view="standings" onclick="setView('standings')">Classifica del girone</button></div></section>
+<section class="card"><div id="content"><div class="notice">Caricamento…</div></div></section>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
+const teamId=new URLSearchParams(location.search).get('team');
+let team=null,teams=[],fixtures=[],groups=[],members=[],statuses=[],view='matches',authorized=false;
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+function tname(id,p){return teams.find(x=>x.id===id)?.name||p||'Da definire'}
+function tlogo(id){return teams.find(x=>x.id===id)?.logo_url||'assets/aics-logo.png'}
+function statusFor(id){return statuses.find(s=>s.fixture_id===id)?.workflow_data||{}}
+function score(id){const w=statusFor(id),r=w.result_data||w.result||w.match_result;if(!r)return '';return r.home_score!=null?`${r.home_score} – ${r.away_score}`:''}
+function done(f){return Boolean(statusFor(f.id).homologated_at||score(f.id))}
+function fixtureHtml(f){return `<div class="fixture"><div class="small muted">${new Date(f.scheduled_at).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div><div><div><img class="mini-logo" src="${esc(tlogo(f.home_team_id))}"><b>${esc(tname(f.home_team_id,f.home_placeholder))}</b></div><div class="muted">contro</div><div><img class="mini-logo" src="${esc(tlogo(f.away_team_id))}"><b>${esc(tname(f.away_team_id,f.away_placeholder))}</b></div><div class="small muted">${esc(f.venue||'')}</div></div><div class="score">${score(f.id)||(done(f)?'Omologata':'Da giocare')}</div></div>`}
+function myGroup(){
+  const membership=members.find(m=>m.team_id===teamId);
+  return membership?groups.find(g=>g.id===membership.group_id):null;
+}
+function standings(){
+  const g=myGroup();if(!g)return [];
+  const ids=members.filter(m=>m.group_id===g.id).map(m=>m.team_id);
+  const rows=Object.fromEntries(ids.map(id=>[id,{id,g:0,v:0,n:0,p:0,mf:0,ms:0,pt:0}]));
+  fixtures.filter(f=>f.group_id===g.id&&done(f)).forEach(f=>{
+    const sc=score(f.id);if(!sc)return;const [h,a]=sc.split('–').map(x=>Number(x.trim()));if(Number.isNaN(h)||Number.isNaN(a))return;
+    const H=rows[f.home_team_id],A=rows[f.away_team_id];if(!H||!A)return;H.g++;A.g++;H.mf+=h;H.ms+=a;A.mf+=a;A.ms+=h;if(h>a){H.v++;A.p++;H.pt+=3}else if(a>h){A.v++;H.p++;A.pt+=3}else{H.n++;A.n++;H.pt++;A.pt++}
+  });
+  return Object.values(rows).sort((a,b)=>b.pt-a.pt||(b.mf-b.ms)-(a.mf-a.ms)||tname(a.id).localeCompare(tname(b.id)));
+}
+function standingsTable(){
+  const rows=standings();return `<div class="table-wrap"><table id="standingsTable"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>MF</th><th>MS</th><th>Diff.</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td><img class="mini-logo" src="${esc(tlogo(r.id))}">${esc(tname(r.id))}</td><td>${r.g}</td><td>${r.v}</td><td>${r.n}</td><td>${r.p}</td><td>${r.mf}</td><td>${r.ms}</td><td>${r.mf-r.ms}</td><td><b>${r.pt}</b></td></tr>`).join('')}</tbody></table></div>`}
+function render(){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='matches'){const own=fixtures.filter(f=>f.home_team_id===teamId||f.away_team_id===teamId).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));$('content').innerHTML=own.length?own.map(fixtureHtml).join(''):'<div class="notice">Nessuna partita della squadra.</div>'}else $('content').innerHTML=standingsTable()}
+function setView(v){view=v;render()}
+function toggleExport(){$('exportMenu').classList.toggle('hidden')}
+function download(name,type,data){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function calendarRows(){return fixtures.filter(f=>f.home_team_id===teamId||f.away_team_id===teamId).map(f=>({Data:new Date(f.scheduled_at).toLocaleString('it-IT'),Casa:tname(f.home_team_id,f.home_placeholder),Ospite:tname(f.away_team_id,f.away_placeholder),Campo:f.venue||'',Risultato:score(f.id)||''}))}
+function exportHtmlExcel(name,rows){const keys=Object.keys(rows[0]||{});const html=`<html><meta charset="utf-8"><table><tr>${keys.map(k=>`<th>${esc(k)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${keys.map(k=>`<td>${esc(r[k])}</td>`).join('')}</tr>`).join('')}</table></html>`;download(name,'application/vnd.ms-excel',html)}
+function printRows(title,html){const w=window.open('','_blank');w.document.write(`<html><head><title>${esc(title)}</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:7px}h1{color:#164a95}</style></head><body><h1>${esc(title)}</h1>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()}
+function exportCalendarExcel(){exportHtmlExcel(`Calendario_${team.name}.xls`,calendarRows())}
+function exportCalendarPdf(){const rows=calendarRows();printRows(`Calendario ${team.name}`,`<table><tr><th>Data</th><th>Casa</th><th>Ospite</th><th>Campo</th><th>Risultato</th></tr>${rows.map(r=>`<tr><td>${esc(r.Data)}</td><td>${esc(r.Casa)}</td><td>${esc(r.Ospite)}</td><td>${esc(r.Campo)}</td><td>${esc(r.Risultato)}</td></tr>`).join('')}</table>`)}
+function standingRows(){return standings().map((r,i)=>({Posizione:i+1,Squadra:tname(r.id),G:r.g,V:r.v,N:r.n,P:r.p,MF:r.mf,MS:r.ms,Differenza:r.mf-r.ms,Punti:r.pt}))}
+function exportStandingsExcel(){exportHtmlExcel(`Classifica_${team.name}.xls`,standingRows())}
+function exportStandingsPdf(){const rows=standingRows();printRows(`Classifica girone · ${team.name}`,`<table><tr>${Object.keys(rows[0]||{}).map(k=>`<th>${esc(k)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${Object.values(r).map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</table>`)}
+async function init(){
+  if(!teamId)return $('content').innerHTML='<div class="notice">Squadra non specificata.</div>';
+  const session=await sb.auth.getSession();
+  if(session.data.session){
+    const [p,r]=await Promise.all([sb.from('profiles').select('role').eq('id',session.data.session.user.id).maybeSingle(),sb.from('team_user_roles').select('*').eq('user_id',session.data.session.user.id).eq('team_id',teamId).eq('active',true)]);
+    authorized=p.data?.role==='admin'||(r.data||[]).some(x=>['captain','secretary'].includes(x.role));
+  }
+  const [t,f,g,m,w]=await Promise.all([sb.from('public_championship_teams').select('*'),sb.from('public_championship_fixtures').select('*').order('scheduled_at'),sb.from('public_championship_groups').select('*'),sb.from('public_championship_group_teams').select('*'),sb.from('public_championship_status').select('*')]);
+  const e=t.error||f.error||g.error||m.error;if(e)return $('content').innerHTML=`<div class="notice">${esc(e.message)}</div>`;
+  teams=t.data||[];fixtures=f.data||[];groups=g.data||[];members=m.data||[];statuses=w.error?[]:(w.data||[]);team=teams.find(x=>x.id===teamId);
+  if(!team)return $('content').innerHTML='<div class="notice">Squadra non trovata.</div>';
+  $('teamTitle').textContent=team.name;$('teamSubtitle').textContent=`${team.series||''} · ${team.club_name||''}`;$('mainLogo').src=team.logo_url||'assets/aics-logo.png';$('exportBox').classList.toggle('hidden',!authorized);render();
+}
+window.setView=setView;window.toggleExport=toggleExport;window.exportCalendarPdf=exportCalendarPdf;window.exportCalendarExcel=exportCalendarExcel;window.exportStandingsPdf=exportStandingsPdf;window.exportStandingsExcel=exportStandingsExcel;init();
+</script></body></html>
