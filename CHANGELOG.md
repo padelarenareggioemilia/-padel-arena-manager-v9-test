@@ -1,5 +1,13 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.5.0 — Calendario corretto
+- Correzione fuso orario locale/UTC.
+- Solo andata oppure andata e ritorno.
+- Giorno, ora e campo obbligatori dalla squadra di casa.
+- Festività, prefestivi e sospensioni.
+- Solo semifinali e finali playoff/playout/Coppa all’Eden.
+
+
 ## V9.4.4 — Import modulo Google AICS
 - Supporto diretto all'esportazione Google Forms del campionato 2027.
 - Mappatura automatica delle intestazioni originali.

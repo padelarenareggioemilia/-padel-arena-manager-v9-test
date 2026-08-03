@@ -1,31 +1,39 @@
-PADEL ARENA MANAGER V9.5.0 — CALENDARIO CORRETTO
+PADEL ARENA MANAGER V9.5.1 — CALENDARIO LOCALE VERIFICATO
 
-CORREZIONI PRINCIPALI
-- Risolto lo scarto di 2 ore causato dalla visualizzazione UTC.
-- Le partite usano giorno, ora e campo della squadra di casa.
-- Nessun orario predefinito viene inventato.
-- Se giorno, ora o campo mancano, la generazione viene bloccata.
-- Scelta esplicita:
-  - Solo andata
-  - Andata e ritorno
-- Date di festività, prefestivi e sospensione personalizzabili.
-- Calendario e Coppa Italia saltano automaticamente le date escluse.
-- Pulsante per inserire le principali festività italiane 2026–2027.
-- Playoff e playout all’Eden:
-  - soltanto 2 semifinali;
-  - soltanto la finale;
-  - 4 squadre qualificate dalla fase precedente.
-- Coppa Italia all’Eden:
-  - soltanto semifinali e finale.
-- Date e orari restano modificabili dall’amministratore.
+OBIETTIVO
+Questa versione non salva più il calendario immediatamente.
+
+NUOVO FLUSSO
+1. Scegli competizione, data, intervallo e formula:
+   - Solo andata
+   - Andata e ritorno
+2. Premi “Anteprima calendario”.
+3. Per ogni partita vengono confrontati:
+   - giorno e ora della scheda della squadra di casa;
+   - giorno e ora calcolati per il calendario;
+   - campo di casa.
+4. Se esiste anche una sola incongruenza, nulla viene salvato.
+5. Solo dopo aver visto “COINCIDE” puoi premere “Conferma e salva calendario”.
+
+CORREZIONI
+- Orari mostrati e verificati in ora locale italiana.
+- Nessun uso di toISOString().slice() per visualizzare gli orari.
+- Svuotamento della cache delle vecchie versioni del calendario.
+- Versione visibile nell’intestazione: V9.5.1.
+- Le vecchie partite vengono cancellate soltanto al momento della conferma finale.
 
 INSTALLAZIONE
-1. Esegui integralmente SUPABASE_V9_5_UPDATE.sql in Supabase V9 Test.
-2. Su GitHub sostituisci integralmente calendar.html.
-3. Fai Commit changes.
-4. Apri calendar.html?v=950.
-5. Rigenera i calendari già creati: quelli vecchi non vengono corretti automaticamente.
+Su GitHub sostituisci:
+- calendar.html
+- service-worker.js
 
-IMPORTANTE
-Le ore già presenti nel database potrebbero essere corrette ma visualizzate in UTC.
-La V9.5.0 visualizza e modifica sempre l’ora locale italiana.
+Non serve una nuova query SQL: quella V9.5 è già stata eseguita correttamente.
+
+Apri:
+calendar.html?v=951
+
+PRIMA DI SALVARE
+Controlla nell’anteprima che, per esempio:
+“Scheda casa: Venerdì 20:00”
+coincida con:
+“Calendario: Venerdì ... ore 20:00”.

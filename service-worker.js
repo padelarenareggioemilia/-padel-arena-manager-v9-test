@@ -1,7 +1,8 @@
-const CACHE_NAME = 'aics-padel-v943';
+const CACHE_NAME = 'aics-padel-v951';
 const ASSETS = [
   './',
   './login.html',
+  './calendar.html?v=951',
   './index.html',
   './assets/aics-logo.png',
   './assets/aics-icon-192.png',
