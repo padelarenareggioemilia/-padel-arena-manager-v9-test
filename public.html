@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AICS PADEL CHAMPIONSHIP</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--bg:#f3f7fb;--panel:#fff;--soft:#eaf2fb;--text:#092d5d;--muted:#647c98;--line:#bfd0e2;--gold:#d9a72e}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(90deg,rgba(0,146,70,.045),transparent 22%,transparent 78%,rgba(206,43,55,.045)),var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:50}
+.shell{max-width:1250px;margin:auto;padding:18px 13px 80px}.hero,.card{border:1px solid var(--line);border-radius:22px;box-shadow:0 14px 32px rgba(8,47,104,.11)}
+.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:18px;display:flex;justify-content:space-between;align-items:center;gap:16px}.brand{display:flex;align-items:center;gap:15px}.logo{width:126px;height:76px;object-fit:contain;background:#fff;padding:7px;border-radius:15px}.hero h1{margin:0;font-size:clamp(24px,4vw,42px);letter-spacing:.03em}.hero p{margin:4px 0 0;color:#dce9f7}.card{background:#fff;padding:16px;margin:13px 0}
+.nav,.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}.btn,.tab{border:0;border-radius:12px;padding:11px 14px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue2);border:1px solid var(--blue)}.tab{background:#edf4fb;color:var(--blue2);border:1px solid var(--line)}.tab.active{background:var(--blue);color:#fff}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#e6eff9;border:1px solid var(--line);font-size:12px;font-weight:900}.muted{color:var(--muted)}.small{font-size:12px}.hidden{display:none!important}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.comp{padding:15px;border:1px solid var(--line);border-radius:17px;background:#fff;text-align:center}.comp strong{font-size:23px;display:block;margin-top:5px}.tricolore{height:5px;border-radius:999px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);border:1px solid #dbe5ef;margin:10px 0}
+.fixture{display:grid;grid-template-columns:115px 1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #dce6f0}.fixture:last-child{border-bottom:0}.score{font-size:19px;font-weight:1000;color:var(--blue2)}.round{font-weight:900}.status-live{background:#fff3cd;border-color:#e5c04d}.status-done{background:#e9f8ef;border-color:#67bd85}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:15px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{padding:10px;border-bottom:1px solid #dde7f1;text-align:center}th{background:var(--blue);color:#fff;position:sticky;top:0}td:nth-child(2),th:nth-child(2){text-align:left}.leader td{font-weight:900;background:#fff9e7}
+.group-title{margin:18px 0 8px;padding:10px 13px;border-left:5px solid var(--green);background:var(--soft);border-radius:0 12px 12px 0}
+.notice{padding:12px;border-radius:13px;background:var(--soft);border:1px solid var(--line);margin:10px 0}.err{background:#fdecef;border-color:var(--red)}
+@media(max-width:850px){.grid5{grid-template-columns:1fr 1fr}.hero{align-items:flex-start}.logo{width:98px;height:62px}.fixture{grid-template-columns:1fr}.fixture .score{text-align:left}}
+</style>
+</head>
+<body>
+<main class="shell">
+<header class="hero">
+  <div class="brand">
+    <img class="logo" src="assets/aics-logo.png" alt="AICS">
+    <div><h1>AICS PADEL CHAMPIONSHIP</h1><p>Campionato · Coppa Italia · Supercoppa</p></div>
+  </div>
+  <button class="btn secondary" onclick="location.href='login.html'">Accedi al tuo account</button>
+</header>
+<div class="tricolore"></div>
+
+<section class="card">
+  <div class="grid5" id="competitionCards"></div>
+</section>
+
+<section class="card">
+  <div class="tabs">
+    <button class="tab" data-view="previous" onclick="setDayView('previous')">Giornata precedente</button>
+    <button class="tab active" data-view="current" onclick="setDayView('current')">Giornata in corso</button>
+    <button class="tab" data-view="next" onclick="setDayView('next')">Giornata successiva</button>
+  </div>
+  <div style="margin-top:12px" id="dayFixtures"><div class="notice">Caricamento calendario…</div></div>
+</section>
+
+<section class="card">
+  <div class="actions" style="justify-content:space-between;align-items:center">
+    <div><h2 style="margin:0">Struttura e classifiche</h2><div class="muted">Serie A, Serie B, Serie C, Coppa Italia e Supercoppa.</div></div>
+    <select id="competitionFilter" onchange="renderCompetition()" style="padding:11px;border-radius:12px;border:1px solid var(--line)">
+      <option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option><option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option><option value="SUPERCOPPA">Supercoppa</option>
+    </select>
+  </div>
+  <div id="competitionContent"></div>
+</section>
+
+<div id="errorBox" class="notice err hidden"></div>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
+let teams=[],groups=[],members=[],fixtures=[],statuses=[];
+let selectedDayView='current';
+
+const codeLabels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+function teamName(id,placeholder){return teams.find(t=>t.id===id)?.name||placeholder||'Da definire'}
+function groupName(id){return groups.find(g=>g.id===id)?.group_name||'Girone unico'}
+function statusFor(id){return statuses.find(s=>s.fixture_id===id)?.workflow_data||{}}
+function resultObject(id){
+  const w=statusFor(id);
+  return w.result_data||w.result||w.match_result||w.score||w.result_json||null;
+}
+function resultSummary(id){
+  const result=resultObject(id);
+  if(!result)return '';
+  const matches=Array.isArray(result.matches)?result.matches:[];
+  if(!matches.length)return result.home_score!=null?`${result.home_score} – ${result.away_score}`:'';
+  let home=0,away=0;
+  matches.forEach(m=>{
+    let hs=0,as=0;
+    [['h1','a1'],['h2','a2'],['h3','a3']].forEach(([h,a])=>{
+      if(Number(m[h])>Number(m[a]))hs++; else if(Number(m[a])>Number(m[h]))as++;
+    });
+    if(hs>as)home++; else if(as>hs)away++;
+  });
+  return `${home} – ${away}`;
+}
+function isDone(f){return Boolean(statusFor(f.id).homologated_at||resultObject(f.id))}
+function dayKey(f){return f.round_number||new Date(f.scheduled_at).toISOString().slice(0,10)}
+function sortedRounds(code){
+  return [...new Set(fixtures.filter(f=>f.competition_code===code&&f.phase==='Girone').map(dayKey))].sort((a,b)=>{
+    if(typeof a==='number'&&typeof b==='number')return a-b;
+    return String(a).localeCompare(String(b));
+  });
+}
+function chosenRound(code){
+  const rounds=sortedRounds(code);if(!rounds.length)return null;
+  const now=Date.now();
+  let currentIndex=rounds.findIndex(round=>{
+    const games=fixtures.filter(f=>f.competition_code===code&&dayKey(f)===round);
+    return games.some(g=>!isDone(g)&&new Date(g.scheduled_at).getTime()>=now-3*86400000);
+  });
+  if(currentIndex<0)currentIndex=Math.max(0,rounds.findIndex(round=>fixtures.filter(f=>f.competition_code===code&&dayKey(f)===round).some(g=>new Date(g.scheduled_at).getTime()>now)));
+  if(currentIndex<0)currentIndex=rounds.length-1;
+  const offset=selectedDayView==='previous'?-1:selectedDayView==='next'?1:0;
+  return rounds[Math.max(0,Math.min(rounds.length-1,currentIndex+offset))];
+}
+function fixtureHtml(f){
+  const score=resultSummary(f.id);
+  return `<div class="fixture ${isDone(f)?'status-done':''}">
+    <div><span class="badge">${esc(codeLabels[f.competition_code]||f.competition_code)}</span><div class="small muted">${f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Da definire'}</div></div>
+    <div><b>${esc(teamName(f.home_team_id,f.home_placeholder))}</b><br><span class="muted">contro</span><br><b>${esc(teamName(f.away_team_id,f.away_placeholder))}</b><div class="small muted">${esc(f.venue||'')}</div></div>
+    <div class="score">${score|| (isDone(f)?'Omologata':'Da giocare')}</div>
+  </div>`;
+}
+function setDayView(view){
+  selectedDayView=view;
+  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  renderDay();
+}
+function renderDay(){
+  const codes=['SERIE_A','SERIE_B','SERIE_C','COPPA_ITALIA'];
+  const sections=[];
+  codes.forEach(code=>{
+    const round=chosenRound(code);
+    const list=fixtures.filter(f=>f.competition_code===code&&dayKey(f)===round).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
+    if(list.length)sections.push(`<h3 class="group-title">${codeLabels[code]} · ${typeof round==='number'?'Giornata '+round:'Turno'}</h3>${list.map(fixtureHtml).join('')}`);
+  });
+  $('dayFixtures').innerHTML=sections.join('')||'<div class="notice">Nessuna partita disponibile per questa selezione.</div>';
+}
+function calculateStandings(code,groupId){
+  const ids=new Set(members.filter(m=>m.group_id===groupId).map(m=>m.team_id));
+  const rows={};
+  ids.forEach(id=>rows[id]={id,pg:0,w:0,d:0,l:0,mf:0,ma:0,pts:0});
+  fixtures.filter(f=>f.competition_code===code&&f.group_id===groupId&&isDone(f)).forEach(f=>{
+    if(!rows[f.home_team_id]||!rows[f.away_team_id])return;
+    const score=resultSummary(f.id);if(!score)return;
+    const [h,a]=score.split('–').map(x=>Number(x.trim()));
+    if(Number.isNaN(h)||Number.isNaN(a))return;
+    const H=rows[f.home_team_id],A=rows[f.away_team_id];
+    H.pg++;A.pg++;H.mf+=h;H.ma+=a;A.mf+=a;A.ma+=h;
+    if(h>a){H.w++;A.l++;H.pts+=3}else if(a>h){A.w++;H.l++;A.pts+=3}else{H.d++;A.d++;H.pts++;A.pts++}
+  });
+  return Object.values(rows).sort((a,b)=>b.pts-a.pts||(b.mf-b.ma)-(a.mf-a.ma)||b.mf-a.mf||teamName(a.id).localeCompare(teamName(b.id)));
+}
+function tableHtml(rows){
+  return `<div class="table-wrap"><table><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>MF</th><th>MS</th><th>Diff.</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${i===0?'leader':''}"><td>${i+1}</td><td>${esc(teamName(r.id))}</td><td>${r.pg}</td><td>${r.w}</td><td>${r.d}</td><td>${r.l}</td><td>${r.mf}</td><td>${r.ma}</td><td>${r.mf-r.ma}</td><td><b>${r.pts}</b></td></tr>`).join('')}</tbody></table></div>`;
+}
+function renderCompetition(){
+  const code=$('competitionFilter').value;
+  if(code==='SUPERCOPPA'){
+    const list=fixtures.filter(f=>f.competition_code==='SUPERCOPPA');
+    $('competitionContent').innerHTML=list.length?list.map(fixtureHtml).join(''):'<div class="notice">Supercoppa non ancora programmata.</div>';return;
+  }
+  const relevantGroups=groups.filter(g=>g.competition_code===code);
+  $('competitionContent').innerHTML=relevantGroups.map(g=>{
+    const teamIds=members.filter(m=>m.group_id===g.id).map(m=>m.team_id);
+    const groupFixtures=fixtures.filter(f=>f.competition_code===code&&f.group_id===g.id).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
+    return `<h3 class="group-title">${esc(g.group_name||'Girone')}</h3>
+      <div class="notice"><b>Squadre:</b> ${teamIds.map(id=>esc(teamName(id))).join(' · ')||'Da definire'}</div>
+      ${tableHtml(calculateStandings(code,g.id))}
+      <h4>Calendario e risultati</h4>${groupFixtures.length?groupFixtures.map(fixtureHtml).join(''):'<div class="notice">Calendario non ancora pubblicato.</div>'}`;
+  }).join('')||'<div class="notice">Struttura non ancora pubblicata.</div>';
+}
+function renderCards(){
+  const codes=['SERIE_A','SERIE_B','SERIE_C','COPPA_ITALIA','SUPERCOPPA'];
+  $('competitionCards').innerHTML=codes.map(code=>{
+    const teamIds=new Set();
+    groups.filter(g=>g.competition_code===code).forEach(g=>members.filter(m=>m.group_id===g.id).forEach(m=>teamIds.add(m.team_id)));
+    const games=fixtures.filter(f=>f.competition_code===code);
+    return `<div class="comp"><span class="badge">${codeLabels[code]}</span><strong>${code==='SUPERCOPPA'?games.length:teamIds.size}</strong><div class="muted small">${code==='SUPERCOPPA'?'gara programmata':'squadre'}</div></div>`;
+  }).join('');
+}
+async function init(){
+  try{
+    const [t,g,m,f,w]=await Promise.all([
+      sb.from('public_championship_teams').select('*'),
+      sb.from('public_championship_groups').select('*'),
+      sb.from('public_championship_group_teams').select('*'),
+      sb.from('public_championship_fixtures').select('*').order('scheduled_at'),
+      sb.from('public_championship_status').select('*')
+    ]);
+    const error=t.error||g.error||m.error||f.error||w.error;if(error)throw error;
+    teams=t.data||[];groups=g.data||[];members=m.data||[];fixtures=f.data||[];statuses=w.data||[];
+    renderCards();renderDay();renderCompetition();
+  }catch(e){
+    $('errorBox').textContent='Portale pubblico non disponibile: '+(e.message||e);
+    $('errorBox').classList.remove('hidden');
+  }
+}
+window.setDayView=setDayView;window.renderCompetition=renderCompetition;
+init();
+</script>
+</body></html>

@@ -1,29 +1,35 @@
-PADEL ARENA MANAGER V9.5.4 — SOLUZIONE AUTOMATICA CONFLITTI
+AICS PADEL CHAMPIONSHIP V9.6.0 — PORTALE PUBBLICO E ACCESSI
 
-Quando trova una sovrapposizione, il calendario non si limita più a segnalarla.
+PRIMA PAGINA
+- Accesso con account facoltativo.
+- Pulsante “Continua senza account”.
+- Intestazione in maiuscolo: AICS PADEL CHAMPIONSHIP.
 
-L’app prova automaticamente:
-1. inversione casa/trasferta;
-2. anticipo di una settimana;
-3. posticipo di una settimana;
-4. ricerca fino a quattro settimane prima o dopo.
+AREA PUBBLICA
+- Serie A, Serie B, Serie C.
+- Coppa Italia.
+- Supercoppa.
+- Gironi e squadre.
+- Giornata precedente, in corso e successiva.
+- Calendario e risultati.
+- Classifiche automatiche per ogni girone.
+- Nessun dato personale di capitani o giocatori viene esposto.
 
-Prima di accettare una soluzione controlla:
-- stesso impianto o indirizzo;
-- sovrapposizione completa o parziale dello slot;
-- eventuale altra partita delle due squadre;
-- partite già presenti nelle altre Serie;
-- partite già presenti in Coppa Italia;
-- festività, prefestivi e sospensioni.
-
-Nell’anteprima ogni modifica mostra:
-“SOLUZIONE AUTOMATICA: ...”
-
-Se non esiste una soluzione libera, nessuna partita viene salvata.
+ACCESSO CON CREDENZIALI
+- Admin → pannello amministratore.
+- Capitano / segretario → area squadra con funzioni autorizzate.
+- Giocatore → area giocatore.
+- Account senza ruolo → portale pubblico.
 
 INSTALLAZIONE
-Su GitHub sostituisci soltanto:
-- calendar.html
+1. Esegui integralmente SUPABASE_V9_6_UPDATE.sql.
+2. Su GitHub carica/sostituisci:
+   - public.html
+   - login.html
+   - tutti i file HTML del pacchetto per uniformare le intestazioni.
+3. Fai Commit changes.
+4. Apri login.html?v=960.
 
-Non serve SQL.
-Apri calendar.html?v=954.
+NOTA CLASSIFICHE
+Le classifiche sono calcolate sui risultati disponibili e omologati:
+3 punti vittoria, 1 pareggio, 0 sconfitta.

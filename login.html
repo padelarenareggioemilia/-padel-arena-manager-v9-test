@@ -128,13 +128,43 @@ label{color:var(--aics-blue-dark)!important}
 <meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
 <meta name="twitter:image" content="assets/aics-social-preview.png">
 
-</head><body><main class="shell" style="max-width:760px"><header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png" alt="AICS"><div><h1>Padel Arena Manager</h1><div class="muted">Accesso amministratore</div></div></div></header><div class="tricolore"></div><section class="card"><div class="field"><label>Email</label><input id="email" type="email" value="padelarenareggioemilia@gmail.com"></div><div class="field"><label>Password</label><input id="password" type="password"></div><div class="actions"><button class="btn primary" id="login">Accedi</button><button class="btn secondary" id="signup">Crea account admin</button></div><div id="msg" class="notice hidden"></div></section><script>
-function destinationAfterLogin(){
-  const p = new URLSearchParams(location.search);
-  const requested = p.get('return');
-  return requested ? decodeURIComponent(requested) : 'index.html';
+</head><body><main class="shell" style="max-width:840px">
+<header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png" alt="AICS"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div class="muted">Portale ufficiale · Accesso facoltativo</div></div></div></header>
+<div class="tricolore"></div>
+<section class="card">
+  <div class="notice">
+    Senza account puoi consultare struttura, gironi, calendari, risultati e classifiche.
+    Accedendo vengono abilitate automaticamente le funzioni previste dal tuo ruolo.
+  </div>
+  <div class="actions"><button class="btn secondary" style="width:100%" onclick="location.href='public.html'">Continua senza account</button></div>
+</section>
+<section class="card">
+  <h2>Accedi al tuo account</h2>
+  <div class="field"><label>Email</label><input id="email" type="email" autocomplete="email"></div>
+  <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
+  <div class="actions"><button class="btn primary" id="login">Accedi</button></div>
+  <div id="msg" class="notice hidden"></div>
+<script>
+const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),$=i=>document.getElementById(i);
+function m(t,e=false){$('msg').textContent=t;$('msg').className='notice '+(e?'err':'ok');$('msg').classList.remove('hidden')}
+async function destinationForUser(userId){
+  const p=await s.from('profiles').select('role').eq('id',userId).maybeSingle();
+  if(p.data?.role==='admin')return 'index.html';
+  const r=await s.from('team_user_roles').select('role,team_id,active').eq('user_id',userId).eq('active',true);
+  if(r.error)throw r.error;
+  const roles=r.data||[];
+  const operational=roles.find(x=>['captain','secretary'].includes(x.role));
+  if(operational)return `captain.html?team=${encodeURIComponent(operational.team_id)}`;
+  const player=roles.find(x=>x.role==='player');
+  if(player)return `player.html?team=${encodeURIComponent(player.team_id)}`;
+  return 'public.html';
 }
-const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),$=i=>document.getElementById(i);function m(t,e=false){$('msg').textContent=t;$('msg').className='notice '+(e?'err':'ok');$('msg').classList.remove('hidden')}$('login').onclick=async()=>{let r=await s.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error)return m(r.error.message,true);location.href=destinationAfterLogin()};$('signup').onclick=async()=>{let r=await s.auth.signUp({email:$('email').value.trim(),password:$('password').value,options:{data:{first_name:'Francesco',last_name:'Lignola'}}});if(r.error)return m(r.error.message,true);m(r.data.session?'Account creato.':'Account creato: conferma l’email.')};s.auth.getSession().then(r=>{if(r.data.session)location.href=destinationAfterLogin()})</script></main>
+$('login').onclick=async()=>{
+  const r=await s.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+  if(r.error)return m(r.error.message,true);
+  try{location.href=await destinationForUser(r.data.user.id)}catch(e){m(e.message||String(e),true)}
+};
+s.auth.getSession().then(async r=>{if(r.data.session)location.href=await destinationForUser(r.data.session.user.id)});</script></main>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
