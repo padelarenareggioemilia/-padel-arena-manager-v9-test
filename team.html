@@ -179,6 +179,7 @@ const sb = supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey);
 const params = new URLSearchParams(window.location.search);
 const teamId = params.get('id');
 const box = document.getElementById('teamBox');
+let currentTeam = null;
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -193,6 +194,77 @@ function formatDate(value) {
 function formatTime(value) {
   return value ? String(value).slice(0,5) : 'Da definire';
 }
+
+
+function normalizeDay(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  const days = {'lunedi':'Lunedì','lunedì':'Lunedì','martedi':'Martedì','martedì':'Martedì','mercoledi':'Mercoledì','mercoledì':'Mercoledì','giovedi':'Giovedì','giovedì':'Giovedì','venerdi':'Venerdì','venerdì':'Venerdì','sabato':'Sabato','domenica':'Domenica'};
+  return days[raw] || '';
+}
+function normalizeTime(value) {
+  const match = String(value || '').match(/(\d{1,2}):(\d{2})/);
+  if (!match) return '';
+  return String(match[1]).padStart(2,'0') + ':' + match[2];
+}
+function setEditMessage(text, error=false) {
+  const el = document.getElementById('editMessage');
+  el.textContent = text;
+  el.className = 'notice ' + (error ? 'err' : 'ok');
+  el.classList.remove('hidden');
+}
+function openInlineEditor() {
+  if (!currentTeam) return;
+  const editor = document.getElementById('inlineEditor');
+  editor.classList.remove('hidden');
+  document.getElementById('editName').value = currentTeam.name || '';
+  document.getElementById('editSeries').value = currentTeam.series || 'Serie C';
+  document.getElementById('editClub').value = currentTeam.club_name || '';
+  document.getElementById('editFiscal').value = currentTeam.club_fiscal_code || '';
+  document.getElementById('editAddress').value = currentTeam.club_address || '';
+  document.getElementById('editCity').value = currentTeam.club_city || '';
+  document.getElementById('editProvince').value = currentTeam.club_province || '';
+  document.getElementById('editCourt').value = currentTeam.home_court || '';
+  document.getElementById('editCaptain').value = currentTeam.captain_name || '';
+  document.getElementById('editCaptainEmail').value = currentTeam.captain_email || '';
+  document.getElementById('editCaptainPhone').value = currentTeam.captain_phone || '';
+  document.getElementById('editHomeDay').value = normalizeDay(currentTeam.home_match_day);
+  document.getElementById('editHomeTime').value = normalizeTime(currentTeam.home_match_time);
+  document.getElementById('editAccess').checked = currentTeam.captain_access_enabled !== false;
+  document.getElementById('editNotes').value = currentTeam.notes || '';
+  document.getElementById('editMessage').classList.add('hidden');
+  editor.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function closeInlineEditor() { const editor=document.getElementById('inlineEditor'); if(editor) editor.classList.add('hidden'); }
+async function saveInlineEditor() {
+  if (!currentTeam) return;
+  const payload = {
+    name: document.getElementById('editName').value.trim(),
+    series: document.getElementById('editSeries').value,
+    club_name: document.getElementById('editClub').value.trim(),
+    club_fiscal_code: document.getElementById('editFiscal').value.trim(),
+    club_address: document.getElementById('editAddress').value.trim(),
+    club_city: document.getElementById('editCity').value.trim(),
+    club_province: document.getElementById('editProvince').value.trim().toUpperCase(),
+    home_court: document.getElementById('editCourt').value.trim(),
+    captain_name: document.getElementById('editCaptain').value.trim(),
+    captain_email: document.getElementById('editCaptainEmail').value.trim().toLowerCase(),
+    captain_phone: document.getElementById('editCaptainPhone').value.trim(),
+    home_match_day: document.getElementById('editHomeDay').value || null,
+    home_match_time: document.getElementById('editHomeTime').value || null,
+    captain_access_enabled: document.getElementById('editAccess').checked,
+    notes: document.getElementById('editNotes').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+  if (!payload.name || !payload.captain_name || !payload.captain_email) return setEditMessage('Compila nome squadra, capitano ed email.', true);
+  const result = await sb.from('teams').update(payload).eq('id', currentTeam.id);
+  if (result.error) return setEditMessage(result.error.message, true);
+  setEditMessage('Squadra aggiornata correttamente.');
+  currentTeam = {...currentTeam, ...payload};
+  setTimeout(() => window.location.replace('team.html?id=' + encodeURIComponent(currentTeam.id) + '&v=923'), 500);
+}
+window.openInlineEditor = openInlineEditor;
+window.closeInlineEditor = closeInlineEditor;
+window.saveInlineEditor = saveInlineEditor;
 
 async function copyLink(url) {
   try {
@@ -248,6 +320,7 @@ async function init() {
   }
 
   const team = teamResult.data;
+  currentTeam = team;
 
   const rosterResult = await sb
     .from('roster_requests')
@@ -292,12 +365,45 @@ async function init() {
         </div>
 
         <div class="actions" style="margin-top:16px">
-          <button class="btn primary" onclick="location.href='index.html?edit=${encodeURIComponent(team.id)}'">Modifica squadra</button>
+          <button class="btn primary" onclick="openInlineEditor()">Modifica squadra</button>
           <button class="btn secondary" onclick='copyLink(${JSON.stringify(captainUrl)})'>Copia link capitano</button>
           <button class="btn secondary" onclick='copyLink(${JSON.stringify(playerUrl)})'>Copia link giocatori</button>
         </div>
       </div>
     </div>
+
+    <section id="inlineEditor" class="card hidden" style="margin-top:18px">
+      <div class="section-title">
+        <div><h2 style="margin:0">Modifica squadra</h2><div class="muted">Le modifiche vengono salvate direttamente nel database.</div></div>
+        <button class="btn secondary" onclick="closeInlineEditor()">Chiudi</button>
+      </div>
+      <form id="editTeamForm" onsubmit="event.preventDefault();saveInlineEditor()">
+        <div class="grid2">
+          <div>
+            <div class="field"><label>Nome squadra *</label><input id="editName" required></div>
+            <div class="field"><label>Serie *</label><select id="editSeries"><option>Serie A</option><option>Serie B</option><option>Serie C</option></select></div>
+            <div class="field"><label>Club / società</label><input id="editClub"></div>
+            <div class="field"><label>Codice fiscale / P. IVA</label><input id="editFiscal"></div>
+            <div class="field"><label>Indirizzo</label><input id="editAddress"></div>
+            <div class="grid2"><div class="field"><label>Comune</label><input id="editCity"></div><div class="field"><label>Provincia</label><input id="editProvince" maxlength="2"></div></div>
+            <div class="field"><label>Campo di casa</label><input id="editCourt"></div>
+          </div>
+          <div>
+            <div class="field"><label>Capitano *</label><input id="editCaptain" required></div>
+            <div class="field"><label>Email capitano *</label><input id="editCaptainEmail" type="email" required></div>
+            <div class="field"><label>Telefono capitano</label><input id="editCaptainPhone"></div>
+            <div class="grid2">
+              <div class="field"><label>Giorno partite in casa</label><select id="editHomeDay"><option value="">Da definire</option><option>Lunedì</option><option>Martedì</option><option>Mercoledì</option><option>Giovedì</option><option>Venerdì</option><option>Sabato</option><option>Domenica</option></select></div>
+              <div class="field"><label>Orario partite in casa</label><input id="editHomeTime" type="time"></div>
+            </div>
+            <label class="notice"><input id="editAccess" type="checkbox" style="width:auto;margin-right:8px"> Accesso capitano attivo</label>
+            <div class="field"><label>Note</label><textarea id="editNotes"></textarea></div>
+          </div>
+        </div>
+        <div id="editMessage" class="notice hidden"></div>
+        <div class="actions"><button class="btn primary" type="submit">Salva modifiche</button><button class="btn secondary" type="button" onclick="closeInlineEditor()">Annulla</button></div>
+      </form>
+    </section>
 
     <hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
 

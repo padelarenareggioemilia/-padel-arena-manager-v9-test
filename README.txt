@@ -1,23 +1,23 @@
-PADEL ARENA MANAGER V9.2.2 — FIX SCHEDA TECNICA SQUADRA
+PADEL ARENA MANAGER V9.3.0 — FORMAZIONI E RISULTATI
 
-CORREZIONI
-- Il pulsante APRI ora passa correttamente l'identificativo della squadra.
-- La pagina team.html è stata ricostruita e non torna più all'elenco senza motivo.
-- Corretto un errore JavaScript presente nella pagina tecnica.
-- Se la sessione è scaduta, dopo il login si ritorna automaticamente alla squadra richiesta.
-- Il pulsante Modifica squadra apre direttamente il modulo della squadra corretta.
-- Inseriti messaggi chiari per:
-  - ID mancante;
-  - squadra non trovata;
-  - errore di Supabase.
-- Mantenuto il tema AICS e tricolore.
+INCLUSO
+- Fix modifica B&B Team già incorporato.
+- Quattro interruttori globali:
+  accesso capitani/segretari, accesso giocatori, formazioni, risultati.
+- Prima formazione aperta alla pubblicazione del calendario.
+- Formazioni successive aperte all'omologazione della partita precedente.
+- Blocco aggiunte/rimozioni/sostituzioni a 120 minuti dalla gara.
+- Fino a 5 minuti prima: consentite solo combinazioni e ordine con gli stessi convocati.
+- A 5 minuti: distinta ufficiale e blocco.
+- Risultati modificabili fino a 26 ore dall'inizio del match; dopo, solo amministratore.
+- Omologazione amministratore e apertura automatica della formazione successiva.
+- Fino a 3 segretari per squadra, obbligatoriamente giocatori approvati con account.
+- Centro gara con formazione, timer, risultato e stampa distinta/referto.
+- Account giocatore indicato come obbligatorio.
 
 INSTALLAZIONE
-Su GitHub V9 Test sostituisci integralmente:
-- index.html
-- team.html
-- login.html
+1. Esegui integralmente SUPABASE_V9_3_UPDATE.sql nel progetto Supabase V9 Test.
+2. Su GitHub sostituisci/carica tutti i file del pacchetto.
+3. Fai Commit changes e attendi circa un minuto.
 
-Puoi anche caricare l'intero pacchetto per mantenere tutti i file allineati.
-Non è necessario eseguire SQL.
-Nessun dato viene cancellato.
+NESSUN DATO ESISTENTE VIENE CANCELLATO.

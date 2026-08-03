@@ -158,7 +158,7 @@ async function portal(){
  b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}<h2>${e(team.name)}</h2>
  ${warning}<div class="actions"><button class="btn primary" onclick="copyPlayers()">Copia link giocatori</button>
  <button class="btn secondary" onclick="portal()">Aggiorna</button></div><hr>
- <h3>Richieste giocatori</h3>${(r.data||[]).map(x=>`<div class="notice player-row">
+ <div class="notice"><b>Segretari di squadra:</b> il capitano può nominare da 0 a 3 giocatori approvati con account. I segretari avranno le stesse funzioni operative del capitano per formazioni e risultati.</div><h3>Richieste giocatori</h3>${(r.data||[]).map(x=>`<div class="notice player-row">
  ${x.photo_url?`<img class="player-photo" src="${e(x.photo_url)}" alt="Foto tessera">`:`<div class="player-photo"></div>`}
  <div><b>${e(x.first_name)} ${e(x.last_name)}</b>
  <div class="muted">${e(x.email)} · ${e(x.phone)}</div>
