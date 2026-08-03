@@ -316,9 +316,11 @@ controllando anche le partite già presenti nelle altre competizioni.
 
 <section class="card">
   <div class="notice">
-    <b>Regole fondamentali:</b> ogni gara utilizza giorno, ora e campo della squadra di casa.
-    Prima del salvataggio l’app controlla che non esistano due gare sovrapposte nello stesso
-    impianto o indirizzo. In presenza di un conflitto il calendario viene bloccato.
+    <b>Regola casa/trasferta:</b> giorno, ora e campo vengono letti esclusivamente dalla squadra di casa.
+    La squadra ospite si adatta sempre alla disponibilità dell’avversaria.
+    HORMIGA PADEL CLUB gioca la domenica alle 11 soltanto quando è in casa;
+    in trasferta segue giorno e ora della squadra ospitante.
+    Prima del salvataggio l’app controlla anche le sovrapposizioni di impianto.
   </div>
   <div id="fixtures"></div>
 </section>
@@ -415,6 +417,26 @@ function nextAllowedHomeDate(baseDate,team,roundOffset,competitionCode,intervalW
   }
 
   return localDateTimeToISO(dateKey(base),time);
+}
+
+
+function scheduleHomeFixture(baseDate,homeTeam,roundOffset,competitionCode,intervalWeeks){
+  // REGOLA UFFICIALE:
+  // giorno, ora e campo dipendono esclusivamente dalla squadra di casa.
+  // La squadra ospite si adatta sempre alla disponibilità della squadra ospitante.
+  if(!homeTeam) throw new Error('Squadra di casa non valida.');
+  return {
+    scheduledAt: nextAllowedHomeDate(
+      baseDate,
+      homeTeam,
+      roundOffset,
+      competitionCode,
+      intervalWeeks
+    ),
+    venue: homeTeam.home_court,
+    configuredDay: homeTeam.home_match_day,
+    configuredTime: normalizeTime(homeTeam.home_match_time)
+  };
 }
 
 function roundRobin(arr){
@@ -581,8 +603,8 @@ function candidateAtWeekOffset(match,home,away,weekOffset,competitionCode){
   const current=new Date(match.scheduled_at);
   current.setDate(current.getDate()+weekOffset*7);
   const base=dateKey(current);
-  const scheduledAt=nextAllowedHomeDate(base,home,0,competitionCode,1);
-  return {home,away,scheduledAt};
+  const schedule=scheduleHomeFixture(base,home,0,competitionCode,1);
+  return {home,away,scheduledAt:schedule.scheduledAt};
 }
 
 function candidateSwapHome(match,competitionCode){
@@ -592,8 +614,8 @@ function candidateSwapHome(match,competitionCode){
 
   const current=new Date(match.scheduled_at);
   const roundBase=dateKey(current);
-  const scheduledAt=nextAllowedHomeDate(roundBase,newHome,0,competitionCode,1);
-  return {home:newHome,away:newAway,scheduledAt};
+  const schedule=scheduleHomeFixture(roundBase,newHome,0,competitionCode,1);
+  return {home:newHome,away:newAway,scheduledAt:schedule.scheduledAt};
 }
 
 function candidateIsValid(candidate,match,working,existing){
@@ -740,7 +762,7 @@ function explainConflict(match,payload,existing){
     reasons.push(`Una delle due squadre ha già un’altra gara nello stesso intervallo.`);
   }
   if(home)reasons.push(`${home.name}: disponibilità ${teamScheduleSummary(home)}.`);
-  if(away)reasons.push(`${away.name}: disponibilità ${teamScheduleSummary(away)}.`);
+  if(away)reasons.push(`${away.name}: è in trasferta e si adatta completamente a giorno, ora e campo della squadra di casa.`);
   if(!reasons.length)reasons.push('Nessuno slot libero trovato entro i limiti impostati.');
 
   return {reasons,checks};
@@ -906,14 +928,15 @@ async function buildCalendarPayload(){
       pairs.forEach(([first,second])=>{
         const home=reverse?second:first;
         const away=reverse?first:second;
-        const configuredTime=normalizeTime(home.home_match_time);
-        const scheduledAt=nextAllowedHomeDate(
+        const homeSchedule=scheduleHomeFixture(
           $('startDate').value,
           home,
           roundOffset,
           code,
           intervalWeeks
         );
+        const configuredTime=homeSchedule.configuredTime;
+        const scheduledAt=homeSchedule.scheduledAt;
         const local=localPartsFromISO(scheduledAt);
 
         // Controllo definitivo: il calendario generato deve coincidere con la scheda di casa.
@@ -932,7 +955,7 @@ async function buildCalendarPayload(){
           home_team_id:home.id,
           away_team_id:away.id,
           scheduled_at:scheduledAt,
-          venue:home.home_court,
+          venue:homeSchedule.venue,
           _home_name:home.name,
           _away_name:away.name,
           _configured_day:home.home_match_day,
