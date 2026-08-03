@@ -1,4 +1,4 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gestione gironi</title>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AICS Padel Championship Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
 :root{--bg:#06111f;--panel:#10233b;--panel2:#09182a;--line:#315676;--text:#f8fafc;--muted:#a9bacd;--lime:#9dff25;--blue:#16a8ff;--red:#ef4444;--amber:#f6c453}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 90% 0%,#123f61,transparent 34%),linear-gradient(180deg,#06111f,#040b14);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
@@ -114,7 +114,27 @@ label{color:var(--aics-blue-dark)!important}
 @media(max-width:800px){
   .brand-logo{width:100px;height:62px}
 }
-</style></head><body><main class="shell">
+</style>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/aics-icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/aics-icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/aics-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="application-name" content="AICS Padel Championship Manager">
+<meta name="apple-mobile-web-app-title" content="AICS Padel">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AICS Padel Championship Manager">
+<meta property="og:description" content="Gestionale ufficiale AICS Padel Championship">
+<meta property="og:image" content="assets/aics-social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AICS Padel Championship Manager">
+<meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
+<meta name="twitter:image" content="assets/aics-social-preview.png">
+
+</head><body><main class="shell">
 <div class="top"><div class="nav"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='index.html'">⌂ Home</button><button class="btn secondary" onclick="location.href='competitions.html'">Competizioni</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button></div></div>
 <header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png" alt="AICS"><div><h1 style="margin:0">Gestione gironi</h1><div class="muted">Divisione manuale o automatica per vicinanza geografica</div></div></div></header><div class="tricolore"></div>
 <section class="card"><div class="grid3"><div class="field"><label>Competizione</label><select id="competition"><option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option><option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option></select></div><div class="field"><label>Numero gironi</label><input id="groupCount" type="number" min="1" value="1"></div><div class="field"><label>Modalità automatica</label><select id="autoMode"><option value="geo">Geografica</option><option value="balanced">Bilanciata</option></select></div></div>
@@ -176,4 +196,13 @@ async function geocodeMissing(){
  msg('Geolocalizzazione completata.');loadAll()
 }
 $('competition').onchange=loadAll;guard().then(loadAll);
-</script></main></body></html>
+</script></main>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  });
+}
+</script>
+
+</body></html>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#164a95">
-<title>Scheda tecnica squadra</title>
+<title>AICS Padel Championship Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <style>
@@ -151,6 +151,26 @@ label{color:var(--aics-blue-dark)!important}
   .player-card>.badge{grid-column:1/-1}
 }
 </style>
+
+<link rel="icon" type="image/png" sizes="32x32" href="assets/aics-icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/aics-icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/aics-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="application-name" content="AICS Padel Championship Manager">
+<meta name="apple-mobile-web-app-title" content="AICS Padel">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AICS Padel Championship Manager">
+<meta property="og:description" content="Gestionale ufficiale AICS Padel Championship">
+<meta property="og:image" content="assets/aics-social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AICS Padel Championship Manager">
+<meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
+<meta name="twitter:image" content="assets/aics-social-preview.png">
+
 </head>
 <body>
 <main class="shell">
@@ -716,5 +736,14 @@ async function init() {
 window.copyLink = copyLink;
 init();
 </script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  });
+}
+</script>
+
 </body>
 </html>

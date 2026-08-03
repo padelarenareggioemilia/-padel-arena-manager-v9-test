@@ -1,39 +1,30 @@
-PADEL ARENA MANAGER V9.4.2 — REPOSITORY COMPLETO
+PADEL ARENA MANAGER V9.4.3 — IDENTITÀ AICS COMPLETA
 
-QUESTO È IL PACCHETTO COMPLETO DEL PROGETTO V9.
-Non è una patch e non richiede di ricostruire file a mano.
+NOVITÀ
+- Logo AICS come favicon del sito.
+- Logo AICS come icona su iPhone, iPad e Android.
+- Manifest Web App completo.
+- Titolo uniforme: AICS Padel Championship Manager.
+- Anteprima link per WhatsApp, Telegram, Facebook e social con logo AICS.
+- Immagine Open Graph dedicata.
+- Colori AICS e richiamo al tricolore.
+- Service worker per rendere la Web App installabile.
 
-CONTENUTO PRINCIPALE
-- index.html
-- login.html
-- team.html
-- captain.html
-- player.html
-- competitions.html
-- groups.html
-- calendar.html
-- admin-control.html
-- match-center.html
-- data-exchange.html
-- config.js
-- cartella assets
-- script SQL
-- CHANGELOG.md
-- VERSION.txt
+INSTALLAZIONE
+1. Su GitHub sostituisci tutti i file del pacchetto.
+2. Carica integralmente la cartella assets.
+3. Assicurati che siano presenti:
+   - manifest.webmanifest
+   - service-worker.js
+4. Fai Commit changes.
+5. Attendi circa un minuto.
+6. Su iPhone, apri il link in Safari e usa:
+   Condividi → Aggiungi alla schermata Home.
 
-INSTALLAZIONE GITHUB
-1. Apri il repository V9 Test.
-2. Carica tutti i file del pacchetto.
-3. Mantieni la stessa struttura delle cartelle.
-4. Se GitHub segnala file già presenti, sostituiscili.
-5. Fai Commit changes.
-6. Attendi circa un minuto.
+NOTA
+Le anteprime dei link su WhatsApp possono usare la cache.
+Dopo l'aggiornamento potrebbe essere necessario inviare il link con un parametro nuovo,
+ad esempio ?v=943, per forzare l'aggiornamento dell'anteprima.
 
-SUPABASE
-Esegui soltanto gli script SQL che non hai ancora eseguito.
-Gli script sono cumulativi per versione e non eliminano i dati esistenti.
-
-IMPORTANTE
-- Non viene cancellata nessuna squadra.
-- Non vengono cancellati giocatori, calendari o risultati.
-- Il file config.js è già collegato al progetto V9 Test.
+Nessun dato Supabase viene modificato.
+Non serve eseguire SQL.

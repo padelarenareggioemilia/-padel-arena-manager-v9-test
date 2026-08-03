@@ -1,5 +1,14 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.4.3 — Identità AICS completa
+- Favicon AICS.
+- Icone iPhone, Android e Web App.
+- Manifest installabile.
+- Anteprima social con logo AICS.
+- Titolo uniforme dell'app.
+- Service worker.
+
+
 ## V9.4.2 — Repository completo
 - Pacchetto completo e coerente dell'intero progetto V9.
 - Inclusa la funzione amministratore Importa/Esporta Excel e CSV.

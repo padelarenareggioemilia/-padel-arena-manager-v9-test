@@ -1,4 +1,4 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Centro gara</title>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AICS Padel Championship Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
 :root{
  --blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;
@@ -22,7 +22,27 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 .score-row{display:grid;grid-template-columns:160px repeat(4,90px);gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
 .hidden{display:none!important}.small{font-size:12px}.right{text-align:right}
 @media(max-width:850px){.grid2,.grid3,.grid4{grid-template-columns:1fr}.lineup-row,.score-row{grid-template-columns:1fr}.hero{align-items:flex-start}.brand-logo{width:98px;height:62px}}
-</style></head><body><main class="shell">
+</style>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/aics-icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/aics-icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/aics-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="application-name" content="AICS Padel Championship Manager">
+<meta name="apple-mobile-web-app-title" content="AICS Padel">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AICS Padel Championship Manager">
+<meta property="og:description" content="Gestionale ufficiale AICS Padel Championship">
+<meta property="og:image" content="assets/aics-social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AICS Padel Championship Manager">
+<meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
+<meta name="twitter:image" content="assets/aics-social-preview.png">
+
+</head><body><main class="shell">
 <div class="top"><div class="nav"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button></div></div>
 <header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png"><div><h1 style="margin:0">Centro gara</h1><div class="muted">Formazioni, distinta, risultati e referto</div></div></div></header><div class="tricolore"></div>
 <section id="summary" class="card">Caricamento...</section>
@@ -49,4 +69,13 @@ function renderResult(){$('resultCard').classList.remove('hidden');$('scores').i
 async function saveResult(){let data={matches:labels.map((l,i)=>{let o={label:l};document.querySelectorAll(`[data-r="${i}"]`).forEach(x=>o[x.dataset.k]=x.value===''?null:+x.value);return o})};let r=await sb.rpc('save_match_result',{p_fixture_id:fixtureId,p_result:data});if(r.error)return msg('resultMsg',r.error.message,true);msg('resultMsg','Risultato salvato. Modificabile fino a 26 ore dall’inizio della gara, salvo omologazione.')}
 function printDistinct(){window.print()}function printReport(){window.print()}
 init();
-</script></main></body></html>
+</script></main>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  });
+}
+</script>
+
+</body></html>

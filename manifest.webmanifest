@@ -1,1 +1,25 @@
-{"name":"Padel Arena Manager V9 DEV","short_name":"PAM V9 DEV","start_url":"./index.html","display":"standalone","background_color":"#07111f","theme_color":"#07111f","icons":[]}
+{
+  "name": "AICS Padel Championship Manager",
+  "short_name": "AICS Padel",
+  "description": "Gestionale ufficiale AICS Padel Championship",
+  "start_url": "./login.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f4f8fc",
+  "theme_color": "#164a95",
+  "icons": [
+    {
+      "src": "assets/aics-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/aics-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

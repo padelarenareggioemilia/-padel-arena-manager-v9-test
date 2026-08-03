@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Importa / Esporta dati</title>
+<title>AICS Padel Championship Manager</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="config.js"></script>
@@ -29,6 +29,26 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kpi{padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}.kpi strong{display:block;font-size:24px;color:var(--blue)}
 @media(max-width:850px){.grid2,.grid3,.kpis{grid-template-columns:1fr}.hero{align-items:flex-start}.brand-logo{width:98px;height:62px}}
 </style>
+
+<link rel="icon" type="image/png" sizes="32x32" href="assets/aics-icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/aics-icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/aics-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="application-name" content="AICS Padel Championship Manager">
+<meta name="apple-mobile-web-app-title" content="AICS Padel">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AICS Padel Championship Manager">
+<meta property="og:description" content="Gestionale ufficiale AICS Padel Championship">
+<meta property="og:image" content="assets/aics-social-preview.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AICS Padel Championship Manager">
+<meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
+<meta name="twitter:image" content="assets/aics-social-preview.png">
+
 </head>
 <body>
 <main class="shell">
@@ -571,5 +591,14 @@ $('duplicateMode').onchange=()=>importedRows.length&&analyzeRows();
 $('duplicateKey').onchange=()=>importedRows.length&&analyzeRows();
 guard().then(loadTeamFilter);
 </script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+  });
+}
+</script>
+
 </body>
 </html>
