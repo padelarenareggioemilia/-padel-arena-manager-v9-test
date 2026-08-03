@@ -138,6 +138,12 @@ label{color:var(--aics-blue-dark)!important}
 .data-item b{display:block;color:var(--aics-blue-dark);font-size:12px;margin-bottom:4px}
 .player-card{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff;margin:8px 0}
 .player-photo{width:58px;height:74px;object-fit:cover;border-radius:10px;background:#edf4fb;border:1px solid var(--line)}
+.edit-logo-box{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;margin-bottom:14px}
+.edit-logo-preview{width:145px;height:145px;border:1px dashed var(--line);border-radius:18px;background:#f8fbff;display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:12px;font-weight:900}
+.edit-logo-preview img{width:100%;height:100%;object-fit:contain;background:#fff}
+.edit-logo-help{font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px}
+@media(max-width:760px){.edit-logo-box{grid-template-columns:1fr}.edit-logo-preview{width:130px;height:130px}}
+
 @media(max-width:760px){
   .detail-grid,.data-grid{grid-template-columns:1fr}
   .big-logo{width:150px;height:150px}
@@ -180,6 +186,7 @@ const params = new URLSearchParams(window.location.search);
 const teamId = params.get('id');
 const box = document.getElementById('teamBox');
 let currentTeam = null;
+let newLogoFile = null;
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -232,9 +239,84 @@ function openInlineEditor() {
   document.getElementById('editAccess').checked = currentTeam.captain_access_enabled !== false;
   document.getElementById('editNotes').value = currentTeam.notes || '';
   document.getElementById('editMessage').classList.add('hidden');
+
+  newLogoFile = null;
+  const logoInput = document.getElementById('editLogoFile');
+  if (logoInput) logoInput.value = '';
+  const logoPreview = document.getElementById('editLogoPreview');
+  const logoFileName = document.getElementById('editLogoFileName');
+  if (logoPreview) {
+    logoPreview.innerHTML = currentTeam.logo_url
+      ? `<img src="${esc(currentTeam.logo_url)}" alt="Logo attuale">`
+      : '<span>NESSUN LOGO</span>';
+  }
+  if (logoFileName) logoFileName.textContent = '';
+
   editor.scrollIntoView({behavior:'smooth', block:'start'});
 }
 function closeInlineEditor() { const editor=document.getElementById('inlineEditor'); if(editor) editor.classList.add('hidden'); }
+
+function previewTeamLogo(event) {
+  newLogoFile = event.target.files?.[0] || null;
+  const preview = document.getElementById('editLogoPreview');
+  const fileName = document.getElementById('editLogoFileName');
+
+  if (!newLogoFile) {
+    preview.innerHTML = currentTeam?.logo_url
+      ? `<img src="${esc(currentTeam.logo_url)}" alt="Logo attuale">`
+      : '<span>NESSUN LOGO</span>';
+    fileName.textContent = '';
+    return;
+  }
+
+  const allowed = ['image/jpeg','image/png','image/webp'];
+  if (!allowed.includes(newLogoFile.type)) {
+    newLogoFile = null;
+    event.target.value = '';
+    fileName.textContent = '';
+    setEditMessage('Formato non valido. Usa JPG, PNG o WEBP.', true);
+    return;
+  }
+
+  if (newLogoFile.size > 5 * 1024 * 1024) {
+    newLogoFile = null;
+    event.target.value = '';
+    fileName.textContent = '';
+    setEditMessage('Il logo non può superare 5 MB.', true);
+    return;
+  }
+
+  const url = URL.createObjectURL(newLogoFile);
+  preview.innerHTML = `<img src="${url}" alt="Anteprima nuovo logo">`;
+  fileName.textContent = newLogoFile.name;
+}
+
+async function uploadTeamLogo(teamId) {
+  if (!newLogoFile) return currentTeam?.logo_url || null;
+
+  const originalExt = (newLogoFile.name.split('.').pop() || 'png').toLowerCase();
+  const ext = ['jpg','jpeg','png','webp'].includes(originalExt) ? originalExt : 'png';
+  const storagePath = `teams/${teamId}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+
+  const upload = await sb.storage
+    .from('team-logos')
+    .upload(storagePath, newLogoFile, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: newLogoFile.type
+    });
+
+  if (upload.error) throw upload.error;
+
+  return sb.storage
+    .from('team-logos')
+    .getPublicUrl(storagePath)
+    .data
+    .publicUrl;
+}
+
+window.previewTeamLogo = previewTeamLogo;
+
 async function saveInlineEditor() {
   if (!currentTeam) return;
   const payload = {
@@ -256,11 +338,34 @@ async function saveInlineEditor() {
     updated_at: new Date().toISOString()
   };
   if (!payload.name || !payload.captain_name || !payload.captain_email) return setEditMessage('Compila nome squadra, capitano ed email.', true);
-  const result = await sb.from('teams').update(payload).eq('id', currentTeam.id);
-  if (result.error) return setEditMessage(result.error.message, true);
-  setEditMessage('Squadra aggiornata correttamente.');
-  currentTeam = {...currentTeam, ...payload};
-  setTimeout(() => window.location.replace('team.html?id=' + encodeURIComponent(currentTeam.id) + '&v=923'), 500);
+  try {
+    const logoUrl = await uploadTeamLogo(currentTeam.id);
+    if (logoUrl) payload.logo_url = logoUrl;
+
+    const result = await sb
+      .from('teams')
+      .update(payload)
+      .eq('id', currentTeam.id);
+
+    if (result.error) throw result.error;
+
+    setEditMessage(
+      newLogoFile
+        ? 'Squadra e logo aggiornati correttamente.'
+        : 'Squadra aggiornata correttamente.'
+    );
+
+    currentTeam = {...currentTeam, ...payload};
+    newLogoFile = null;
+
+    setTimeout(() => {
+      window.location.replace(
+        'team.html?id=' + encodeURIComponent(currentTeam.id) + '&v=931'
+      );
+    }, 600);
+  } catch (error) {
+    setEditMessage(error?.message || 'Errore durante il salvataggio del logo.', true);
+  }
 }
 window.openInlineEditor = openInlineEditor;
 window.closeInlineEditor = closeInlineEditor;
@@ -378,6 +483,29 @@ async function init() {
         <button class="btn secondary" onclick="closeInlineEditor()">Chiudi</button>
       </div>
       <form id="editTeamForm" onsubmit="event.preventDefault();saveInlineEditor()">
+        <div class="edit-logo-box">
+          <div id="editLogoPreview" class="edit-logo-preview">NESSUN LOGO</div>
+          <div>
+            <div class="field">
+              <label>Logo della squadra</label>
+              <input
+                id="editLogoFile"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onchange="previewTeamLogo(event)"
+              >
+              <div id="editLogoFileName" class="edit-logo-help"></div>
+              <div class="edit-logo-help">
+                Puoi caricare o sostituire il logo in qualsiasi momento.
+                Formati accettati: JPG, PNG e WEBP. Dimensione massima: 5 MB.
+                Se non selezioni un nuovo file, il logo attuale resta invariato.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tricolore"></div>
+
         <div class="grid2">
           <div>
             <div class="field"><label>Nome squadra *</label><input id="editName" required></div>
