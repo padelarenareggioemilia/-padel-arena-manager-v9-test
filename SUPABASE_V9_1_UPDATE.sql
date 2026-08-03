@@ -35,3 +35,88 @@ commit; notify pgrst,'reload schema';
 alter table public.teams add column if not exists home_match_day text;
 alter table public.teams add column if not exists home_match_time time;
 notify pgrst,'reload schema';
+
+
+-- V9.1.2: foto tessera, classifica FITP e scadenza certificato medico
+alter table public.roster_requests add column if not exists photo_url text;
+alter table public.roster_requests add column if not exists fitp_ranking text;
+alter table public.roster_requests add column if not exists medical_certificate_expiry date;
+
+insert into storage.buckets(id,name,public)
+values('player-photos','player-photos',true)
+on conflict(id) do update set public=true;
+
+drop policy if exists player_photos_public_read on storage.objects;
+create policy player_photos_public_read
+on storage.objects for select to public
+using(bucket_id='player-photos');
+
+drop policy if exists player_photos_public_insert on storage.objects;
+create policy player_photos_public_insert
+on storage.objects for insert to anon,authenticated
+with check(bucket_id='player-photos');
+
+drop function if exists public.submit_roster_request(text,jsonb);
+create function public.submit_roster_request(p_token text,p_payload jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path=public
+as $$
+declare
+  tid uuid;
+  rid uuid;
+begin
+  select id into tid
+  from public.teams
+  where player_invite_token=p_token
+  limit 1;
+
+  if tid is null then
+    raise exception 'Link non valido';
+  end if;
+
+  insert into public.roster_requests(
+    team_id,first_name,last_name,email,phone,birth_date,birth_place,
+    residence_town,residence_province,gender,photo_url,fitp_ranking,
+    medical_certificate_expiry,notes
+  )
+  values(
+    tid,
+    p_payload->>'first_name',
+    p_payload->>'last_name',
+    lower(p_payload->>'email'),
+    p_payload->>'phone',
+    (p_payload->>'birth_date')::date,
+    p_payload->>'birth_place',
+    p_payload->>'residence_town',
+    upper(p_payload->>'residence_province'),
+    p_payload->>'gender',
+    p_payload->>'photo_url',
+    upper(p_payload->>'fitp_ranking'),
+    (p_payload->>'medical_certificate_expiry')::date,
+    p_payload->>'notes'
+  )
+  on conflict(team_id,email) do update set
+    first_name=excluded.first_name,
+    last_name=excluded.last_name,
+    phone=excluded.phone,
+    birth_date=excluded.birth_date,
+    birth_place=excluded.birth_place,
+    residence_town=excluded.residence_town,
+    residence_province=excluded.residence_province,
+    gender=excluded.gender,
+    photo_url=excluded.photo_url,
+    fitp_ranking=excluded.fitp_ranking,
+    medical_certificate_expiry=excluded.medical_certificate_expiry,
+    notes=excluded.notes,
+    status='pending',
+    decided_at=null
+  returning id into rid;
+
+  return jsonb_build_object('id',rid,'status','pending');
+end
+$$;
+
+grant execute on function public.submit_roster_request(text,jsonb) to anon,authenticated;
+notify pgrst,'reload schema';

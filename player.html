@@ -1,4 +1,107 @@
-<!doctype html><html lang="it"><head><title>Iscrizione squadra V9.1</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#06111f"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
+<!doctype html><html lang="it"><head><title>Iscrizione squadra V9.1.2</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06111f">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<style>
 :root{--bg:#06111f;--panel:#102842;--line:#315a7d;--text:#f7fafc;--muted:#a9bbce;--lime:#9dff1f;--blue:#1cb5ff;--red:#ff4d5e}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 90% 0%,#123f61,transparent 35%),linear-gradient(180deg,#06111f,#040b13);color:var(--text);font-family:system-ui,-apple-system,sans-serif}button,input,select,textarea{font:inherit}.shell{max-width:1180px;margin:auto;padding:14px 14px 80px}.hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 16px}.brand{display:flex;align-items:center;gap:14px}.mark{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--lime),var(--blue));display:grid;place-items:center;color:#07111f;font-weight:1000}.muted{color:var(--muted)}h1{font-size:clamp(30px,5vw,46px);margin:0}.card{background:linear-gradient(180deg,#102842,#091b2d);border:1px solid var(--line);border-radius:22px;padding:18px;margin:13px 0}.top{position:sticky;top:0;z-index:10;background:#06111fed;backdrop-filter:blur(10px);padding:10px;border:1px solid var(--line);border-radius:18px}.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.btn{border:0;border-radius:13px;padding:12px 14px;font-weight:900;cursor:pointer}.primary{background:var(--lime);color:#07111f}.secondary{background:#193957;color:#fff;border:1px solid #416b91}.danger{background:#7c1f2a;color:#fff;border:1px solid var(--red)}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #416b91;background:#071522;color:#fff}textarea{min-height:85px}.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}.notice{padding:12px;border-radius:13px;background:#071522;border:1px solid var(--line);margin:10px 0}.ok{border-color:#42e58a}.err{border-color:var(--red)}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi{padding:14px;border-radius:16px;background:#0a1d31;border:1px solid var(--line)}.kpi strong{display:block;font-size:25px;color:var(--lime)}.team{display:grid;grid-template-columns:82px 1fr auto;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:17px;background:#091a2b;margin:9px 0}.logo{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:15px;padding:4px}.placeholder{width:76px;height:76px;border-radius:15px;display:grid;place-items:center;background:#173653;font-size:28px}.meta{font-size:13px;color:var(--muted);line-height:1.5}.badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#1b3b59;font-size:11px;font-weight:900}.preview{width:120px;height:120px;border:1px dashed #5b82a5;border-radius:17px;display:grid;place-items:center;overflow:hidden;background:#071522}.preview img{width:100%;height:100%;object-fit:contain;background:white}@media(max-width:800px){.grid2,.kpis{grid-template-columns:1fr}.team{grid-template-columns:64px 1fr}.team>.actions{grid-column:1/-1}.logo,.placeholder{width:60px;height:60px}.actions .btn{flex:1}}
-</style></head><body><main class="shell" style="max-width:850px"><header class="hero"><div class="brand"><div class="mark">🎾</div><div><h1>Iscrizione alla squadra</h1><div class="muted">Account facoltativo</div></div></div></header><section id="box" class="card">Verifica squadra...</section><script>const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),t=new URLSearchParams(location.search).get('team'),b=document.getElementById('box');const e=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));let team;async function init(){let r=await s.rpc('public_team_by_player_invite',{p_token:t});if(r.error||!r.data)return b.innerHTML='<h2>Link non valido</h2>';team=r.data;b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}<h2>${e(team.name)}</h2><p class="muted">${e(team.series||'')} · ${e(team.club_name||'')}</p><form onsubmit="event.preventDefault();send()"><div class="grid2"><div class="field"><label>Nome *</label><input id="fn"></div><div class="field"><label>Cognome *</label><input id="ln"></div><div class="field"><label>Email *</label><input id="em" type="email"></div><div class="field"><label>Telefono *</label><input id="ph"></div><div class="field"><label>Data di nascita *</label><input id="bd" type="date"></div><div class="field"><label>Luogo di nascita *</label><input id="bp"></div><div class="field"><label>Comune di residenza *</label><input id="rt"></div><div class="field"><label>Provincia *</label><input id="rp" maxlength="2"></div><div class="field"><label>Sesso *</label><select id="g"><option value="">Seleziona</option><option>Maschile</option><option>Femminile</option></select></div><div class="field"><label>Livello</label><input id="lv"></div></div><div class="field"><label>Note</label><textarea id="nt"></textarea></div><button id="send" class="btn primary">Invia richiesta</button><div id="m" class="notice hidden"></div></form>`}function m(x,z=false){let a=document.getElementById('m');a.textContent=x;a.className='notice '+(z?'err':'ok');a.classList.remove('hidden')}async function send(){let p={first_name:fn.value.trim(),last_name:ln.value.trim(),email:em.value.trim().toLowerCase(),phone:ph.value.trim(),birth_date:bd.value,birth_place:bp.value.trim(),residence_town:rt.value.trim(),residence_province:rp.value.trim().toUpperCase(),gender:g.value,level:lv.value.trim(),notes:nt.value.trim()};for(let k of ['first_name','last_name','email','phone','birth_date','birth_place','residence_town','residence_province','gender'])if(!p[k])return m('Compila tutti i campi obbligatori.',true);let r=await s.rpc('submit_roster_request',{p_token:t,p_payload:p});if(r.error)return m(r.error.message,true);m('Richiesta inviata correttamente.');send.disabled=true}init()</script></main></body></html>
+
+.photo-preview{width:150px;height:190px;border:1px dashed #5b82a5;border-radius:16px;
+display:grid;place-items:center;overflow:hidden;background:#071522;color:var(--muted)}
+.photo-preview img{width:100%;height:100%;object-fit:cover}
+.doc-note{font-size:12px;color:var(--muted);line-height:1.45;margin-top:6px}
+</style></head><body><main class="shell" style="max-width:900px">
+<header class="hero"><div class="brand"><div class="mark">🎾</div><div><h1>Iscrizione alla squadra</h1>
+<div class="muted">Dati anagrafici e sportivi del giocatore</div></div></div></header>
+<section id="box" class="card">Verifica squadra...</section>
+<script>
+const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),
+t=new URLSearchParams(location.search).get('team'),b=document.getElementById('box');
+const e=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+let team,photoFile=null;
+async function init(){
+ let r=await s.rpc('public_team_by_player_invite',{p_token:t});
+ if(r.error||!r.data)return b.innerHTML='<h2>Link non valido</h2>';
+ team=r.data;
+ b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}
+ <h2>${e(team.name)}</h2><p class="muted">${e(team.series||'')} · ${e(team.club_name||'')}</p>
+ <div class="notice err" style="line-height:1.55">
+  <b>AVVISO IMPORTANTE SULLA VERIDICITÀ DEI DATI</b><br>
+  Il capitano e ciascun giocatore sono responsabili della completezza e della veridicità
+  dei dati, dei documenti e delle dichiarazioni inserite. Informazioni false, alterate,
+  incomplete o riferite ad altre persone potranno comportare l’immediata sospensione o
+  esclusione dalla competizione, l’annullamento dei risultati e, quando necessario, la
+  segnalazione agli organi sportivi o alle autorità competenti. L’organizzazione non
+  risponde delle conseguenze civili, penali, sportive o assicurative derivanti da dati o
+  documenti non veritieri forniti dagli utenti, nei limiti consentiti dalla legge.
+</div>
+ <form onsubmit="event.preventDefault();sendRequest()">
+ <div class="grid2">
+  <div>
+   <div class="field"><label>Foto tessera del giocatore *</label>
+    <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
+    <div class="doc-note">Carica una fotografia recente, frontale e riconoscibile. Formati JPG, PNG o WEBP.</div>
+   </div>
+   <div id="photoPreview" class="photo-preview">ANTEPRIMA FOTO</div>
+  </div>
+  <div>
+   <div class="field"><label>Nome *</label><input id="fn"></div>
+   <div class="field"><label>Cognome *</label><input id="ln"></div>
+   <div class="field"><label>Email *</label><input id="em" type="email"></div>
+   <div class="field"><label>Telefono *</label><input id="ph"></div>
+  </div>
+ </div>
+ <div class="grid2">
+  <div class="field"><label>Data di nascita *</label><input id="bd" type="date"></div>
+  <div class="field"><label>Luogo di nascita *</label><input id="bp"></div>
+  <div class="field"><label>Comune di residenza *</label><input id="rt"></div>
+  <div class="field"><label>Provincia *</label><input id="rp" maxlength="2"></div>
+  <div class="field"><label>Sesso *</label><select id="g"><option value="">Seleziona</option><option>Maschile</option><option>Femminile</option></select></div>
+  <div class="field"><label>Classifica FITP *</label><input id="fitp" placeholder="Es. NC, 4.4, 4.1, 3.5"></div>
+  <div class="field"><label>Scadenza certificato medico *</label><input id="medical" type="date"></div>
+ </div>
+ <div class="field"><label>Note</label><textarea id="nt"></textarea></div>
+ <label class="notice"><input id="truth" type="checkbox" style="width:auto;margin-right:8px">
+ Dichiaro che i dati e i documenti inseriti sono autentici, aggiornati e riferiti alla mia persona.</label>
+ <button id="sendBtn" class="btn primary">Invia richiesta</button><div id="m" class="notice hidden"></div></form>`;
+ document.getElementById('photo').addEventListener('change',ev=>{
+   photoFile=ev.target.files[0]||null;
+   if(photoFile){
+     const u=URL.createObjectURL(photoFile);
+     document.getElementById('photoPreview').innerHTML=`<img src="${u}" alt="Anteprima foto tessera">`;
+   }
+ });
+}
+function m(x,z=false){let a=document.getElementById('m');a.textContent=x;a.className='notice '+(z?'err':'ok');a.classList.remove('hidden')}
+async function uploadPhoto(){
+ if(!photoFile) throw new Error('Carica la foto tessera.');
+ if(photoFile.size>5*1024*1024) throw new Error('La foto non può superare 5 MB.');
+ const ext=(photoFile.name.split('.').pop()||'jpg').toLowerCase();
+ const safeExt=['jpg','jpeg','png','webp'].includes(ext)?ext:'jpg';
+ const path=`${team.id}/${crypto.randomUUID()}.${safeExt}`;
+ const up=await s.storage.from('player-photos').upload(path,photoFile,{contentType:photoFile.type,upsert:false});
+ if(up.error)throw up.error;
+ return s.storage.from('player-photos').getPublicUrl(path).data.publicUrl;
+}
+async function sendRequest(){
+ if(!document.getElementById('truth').checked)return m('Devi confermare la veridicità dei dati inseriti.',true);
+ let p={
+  first_name:fn.value.trim(),last_name:ln.value.trim(),email:em.value.trim().toLowerCase(),
+  phone:ph.value.trim(),birth_date:bd.value,birth_place:bp.value.trim(),
+  residence_town:rt.value.trim(),residence_province:rp.value.trim().toUpperCase(),
+  gender:g.value,fitp_ranking:fitp.value.trim().toUpperCase(),
+  medical_certificate_expiry:medical.value,notes:nt.value.trim()
+ };
+ for(let k of ['first_name','last_name','email','phone','birth_date','birth_place','residence_town',
+ 'residence_province','gender','fitp_ranking','medical_certificate_expiry'])
+  if(!p[k])return m('Compila tutti i campi obbligatori.',true);
+ try{
+   sendBtn.disabled=true;m('Caricamento foto e invio richiesta...');
+   p.photo_url=await uploadPhoto();
+   let r=await s.rpc('submit_roster_request',{p_token:t,p_payload:p});
+   if(r.error)throw r.error;
+   m('Richiesta inviata correttamente. Il capitano potrà verificarla e approvarla.');
+ }catch(err){sendBtn.disabled=false;m(err.message||String(err),true)}
+}
+init();
+</script></main></body></html>

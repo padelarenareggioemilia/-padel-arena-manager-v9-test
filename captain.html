@@ -1,4 +1,69 @@
-<!doctype html><html lang="it"><head><title>Portale Capitano V9.1</title><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#06111f"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
+<!doctype html><html lang="it"><head><title>Portale Capitano V9.1.2</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06111f"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script><style>
 :root{--bg:#06111f;--panel:#102842;--line:#315a7d;--text:#f7fafc;--muted:#a9bbce;--lime:#9dff1f;--blue:#1cb5ff;--red:#ff4d5e}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 90% 0%,#123f61,transparent 35%),linear-gradient(180deg,#06111f,#040b13);color:var(--text);font-family:system-ui,-apple-system,sans-serif}button,input,select,textarea{font:inherit}.shell{max-width:1180px;margin:auto;padding:14px 14px 80px}.hero{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 16px}.brand{display:flex;align-items:center;gap:14px}.mark{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--lime),var(--blue));display:grid;place-items:center;color:#07111f;font-weight:1000}.muted{color:var(--muted)}h1{font-size:clamp(30px,5vw,46px);margin:0}.card{background:linear-gradient(180deg,#102842,#091b2d);border:1px solid var(--line);border-radius:22px;padding:18px;margin:13px 0}.top{position:sticky;top:0;z-index:10;background:#06111fed;backdrop-filter:blur(10px);padding:10px;border:1px solid var(--line);border-radius:18px}.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.btn{border:0;border-radius:13px;padding:12px 14px;font-weight:900;cursor:pointer}.primary{background:var(--lime);color:#07111f}.secondary{background:#193957;color:#fff;border:1px solid #416b91}.danger{background:#7c1f2a;color:#fff;border:1px solid var(--red)}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #416b91;background:#071522;color:#fff}textarea{min-height:85px}.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none!important}.notice{padding:12px;border-radius:13px;background:#071522;border:1px solid var(--line);margin:10px 0}.ok{border-color:#42e58a}.err{border-color:var(--red)}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi{padding:14px;border-radius:16px;background:#0a1d31;border:1px solid var(--line)}.kpi strong{display:block;font-size:25px;color:var(--lime)}.team{display:grid;grid-template-columns:82px 1fr auto;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:17px;background:#091a2b;margin:9px 0}.logo{width:76px;height:76px;object-fit:contain;background:#fff;border-radius:15px;padding:4px}.placeholder{width:76px;height:76px;border-radius:15px;display:grid;place-items:center;background:#173653;font-size:28px}.meta{font-size:13px;color:var(--muted);line-height:1.5}.badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#1b3b59;font-size:11px;font-weight:900}.preview{width:120px;height:120px;border:1px dashed #5b82a5;border-radius:17px;display:grid;place-items:center;overflow:hidden;background:#071522}.preview img{width:100%;height:100%;object-fit:contain;background:white}@media(max-width:800px){.grid2,.kpis{grid-template-columns:1fr}.team{grid-template-columns:64px 1fr}.team>.actions{grid-column:1/-1}.logo,.placeholder{width:60px;height:60px}.actions .btn{flex:1}}
-</style></head><body><main class="shell"><header class="hero"><div class="brand"><div class="mark">C</div><div><h1>Portale Capitano</h1><div class="muted">Gestione della propria squadra</div></div></div></header><section id="box" class="card">Verifica link...</section><script>const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),t=new URLSearchParams(location.search).get('invite'),b=document.getElementById('box');const e=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));let team;async function init(){let r=await s.rpc('public_team_by_captain_invite',{p_token:t});if(r.error||!r.data)return b.innerHTML='<h2>Link non valido</h2>';team=r.data;if(team.captain_access_enabled===false)return b.innerHTML='<h2>Accesso disabilitato</h2>';b.innerHTML=`<h2>${e(team.name)}</h2><p class="muted">${e(team.series||'')} · ${e(team.club_name||'')}</p><div class="notice">Accedi o crea l’account con <b>${e(team.captain_email)}</b>.</div><div class="grid2"><div class="field"><label>Email</label><input id="em" value="${e(team.captain_email)}"></div><div class="field"><label>Password</label><input id="pw" type="password"></div></div><div class="actions"><button class="btn primary" onclick="login()">Accedi</button><button class="btn secondary" onclick="signup()">Crea account</button></div><div id="m" class="notice hidden"></div>`;let q=await s.auth.getSession();if(q.data.session)claim()}function m(x,z=false){let a=document.getElementById('m');a.textContent=x;a.className='notice '+(z?'err':'ok');a.classList.remove('hidden')}async function login(){let r=await s.auth.signInWithPassword({email:em.value.trim(),password:pw.value});if(r.error)return m(r.error.message,true);claim()}async function signup(){let r=await s.auth.signUp({email:em.value.trim(),password:pw.value,options:{data:{first_name:team.captain_name}}});if(r.error)return m(r.error.message,true);if(!r.data.session)return m('Account creato. Conferma l’email.');claim()}async function claim(){let r=await s.rpc('claim_team_as_captain',{p_token:t});if(r.error)return m(r.error.message,true);team=r.data;portal()}async function portal(){let r=await s.from('roster_requests').select('*').eq('team_id',team.id).order('created_at',{ascending:false});b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}<h2>${e(team.name)}</h2><div class="actions"><button class="btn primary" onclick="copyPlayers()">Copia link giocatori</button><button class="btn secondary" onclick="portal()">Aggiorna</button></div><hr>${(r.data||[]).map(x=>`<div class="notice"><b>${e(x.first_name)} ${e(x.last_name)}</b><div class="muted">${e(x.email)} · ${e(x.phone)} · ${e(x.status)}</div>${x.status==='pending'?`<div class="actions"><button class="btn primary" onclick="decide('${x.id}','approved')">Approva</button><button class="btn danger" onclick="decide('${x.id}','rejected')">Rifiuta</button></div>`:''}</div>`).join('')||'<div class="notice">Nessuna richiesta.</div>'}`}function copyPlayers(){let u=new URL('player.html?team='+encodeURIComponent(team.player_invite_token),location.href).href;navigator.clipboard?.writeText(u).then(()=>alert('Link copiato')).catch(()=>prompt('Copia il link:',u))}async function decide(id,status){let r=await s.from('roster_requests').update({status,decided_at:new Date().toISOString()}).eq('id',id);if(r.error)alert(r.error.message);else portal()}init()</script></main></body></html>
+
+.player-row{display:grid;grid-template-columns:78px 1fr auto;gap:12px;align-items:start}
+.player-photo{width:72px;height:92px;object-fit:cover;border-radius:12px;background:#fff;border:1px solid #416b91}
+@media(max-width:700px){.player-row{grid-template-columns:62px 1fr}.player-row>.actions{grid-column:1/-1}.player-photo{width:58px;height:75px}}
+</style></head><body><main class="shell">
+<header class="hero"><div class="brand"><div class="mark">C</div><div><h1>Portale Capitano</h1>
+<div class="muted">Gestione della propria squadra</div></div></div></header>
+<section id="box" class="card">Verifica link...</section>
+<script>
+const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),
+t=new URLSearchParams(location.search).get('invite'),b=document.getElementById('box');
+const e=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+let team;
+const warning=`<div class="notice err" style="line-height:1.55">
+  <b>AVVISO IMPORTANTE SULLA VERIDICITÀ DEI DATI</b><br>
+  Il capitano e ciascun giocatore sono responsabili della completezza e della veridicità
+  dei dati, dei documenti e delle dichiarazioni inserite. Informazioni false, alterate,
+  incomplete o riferite ad altre persone potranno comportare l’immediata sospensione o
+  esclusione dalla competizione, l’annullamento dei risultati e, quando necessario, la
+  segnalazione agli organi sportivi o alle autorità competenti. L’organizzazione non
+  risponde delle conseguenze civili, penali, sportive o assicurative derivanti da dati o
+  documenti non veritieri forniti dagli utenti, nei limiti consentiti dalla legge.
+</div>`;
+async function init(){
+ let r=await s.rpc('public_team_by_captain_invite',{p_token:t});
+ if(r.error||!r.data)return b.innerHTML='<h2>Link non valido</h2>';
+ team=r.data;
+ if(team.captain_access_enabled===false)return b.innerHTML='<h2>Accesso disabilitato</h2>';
+ b.innerHTML=`<h2>${e(team.name)}</h2><p class="muted">${e(team.series||'')} · ${e(team.club_name||'')}</p>
+ ${warning}<div class="notice">Accedi o crea l’account con <b>${e(team.captain_email)}</b>.</div>
+ <div class="grid2"><div class="field"><label>Email</label><input id="em" value="${e(team.captain_email)}"></div>
+ <div class="field"><label>Password</label><input id="pw" type="password"></div></div>
+ <div class="actions"><button class="btn primary" onclick="login()">Accedi</button>
+ <button class="btn secondary" onclick="signup()">Crea account</button></div><div id="m" class="notice hidden"></div>`;
+ let q=await s.auth.getSession();if(q.data.session)claim()
+}
+function m(x,z=false){let a=document.getElementById('m');a.textContent=x;a.className='notice '+(z?'err':'ok');a.classList.remove('hidden')}
+async function login(){let r=await s.auth.signInWithPassword({email:em.value.trim(),password:pw.value});if(r.error)return m(r.error.message,true);claim()}
+async function signup(){let r=await s.auth.signUp({email:em.value.trim(),password:pw.value,options:{data:{first_name:team.captain_name}}});
+ if(r.error)return m(r.error.message,true);if(!r.data.session)return m('Account creato. Conferma l’email.');claim()}
+async function claim(){let r=await s.rpc('claim_team_as_captain',{p_token:t});if(r.error)return m(r.error.message,true);team=r.data;portal()}
+function formatDate(v){if(!v)return 'Non indicata';const d=new Date(v+'T12:00:00');return d.toLocaleDateString('it-IT')}
+async function portal(){
+ let r=await s.from('roster_requests').select('*').eq('team_id',team.id).order('created_at',{ascending:false});
+ b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}<h2>${e(team.name)}</h2>
+ ${warning}<div class="actions"><button class="btn primary" onclick="copyPlayers()">Copia link giocatori</button>
+ <button class="btn secondary" onclick="portal()">Aggiorna</button></div><hr>
+ <h3>Richieste giocatori</h3>${(r.data||[]).map(x=>`<div class="notice player-row">
+ ${x.photo_url?`<img class="player-photo" src="${e(x.photo_url)}" alt="Foto tessera">`:`<div class="player-photo"></div>`}
+ <div><b>${e(x.first_name)} ${e(x.last_name)}</b>
+ <div class="muted">${e(x.email)} · ${e(x.phone)}</div>
+ <div class="meta"><b>Classifica FITP:</b> ${e(x.fitp_ranking||'Non indicata')}<br>
+ <b>Scadenza certificato medico:</b> ${formatDate(x.medical_certificate_expiry)}<br>
+ <b>Stato:</b> ${e(x.status)}</div></div>
+ ${x.status==='pending'?`<div class="actions"><button class="btn primary" onclick="decide('${x.id}','approved')">Approva</button>
+ <button class="btn danger" onclick="decide('${x.id}','rejected')">Rifiuta</button></div>`:''}</div>`).join('')||'<div class="notice">Nessuna richiesta.</div>'}`
+}
+function copyPlayers(){let u=new URL('player.html?team='+encodeURIComponent(team.player_invite_token),location.href).href;
+ navigator.clipboard?.writeText(u).then(()=>alert('Link copiato')).catch(()=>prompt('Copia il link:',u))}
+async function decide(id,status){let r=await s.from('roster_requests').update({status,decided_at:new Date().toISOString()}).eq('id',id);
+ if(r.error)alert(r.error.message);else portal()}
+init();
+</script></main></body></html>
