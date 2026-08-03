@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS PADEL CHAMPIONSHIP · Formazioni</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--bg:#f4f8fc;--panel:#fff;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;--line:#b9cde3;--gold:#d7a72d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:50}
+.shell{max-width:1250px;margin:auto;padding:18px 13px 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 14px 32px rgba(8,47,104,.1)}.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:white;display:flex;justify-content:space-between;align-items:center;gap:14px}.brand{display:flex;gap:13px;align-items:center}.logo{width:104px;height:70px;object-fit:contain;background:#fff;padding:6px;border-radius:13px}.muted{color:var(--muted)}.hero .muted{color:#dce9f7}.btn{border:0;border-radius:11px;padding:10px 13px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.success{background:var(--green);color:#fff}.danger{background:var(--red);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;gap:8px;flex-wrap:wrap}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:8px 0}label{display:block;font-weight:900;font-size:13px;margin-bottom:5px}select,input{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:9px 0}.ok{background:#ebf8f0;border-color:#79bf90}.warn{background:#fff7dd;border-color:#d9b757}.err{background:#fdecef;border-color:#dd7a85}.hidden{display:none!important}.status{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:1000;background:#e6eff9;border:1px solid var(--line)}.team-block{border:1px solid var(--line);border-radius:16px;padding:13px;background:#fff}.pair{border:1px solid #d5e1ed;border-radius:13px;padding:10px;margin:8px 0}.pair-title{font-weight:1000;color:var(--blue2);margin-bottom:6px}.readonly{background:#f6f8fb}.history{font-size:12px;border-left:3px solid var(--blue);padding:6px 9px;margin:7px 0;background:#f8fbfe}.countdown{font-size:20px;font-weight:1000;color:var(--blue2)}.lock{border-color:var(--red);background:#fff0f2}
+@media(max-width:850px){.grid2{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:85px;height:58px}}
+</style>
+</head>
+<body><main class="shell">
+<div class="actions"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='public.html'">Portale pubblico</button></div>
+
+<header class="hero">
+  <div class="brand"><img class="logo" src="assets/aics-logo.png"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div class="muted">Formazioni e distinta virtuale</div></div></div>
+  <span id="roleBadge" class="status">UTENTE</span>
+</header>
+
+<section class="card">
+  <div id="matchInfo"></div>
+  <div id="countdown" class="notice"></div>
+  <div id="msg" class="notice hidden"></div>
+</section>
+
+<section class="card">
+  <div class="grid2">
+    <div id="homeLineup" class="team-block"></div>
+    <div id="awayLineup" class="team-block"></div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Storico modifiche</h2>
+  <div id="historyList"></div>
+</section>
+
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
+const fixtureId=new URLSearchParams(location.search).get('fixture');
+let fixture=null,teams=[],players=[],lineups=[],session=null,myRoles=[],isAdmin=false;
+let timer=null;
+
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+function msg(text,error=false){
+  $('msg').textContent=text;
+  $('msg').className='notice '+(error?'err':'ok');
+  $('msg').classList.remove('hidden');
+}
+function teamName(id){return teams.find(t=>t.id===id)?.name||'Squadra'}
+function playerName(id){
+  const p=players.find(x=>x.id===id);
+  return p?`${p.first_name||''} ${p.last_name||''}`.trim():'';
+}
+function myRoleFor(teamId){
+  if(isAdmin)return 'admin';
+  return myRoles.find(r=>r.team_id===teamId&&r.active)?.role||null;
+}
+function canEditTeam(teamId){
+  const role=myRoleFor(teamId);
+  return isAdmin||['captain','secretary'].includes(role);
+}
+function canViewMatch(){
+  return isAdmin||[fixture.home_team_id,fixture.away_team_id].some(id=>canEditTeam(id));
+}
+function statusFor(teamId){
+  return lineups.find(l=>l.team_id===teamId)||null;
+}
+function now(){return Date.now()}
+function deadlines(){
+  const start=new Date(fixture.scheduled_at).getTime();
+  return {
+    playerLock:start-120*60000,
+    finalLock:start-5*60000
+  };
+}
+function phase(){
+  const d=deadlines();
+  if(now()>=d.finalLock)return 'official';
+  if(now()>=d.playerLock)return 'reorder';
+  return 'editing';
+}
+function phaseLabel(){
+  return phase()==='editing'?'FORMAZIONE IN COMPILAZIONE':phase()==='reorder'?'FORMAZIONE CHIUSA · SOLO COPPIE E ORDINE':'DISTINTA UFFICIALE BLOCCATA';
+}
+function renderCountdown(){
+  const d=deadlines();
+  const target=phase()==='editing'?d.playerLock:d.finalLock;
+  const diff=Math.max(0,target-now());
+  const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+  $('countdown').className='notice '+(phase()==='official'?'lock':phase()==='reorder'?'warn':'ok');
+  $('countdown').innerHTML=`<b>${phaseLabel()}</b><div class="countdown">${phase()==='official'?'BLOCCATA':`${h}h ${m}m ${s}s`}</div>`;
+}
+function lineupPlayers(teamId){
+  return players.filter(p=>p.team_id===teamId&&p.status==='approved');
+}
+function selectOptions(teamId,selected){
+  return `<option value="">— Seleziona —</option>`+lineupPlayers(teamId).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(playerName(p.id))}</option>`).join('');
+}
+function defaultData(){
+  return {matches:[
+    {label:'Maschile 1',p1:null,p2:null},
+    {label:'Maschile 2',p1:null,p2:null},
+    {label:'Misto',p1:null,p2:null},
+    {label:'Femminile',p1:null,p2:null}
+  ]};
+}
+function renderTeam(teamId,targetId){
+  const teamLineup=statusFor(teamId);
+  const data=teamLineup?.lineup_data||defaultData();
+  const editable=canEditTeam(teamId)&&phase()!=='official';
+  const canChangePlayers=editable&&phase()==='editing';
+  const block=$(targetId);
+  block.classList.toggle('readonly',!editable);
+  block.innerHTML=`
+    <h2>${esc(teamName(teamId))}</h2>
+    <div class="status">${teamLineup?.status||'draft'}</div>
+    ${data.matches.map((m,i)=>`
+      <div class="pair">
+        <div class="pair-title">${esc(m.label||`Partita ${i+1}`)}</div>
+        <select ${canChangePlayers?'':'disabled'} onchange="setPlayer('${teamId}',${i},'p1',this.value)">${selectOptions(teamId,m.p1)}</select>
+        <select ${canChangePlayers?'':'disabled'} onchange="setPlayer('${teamId}',${i},'p2',this.value)">${selectOptions(teamId,m.p2)}</select>
+        ${editable&&phase()==='reorder'?`<div class="actions" style="margin-top:7px"><button class="btn secondary" onclick="movePair('${teamId}',${i},-1)">↑</button><button class="btn secondary" onclick="movePair('${teamId}',${i},1)">↓</button></div>`:''}
+      </div>`).join('')}
+    ${editable?`<div class="actions">
+      <button class="btn primary" onclick="saveLineup('${teamId}')">Salva formazione</button>
+      <button class="btn success" onclick="confirmLineup('${teamId}')">Conferma formazione</button>
+    </div>`:''}
+  `;
+}
+function setPlayer(teamId,index,key,value){
+  let l=statusFor(teamId);
+  if(!l){l={fixture_id:fixtureId,team_id:teamId,status:'draft',lineup_data:defaultData()};lineups.push(l)}
+  l.lineup_data.matches[index][key]=value||null;
+}
+function movePair(teamId,index,direction){
+  const l=statusFor(teamId);if(!l)return;
+  const next=index+direction;
+  if(next<0||next>=l.lineup_data.matches.length)return;
+  [l.lineup_data.matches[index],l.lineup_data.matches[next]]=[l.lineup_data.matches[next],l.lineup_data.matches[index]];
+  renderAll();
+}
+function validateLineup(teamId){
+  const l=statusFor(teamId);
+  if(!l)return 'Formazione vuota.';
+  const ids=l.lineup_data.matches.flatMap(m=>[m.p1,m.p2]).filter(Boolean);
+  if(ids.length<8)return 'Inserisci tutti gli 8 giocatori previsti.';
+  if(new Set(ids).size!==ids.length)return 'Uno stesso giocatore non può comparire due volte.';
+  return null;
+}
+async function saveLineup(teamId){
+  if(!canEditTeam(teamId))return msg('Non sei autorizzato a modificare questa formazione.',true);
+  if(phase()==='official')return msg('La distinta è bloccata.',true);
+  const current=statusFor(teamId)||{fixture_id:fixtureId,team_id:teamId,lineup_data:defaultData(),status:'draft'};
+  const error=validateLineup(teamId);
+  if(error&&phase()==='editing')return msg(error,true);
+  const r=await sb.from('match_lineups').upsert({
+    fixture_id:fixtureId,team_id:teamId,lineup_data:current.lineup_data,status:'draft',
+    updated_by:session.user.id,updated_at:new Date().toISOString()
+  },{onConflict:'fixture_id,team_id'});
+  if(r.error)return msg(r.error.message,true);
+  await logAction(teamId,'save','Formazione salvata');
+  msg('Formazione salvata e visibile agli addetti autorizzati di entrambe le squadre.');
+  loadData();
+}
+async function confirmLineup(teamId){
+  if(!canEditTeam(teamId))return msg('Non sei autorizzato.',true);
+  const error=validateLineup(teamId);if(error)return msg(error,true);
+  const status=phase()==='official'?'official':'confirmed';
+  const r=await sb.from('match_lineups').upsert({
+    fixture_id:fixtureId,team_id:teamId,lineup_data:statusFor(teamId).lineup_data,status,
+    confirmed_at:new Date().toISOString(),confirmed_by:session.user.id,
+    updated_by:session.user.id,updated_at:new Date().toISOString()
+  },{onConflict:'fixture_id,team_id'});
+  if(r.error)return msg(r.error.message,true);
+  await logAction(teamId,'confirm',`Formazione confermata: ${status}`);
+  msg('Formazione confermata.');
+  loadData();
+}
+async function logAction(teamId,action,description){
+  await sb.from('match_lineup_audit').insert({
+    fixture_id:fixtureId,team_id:teamId,user_id:session.user.id,action,description
+  });
+}
+async function renderHistory(){
+  const r=await sb.from('match_lineup_audit').select('*').eq('fixture_id',fixtureId).order('created_at',{ascending:false});
+  $('historyList').innerHTML=(r.data||[]).map(x=>`<div class="history"><b>${esc(teamName(x.team_id))}</b> · ${esc(x.description||x.action)}<br><span class="muted">${new Date(x.created_at).toLocaleString('it-IT')}</span></div>`).join('')||'<div class="notice">Nessuna modifica registrata.</div>';
+}
+function renderAll(){
+  $('matchInfo').innerHTML=`<h2>${esc(teamName(fixture.home_team_id))} vs ${esc(teamName(fixture.away_team_id))}</h2><div class="muted">${new Date(fixture.scheduled_at).toLocaleString('it-IT')} · ${esc(fixture.venue||'')}</div>`;
+  renderTeam(fixture.home_team_id,'homeLineup');
+  renderTeam(fixture.away_team_id,'awayLineup');
+  renderCountdown();
+}
+async function loadData(){
+  if(!fixtureId)return msg('Partita non specificata.',true);
+  const sessionResult=await sb.auth.getSession();
+  session=sessionResult.data.session;
+  if(!session)return location.href='login.html';
+
+  const profile=await sb.from('profiles').select('role').eq('id',session.user.id).maybeSingle();
+  isAdmin=profile.data?.role==='admin';
+
+  const [f,t,p,l,r]=await Promise.all([
+    sb.from('fixtures').select('*').eq('id',fixtureId).maybeSingle(),
+    sb.from('teams').select('id,name').in('id',[]),
+    sb.from('roster_requests').select('*'),
+    sb.from('match_lineups').select('*').eq('fixture_id',fixtureId),
+    sb.from('team_user_roles').select('*').eq('user_id',session.user.id).eq('active',true)
+  ]);
+  if(f.error)return msg(f.error.message,true);
+  fixture=f.data;
+  const teamResult=await sb.from('teams').select('id,name').in('id',[fixture.home_team_id,fixture.away_team_id]);
+  teams=teamResult.data||[];
+  players=(p.data||[]).filter(x=>[fixture.home_team_id,fixture.away_team_id].includes(x.team_id));
+  lineups=l.data||[];
+  myRoles=r.data||[];
+
+  if(!canViewMatch())return msg('Non sei autorizzato a visualizzare le formazioni di questa partita.',true);
+
+  $('roleBadge').textContent=isAdmin?'ADMIN':(myRoles[0]?.role||'UTENTE').toUpperCase();
+  renderAll();
+  renderHistory();
+  if(timer)clearInterval(timer);
+  timer=setInterval(renderCountdown,1000);
+}
+window.setPlayer=setPlayer;window.movePair=movePair;window.saveLineup=saveLineup;window.confirmLineup=confirmLineup;
+loadData();
+</script>
+</main></body></html>

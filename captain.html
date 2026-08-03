@@ -8,6 +8,15 @@
 .player-row{display:grid;grid-template-columns:78px 1fr auto;gap:12px;align-items:start}
 .player-photo{width:72px;height:92px;object-fit:cover;border-radius:12px;background:#fff;border:1px solid #416b91}
 @media(max-width:700px){.player-row{grid-template-columns:62px 1fr}.player-row>.actions{grid-column:1/-1}.player-photo{width:58px;height:75px}}
+
+.captain-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.captain-tile{border:1px solid #bfd0e2;border-radius:16px;padding:15px;background:#fff}
+.captain-tile h3{margin:0 0 6px}
+.player-card{border:1px solid #d5e1ed;border-radius:14px;padding:12px;margin:9px 0;background:#fff}
+.player-card .row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.player-card .actions{margin-top:9px}
+.permission-off{opacity:.55;pointer-events:none}
+@media(max-width:850px){.captain-grid{grid-template-columns:1fr}}
 </style><style>
 :root{
   --aics-blue:#164a95;
@@ -193,7 +202,73 @@ function copyPlayers(){let u=new URL('player.html?team='+encodeURIComponent(team
 async function decide(id,status){let r=await s.from('roster_requests').update({status,decided_at:new Date().toISOString()}).eq('id',id);
  if(r.error)alert(r.error.message);else portal()}
 init();
-</script></main>
+</script>
+<section class="card" id="captainManagement">
+  <div class="section-title">
+    <div>
+      <h2 style="margin:0">Gestione squadra e giocatori</h2>
+      <div class="muted small">Funzioni disponibili quando l’amministratore abilita l’accesso del capitano.</div>
+    </div>
+    <button class="btn secondary" onclick="loadCaptainWorkspace()">Aggiorna</button>
+  </div>
+
+  <div id="captainPermissionMsg" class="notice hidden"></div>
+
+  <div class="captain-grid">
+    <div class="captain-tile">
+      <h3>Dati squadra</h3>
+      <div class="field"><label>Nome squadra</label><input id="captainTeamName"></div>
+      <div class="field"><label>Club / società</label><input id="captainClubName"></div>
+      <div class="notice">
+        Campo di casa, giorno e orario delle partite possono essere modificati esclusivamente dall’amministratore.
+      </div>
+      <div class="field"><label>Note squadra</label><textarea id="captainTeamNotes" rows="4"></textarea></div>
+      <button class="btn primary" onclick="saveCaptainTeam()">Salva dati squadra</button>
+    </div>
+
+    <div class="captain-tile">
+      <h3>Inserisci giocatore</h3>
+      <div class="field"><label>Nome</label><input id="newPlayerFirstName"></div>
+      <div class="field"><label>Cognome</label><input id="newPlayerLastName"></div>
+      <div class="field"><label>Email</label><input id="newPlayerEmail" type="email"></div>
+      <div class="field"><label>Telefono</label><input id="newPlayerPhone"></div>
+      <div class="field"><label>Classifica FITP</label><input id="newPlayerFitp"></div>
+      <div class="field"><label>Scadenza certificato medico</label><input id="newPlayerMedicalExpiry" type="date"></div>
+      <button class="btn success" onclick="addPlayerManually()">Inserisci giocatore</button>
+    </div>
+
+    <div class="captain-tile">
+      <h3>Operazioni consentite</h3>
+      <div class="notice">
+        Il capitano abilitato può:
+        <br>• modificare i dati operativi della squadra;
+        <br>• inserire giocatori manualmente;
+        <br>• modificare i dati dei giocatori;
+        <br>• approvare o rifiutare richieste giocatore;
+        <br>• segnalare all’amministratore eventuali giocatori da rimuovere.
+        <br><br><b>Solo l’amministratore</b> può cambiare campo, giorno e ora delle gare casalinghe oppure rimuovere un giocatore.
+      </div>
+    </div>
+  </div>
+
+  <h3>Giocatori della squadra</h3>
+  <div id="captainPlayers"></div>
+</section>
+
+
+<section class="card" id="secretaryManagement">
+  <h2>Segretari della squadra</h2>
+  <div class="notice">
+    Il capitano può nominare fino a 3 segretari. Devono avere un account personale
+    e avranno le stesse funzioni sportive del capitano su formazioni, combinazioni,
+    distinta virtuale e risultati.
+  </div>
+  <div class="field"><label>Email dell’account da nominare</label><input id="secretaryEmail" type="email"></div>
+  <div class="actions"><button class="btn primary" onclick="appointSecretary()">Nomina segretario</button></div>
+  <div id="secretaryList"></div>
+</section>
+
+</main>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -203,4 +278,218 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
+
+<script>
+let captainTeam=null;
+let captainPlayers=[];
+let captainTeamId=null;
+let captainAccessEnabled=false;
+
+function captainMsg(text,error=false){
+  const box=document.getElementById('captainPermissionMsg');
+  box.textContent=text;
+  box.className='notice '+(error?'err':'ok');
+  box.classList.remove('hidden');
+}
+
+function currentTeamIdFromUrl(){
+  const p=new URLSearchParams(location.search);
+  return p.get('team')||p.get('id')||p.get('team_id');
+}
+
+async function loadCaptainWorkspace(){
+  try{
+    captainTeamId=currentTeamIdFromUrl();
+    if(!captainTeamId) throw new Error('Squadra non specificata nel link.');
+
+    const [teamResult,playerResult,sessionResult]=await Promise.all([
+      s.from('teams').select('*').eq('id',captainTeamId).maybeSingle(),
+      s.from('roster_requests').select('*').eq('team_id',captainTeamId).order('last_name'),
+      s.auth.getSession()
+    ]);
+    if(teamResult.error) throw teamResult.error;
+    if(playerResult.error) throw playerResult.error;
+    if(!sessionResult.data.session) throw new Error('Accedi con il tuo account capitano.');
+
+    captainTeam=teamResult.data;
+    captainPlayers=playerResult.data||[];
+
+    const roleCheck=await s.from('team_user_roles')
+      .select('role,active')
+      .eq('team_id',captainTeamId)
+      .eq('user_id',sessionResult.data.session.user.id);
+
+    if(roleCheck.error) throw roleCheck.error;
+
+    const role=(roleCheck.data||[]).find(r=>r.active&&['captain','secretary'].includes(r.role));
+    captainAccessEnabled=Boolean(role && captainTeam?.captain_access_enabled!==false);
+
+    const panel=document.getElementById('captainManagement');
+    panel.classList.toggle('permission-off',!captainAccessEnabled);
+
+    if(!captainAccessEnabled){
+      captainMsg('Il tuo account è riconosciuto, ma le funzioni operative del capitano non risultano abilitate dall’amministratore.',true);
+      return;
+    }
+
+    document.getElementById('captainTeamName').value=captainTeam.name||'';
+    document.getElementById('captainClubName').value=captainTeam.club_name||'';
+    document.getElementById('captainTeamNotes').value=captainTeam.notes||'';
+
+    renderCaptainPlayers();
+    captainMsg('Accesso capitano attivo: puoi gestire squadra e giocatori.');
+  }catch(error){
+    captainMsg(error.message||String(error),true);
+  }
+}
+
+async function saveCaptainTeam(){
+  if(!captainAccessEnabled) return captainMsg('Funzione non autorizzata.',true);
+  const payload={
+    name:document.getElementById('captainTeamName').value.trim(),
+    club_name:document.getElementById('captainClubName').value.trim(),
+    notes:document.getElementById('captainTeamNotes').value.trim(),
+    updated_at:new Date().toISOString()
+  };
+  const r=await s.from('teams').update(payload).eq('id',captainTeamId);
+  if(r.error) return captainMsg(r.error.message,true);
+  captainMsg('Dati squadra aggiornati correttamente.');
+  loadCaptainWorkspace();
+}
+
+async function addPlayerManually(){
+  if(!captainAccessEnabled) return captainMsg('Funzione non autorizzata.',true);
+
+  const firstName=document.getElementById('newPlayerFirstName').value.trim();
+  const lastName=document.getElementById('newPlayerLastName').value.trim();
+  const email=document.getElementById('newPlayerEmail').value.trim().toLowerCase();
+  if(!firstName||!lastName) return captainMsg('Inserisci nome e cognome del giocatore.',true);
+
+  const payload={
+    team_id:captainTeamId,
+    first_name:firstName,
+    last_name:lastName,
+    email:email||null,
+    phone:document.getElementById('newPlayerPhone').value.trim()||null,
+    fitp_ranking:document.getElementById('newPlayerFitp').value.trim()||null,
+    medical_certificate_expiry:document.getElementById('newPlayerMedicalExpiry').value||null,
+    status:'approved',
+    created_at:new Date().toISOString(),
+    updated_at:new Date().toISOString()
+  };
+
+  const r=await s.from('roster_requests').insert(payload);
+  if(r.error) return captainMsg(r.error.message,true);
+
+  ['newPlayerFirstName','newPlayerLastName','newPlayerEmail','newPlayerPhone','newPlayerFitp','newPlayerMedicalExpiry']
+    .forEach(id=>document.getElementById(id).value='');
+
+  captainMsg('Giocatore inserito manualmente.');
+  loadCaptainWorkspace();
+}
+
+function renderCaptainPlayers(){
+  const host=document.getElementById('captainPlayers');
+  host.innerHTML=captainPlayers.map(player=>`
+    <div class="player-card">
+      <div class="row">
+        <div>
+          <b>${esc(player.first_name||'')} ${esc(player.last_name||'')}</b>
+          <div class="muted small">${esc(player.email||'Nessuna email')} · ${esc(player.fitp_ranking||'FITP non indicata')}</div>
+        </div>
+        <span class="badge">${esc(player.status||'approved')}</span>
+      </div>
+      <div class="actions">
+        <button class="btn secondary tiny" onclick="editCaptainPlayer('${player.id}')">Modifica</button>
+        ${player.status!=='approved'?`<button class="btn success tiny" onclick="setPlayerStatus('${player.id}','approved')">Approva</button>`:''}
+        ${player.status!=='rejected'?`<button class="btn secondary tiny" onclick="setPlayerStatus('${player.id}','rejected')">Rifiuta</button>`:''}
+      </div>
+    </div>
+  `).join('')||'<div class="notice">Nessun giocatore presente.</div>';
+}
+
+async function editCaptainPlayer(playerId){
+  const player=captainPlayers.find(p=>p.id===playerId);
+  if(!player)return;
+  const fitp=prompt('Classifica FITP',player.fitp_ranking||'');
+  if(fitp===null)return;
+  const phone=prompt('Telefono',player.phone||'');
+  if(phone===null)return;
+  const expiry=prompt('Scadenza certificato medico (AAAA-MM-GG)',player.medical_certificate_expiry||'');
+  if(expiry===null)return;
+
+  const r=await s.from('roster_requests').update({
+    fitp_ranking:fitp.trim()||null,
+    phone:phone.trim()||null,
+    medical_certificate_expiry:expiry.trim()||null,
+    updated_at:new Date().toISOString()
+  }).eq('id',playerId).eq('team_id',captainTeamId);
+
+  if(r.error)return captainMsg(r.error.message,true);
+  captainMsg('Giocatore aggiornato.');
+  loadCaptainWorkspace();
+}
+
+async function setPlayerStatus(playerId,status){
+  const r=await s.from('roster_requests').update({status,updated_at:new Date().toISOString()})
+    .eq('id',playerId).eq('team_id',captainTeamId);
+  if(r.error)return captainMsg(r.error.message,true);
+  captainMsg('Stato giocatore aggiornato.');
+  loadCaptainWorkspace();
+}
+
+
+window.loadCaptainWorkspace=loadCaptainWorkspace;
+window.saveCaptainTeam=saveCaptainTeam;
+window.addPlayerManually=addPlayerManually;
+window.editCaptainPlayer=editCaptainPlayer;
+window.setPlayerStatus=setPlayerStatus;
+window.addEventListener('load',loadCaptainWorkspace);
+</script>
+
+
+<script>
+async function loadSecretaries(){
+  const teamId=currentTeamIdFromUrl();
+  if(!teamId)return;
+  const r=await s.from('team_user_roles').select('id,user_id,role,active').eq('team_id',teamId).eq('role','secretary').eq('active',true);
+  const list=r.data||[];
+  document.getElementById('secretaryList').innerHTML=list.map((x,i)=>`
+    <div class="player-card"><b>Segretario ${i+1}</b><div class="muted small">Account: ${x.user_id}</div>
+    <button class="btn danger tiny" onclick="revokeSecretary('${x.id}')">Revoca</button></div>`).join('')||'<div class="notice">Nessun segretario nominato.</div>';
+}
+async function appointSecretary(){
+  const teamId=currentTeamIdFromUrl();
+  const email=document.getElementById('secretaryEmail').value.trim().toLowerCase();
+  if(!email)return captainMsg('Inserisci l’email dell’account.',true);
+
+  const current=await s.from('team_user_roles').select('id').eq('team_id',teamId).eq('role','secretary').eq('active',true);
+  if(current.error)return captainMsg(current.error.message,true);
+  if((current.data||[]).length>=3)return captainMsg('Puoi nominare al massimo 3 segretari.',true);
+
+  const user=await s.rpc('find_user_id_by_email',{target_email:email});
+  if(user.error)return captainMsg(user.error.message,true);
+  if(!user.data)return captainMsg('Nessun account trovato con questa email.',true);
+
+  const save=await s.from('team_user_roles').upsert({
+    team_id:teamId,user_id:user.data,role:'secretary',active:true
+  },{onConflict:'team_id,user_id,role'});
+  if(save.error)return captainMsg(save.error.message,true);
+
+  document.getElementById('secretaryEmail').value='';
+  captainMsg('Segretario nominato correttamente.');
+  loadSecretaries();
+}
+async function revokeSecretary(roleId){
+  if(!confirm('Revocare questo segretario?'))return;
+  const r=await s.from('team_user_roles').update({active:false}).eq('id',roleId);
+  if(r.error)return captainMsg(r.error.message,true);
+  captainMsg('Segretario revocato.');
+  loadSecretaries();
+}
+window.appointSecretary=appointSecretary;
+window.revokeSecretary=revokeSecretary;
+window.addEventListener('load',loadSecretaries);
+</script>
+
 </body></html>

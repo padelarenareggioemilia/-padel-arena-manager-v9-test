@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS PADEL CHAMPIONSHIP</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--bg:#f3f7fb;--panel:#fff;--soft:#eaf2fb;--text:#092d5d;--muted:#647c98;--line:#bfd0e2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:20}
+.shell{max-width:1180px;margin:auto;padding:18px 12px 70px}.hero,.card{border:1px solid var(--line);border-radius:20px;box-shadow:0 13px 28px rgba(8,47,104,.1)}.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center}.brand{display:flex;gap:13px;align-items:center}.logo{width:100px;height:78px;object-fit:contain;background:#fff;border-radius:13px;padding:5px}.hero h1{margin:0}.card{background:#fff;padding:15px;margin:12px 0}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.tab{border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:12px;padding:12px;font-weight:900;cursor:pointer}.tab.active{background:var(--blue);color:#fff}.fixture{display:grid;grid-template-columns:110px 1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #dce6f0}.score{font-size:20px;font-weight:1000}.muted{color:var(--muted)}.small{font-size:12px}.notice{padding:12px;border-radius:12px;background:var(--soft);border:1px solid var(--line)}.hidden{display:none!important}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{padding:10px;border-bottom:1px solid #dce6f0;text-align:center}th{background:var(--blue);color:#fff}td:nth-child(2),th:nth-child(2){text-align:left}.group-title{padding:9px 12px;border-left:5px solid var(--green);background:var(--soft);border-radius:0 10px 10px 0}
+.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+@media(max-width:760px){.tabs{grid-template-columns:1fr 1fr}.fixture{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:82px;height:64px}}
+</style>
+</head>
+<body><main class="shell">
+<header class="hero">
+  <div class="brand"><img id="competitionLogo" class="logo"><div><h1 id="competitionTitle"></h1><div>Calendario, risultati e classifiche</div></div></div>
+  <button class="btn secondary" onclick="location.href='public.html'">← Competizioni</button>
+</header>
+
+<section class="card">
+  <div class="tabs">
+    <button class="tab" data-view="previous" onclick="setView('previous')">Giornata precedente</button>
+    <button class="tab active" data-view="current" onclick="setView('current')">Giornata in corso</button>
+    <button class="tab" data-view="next" onclick="setView('next')">Prossima giornata</button>
+    <button class="tab" data-view="standings" onclick="setView('standings')">Classifica</button>
+  </div>
+</section>
+
+<section class="card"><div id="content"><div class="notice">Caricamento…</div></div></section>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
+const code=new URLSearchParams(location.search).get('code')||'SERIE_A';
+const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
+const logos={SERIE_A:'assets/aics-serie-a-2027.png',SERIE_B:'assets/aics-serie-b-2027.png',SERIE_C:'assets/aics-serie-c-2027.png',COPPA_ITALIA:'assets/aics-coppa-italia-2027.png',SUPERCOPPA:'assets/aics-supercoppa-2027.png'};
+let teams=[],groups=[],members=[],fixtures=[],statuses=[],view='current';
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+function teamName(id,p){return teams.find(t=>t.id===id)?.name||p||'Da definire'}
+function statusFor(id){return statuses.find(s=>s.fixture_id===id)?.workflow_data||{}}
+function resultFor(id){const w=statusFor(id);return w.result_data||w.result||w.match_result||null}
+function score(id){const r=resultFor(id);if(!r)return '';if(r.home_score!=null)return `${r.home_score} – ${r.away_score}`;return ''}
+function done(f){return Boolean(statusFor(f.id).homologated_at||resultFor(f.id))}
+function roundKey(f){return f.round_number||new Date(f.scheduled_at).toISOString().slice(0,10)}
+function rounds(){return [...new Set(fixtures.map(roundKey))].sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}))}
+function selectedRound(){
+  const all=rounds();if(!all.length)return null;
+  const now=Date.now();
+  let idx=all.findIndex(r=>fixtures.filter(f=>roundKey(f)===r).some(f=>!done(f)&&new Date(f.scheduled_at).getTime()>=now-3*86400000));
+  if(idx<0)idx=all.length-1;
+  const off=view==='previous'?-1:view==='next'?1:0;
+  return all[Math.max(0,Math.min(all.length-1,idx+off))];
+}
+function fixtureHtml(f){return `<div class="fixture"><div class="small muted">${new Date(f.scheduled_at).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div><div><b>${esc(teamName(f.home_team_id,f.home_placeholder))}</b><br><span class="muted">contro</span><br><b>${esc(teamName(f.away_team_id,f.away_placeholder))}</b><div class="small muted">${esc(f.venue||'')}</div></div><div class="score">${score(f.id)|| (done(f)?'Omologata':'Da giocare')}</div></div>`}
+function standingsFor(group){
+  const ids=members.filter(m=>m.group_id===group.id).map(m=>m.team_id);
+  const rows=Object.fromEntries(ids.map(id=>[id,{id,g:0,v:0,n:0,p:0,mf:0,ms:0,pt:0}]));
+  fixtures.filter(f=>f.group_id===group.id&&done(f)).forEach(f=>{
+    const sc=score(f.id);if(!sc)return;const [h,a]=sc.split('–').map(x=>Number(x.trim()));if(Number.isNaN(h)||Number.isNaN(a))return;
+    const H=rows[f.home_team_id],A=rows[f.away_team_id];if(!H||!A)return;H.g++;A.g++;H.mf+=h;H.ms+=a;A.mf+=a;A.ms+=h;
+    if(h>a){H.v++;A.p++;H.pt+=3}else if(a>h){A.v++;H.p++;A.pt+=3}else{H.n++;A.n++;H.pt++;A.pt++}
+  });
+  return Object.values(rows).sort((a,b)=>b.pt-a.pt||(b.mf-b.ms)-(a.mf-a.ms)||teamName(a.id).localeCompare(teamName(b.id)));
+}
+function render(){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  if(view==='standings'){
+    $('content').innerHTML=groups.map(g=>{const rows=standingsFor(g);return `<h3 class="group-title">${esc(g.group_name||'Girone')}</h3><div class="table-wrap"><table><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>MF</th><th>MS</th><th>Diff.</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(teamName(r.id))}</td><td>${r.g}</td><td>${r.v}</td><td>${r.n}</td><td>${r.p}</td><td>${r.mf}</td><td>${r.ms}</td><td>${r.mf-r.ms}</td><td><b>${r.pt}</b></td></tr>`).join('')}</tbody></table></div>`}).join('')||'<div class="notice">Classifica non disponibile.</div>';return;
+  }
+  const round=selectedRound();
+  const list=fixtures.filter(f=>roundKey(f)===round).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
+  $('content').innerHTML=list.length?list.map(fixtureHtml).join(''):'<div class="notice">Nessuna partita disponibile.</div>';
+}
+function setView(v){view=v;render()}
+async function init(){
+  $('competitionTitle').textContent=labels[code]||code;$('competitionLogo').src=logos[code]||'assets/aics-logo.png';
+  const [t,g,m,f,w]=await Promise.all([
+    sb.from('public_championship_teams').select('*'),
+    sb.from('public_championship_groups').select('*').eq('competition_code',code),
+    sb.from('public_championship_group_teams').select('*'),
+    sb.from('public_championship_fixtures').select('*').eq('competition_code',code).order('scheduled_at'),
+    sb.from('public_championship_status').select('*')
+  ]);
+  const e=t.error||g.error||m.error||f.error;if(e){$('content').innerHTML=`<div class="notice">${esc(e.message)}</div>`;return}
+  teams=t.data||[];groups=g.data||[];members=m.data||[];fixtures=f.data||[];statuses=w.error?[]:(w.data||[]);render();
+}
+window.setView=setView;init();
+</script></body></html>
