@@ -1,0 +1,15 @@
+CHANGELOG.md
+README.txt
+SUPABASE_V9_4_UPDATE.sql
+VERSION.txt
+admin-control.html
+calendar.html
+captain.html
+competitions.html
+data-exchange.html
+groups.html
+index.html
+login.html
+match-center.html
+player.html
+team.html

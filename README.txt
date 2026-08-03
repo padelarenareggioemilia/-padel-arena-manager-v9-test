@@ -1,20 +1,39 @@
-PADEL ARENA MANAGER V9.4.1 — FILTRO SQUADRA EXPORT
+PADEL ARENA MANAGER V9.4.2 — REPOSITORY COMPLETO
 
-MODIFICA
-- Nei filtri di esportazione è ora selezionabile anche la singola squadra.
-- Il filtro squadra funziona sia per:
-  - esportazione squadre;
-  - esportazione giocatori.
-- Cambiando la serie, l'elenco squadre si aggiorna automaticamente.
-- È ancora possibile esportare:
-  - tutte le squadre;
-  - tutte le squadre di una serie;
-  - una sola squadra;
-  - i soli giocatori di una squadra.
+QUESTO È IL PACCHETTO COMPLETO DEL PROGETTO V9.
+Non è una patch e non richiede di ricostruire file a mano.
 
-INSTALLAZIONE
-Su GitHub sostituisci integralmente:
+CONTENUTO PRINCIPALE
+- index.html
+- login.html
+- team.html
+- captain.html
+- player.html
+- competitions.html
+- groups.html
+- calendar.html
+- admin-control.html
+- match-center.html
 - data-exchange.html
+- config.js
+- cartella assets
+- script SQL
+- CHANGELOG.md
+- VERSION.txt
 
-Non serve eseguire SQL.
-Nessun dato viene modificato o cancellato.
+INSTALLAZIONE GITHUB
+1. Apri il repository V9 Test.
+2. Carica tutti i file del pacchetto.
+3. Mantieni la stessa struttura delle cartelle.
+4. Se GitHub segnala file già presenti, sostituiscili.
+5. Fai Commit changes.
+6. Attendi circa un minuto.
+
+SUPABASE
+Esegui soltanto gli script SQL che non hai ancora eseguito.
+Gli script sono cumulativi per versione e non eliminano i dati esistenti.
+
+IMPORTANTE
+- Non viene cancellata nessuna squadra.
+- Non vengono cancellati giocatori, calendari o risultati.
+- Il file config.js è già collegato al progetto V9 Test.
