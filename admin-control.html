@@ -1,126 +1,142 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AICS Padel Championship Manager</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-<script>window.addEventListener('load',()=>{ if(typeof loadPublication==='function') loadPublication(); });</script><script src="config.js"></script><style>
-:root{
- --blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;
- --bg:#f4f8fc;--panel:#fff;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;
- --line:#b9cde3;--shadow:0 14px 34px rgba(8,47,104,.13)
-}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;color:var(--text);font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(90deg,rgba(0,146,70,.05),transparent 22%,transparent 78%,rgba(206,43,55,.05)),radial-gradient(circle at 50% 0%,rgba(22,74,149,.12),transparent 35%),var(--bg)}
-body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:999}
-.shell{max-width:1200px;margin:auto;padding:22px 14px 90px}.top,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
-.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px;border-radius:24px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;box-shadow:var(--shadow)}
-.brand{display:flex;align-items:center;gap:15px}.brand-logo{width:125px;height:74px;object-fit:contain;background:#fff;border-radius:15px;padding:7px}.muted{color:var(--muted)}.hero .muted{color:#d7e5f5}
-.nav,.actions,.grid-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:12px;padding:12px 14px;font:inherit;font-weight:900;cursor:pointer}.primary{color:#fff;background:linear-gradient(135deg,#2e6fba,var(--blue))}.secondary{color:var(--blue2);background:#fff;border:1px solid #2e6fba}.danger{color:#fff;background:var(--red)}.success{color:#fff;background:var(--green)}.btn:disabled{opacity:.45;cursor:not-allowed}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font:inherit}
-.notice{padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--soft);margin:10px 0}.ok{background:#eaf8f0;border-color:var(--green)}.err{background:#fdecef;border-color:var(--red)}.warn{background:#fff8e6;border-color:#e1b94a}
-.badge{display:inline-flex;padding:6px 9px;border-radius:999px;background:#e7f0fb;border:1px solid var(--line);font-weight:900;font-size:12px}.tricolore{height:5px;border-radius:999px;margin-top:10px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);border:1px solid #d7e3ef}
-.kpi{padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}.kpi strong{display:block;font-size:24px;color:var(--blue)}
-.switch-row{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff;margin:9px 0}.switch{width:auto;transform:scale(1.35)}
-.match{padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff;margin:10px 0}.match-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.countdown{font-variant-numeric:tabular-nums;font-size:25px;font-weight:1000;color:var(--blue)}
-.lineup-row{display:grid;grid-template-columns:150px 1fr 1fr;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:13px;margin:8px 0;background:#f8fbff}
-.score-row{display:grid;grid-template-columns:160px repeat(4,90px);gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
-.hidden{display:none!important}.small{font-size:12px}.right{text-align:right}
-@media(max-width:850px){.grid2,.grid3,.grid4{grid-template-columns:1fr}.lineup-row,.score-row{grid-template-columns:1fr}.hero{align-items:flex-start}.brand-logo{width:98px;height:62px}}
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS PADEL CHAMPIONSHIP · Controllo</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--bg:#f4f8fc;--panel:#fff;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;--line:#b9cde3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:20}
+.shell{max-width:1180px;margin:auto;padding:18px 12px 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 13px 28px rgba(8,47,104,.1)}.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;display:flex;justify-content:space-between;align-items:center;gap:14px}.brand{display:flex;align-items:center;gap:13px}.logo{width:105px;height:70px;object-fit:contain;background:#fff;border-radius:13px;padding:6px}.muted{color:var(--muted)}.hero .muted{color:#dce9f7}
+.btn{border:0;border-radius:11px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.success{background:var(--green);color:#fff}.danger{background:var(--red);color:#fff}.btn:disabled{opacity:.48;cursor:not-allowed}.actions,.nav{display:flex;gap:8px;flex-wrap:wrap}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field{margin:8px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}select,input{width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;font:inherit}
+.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:9px 0;white-space:pre-line}.ok{background:#ebf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}.warn{background:#fff7dd;border-color:#d9b757}.hidden{display:none!important}.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;margin:8px 0}.switch{width:auto;transform:scale(1.3)}
+.match{border:1px solid var(--line);border-radius:14px;padding:12px;margin:9px 0}.match-head{display:flex;justify-content:space-between;gap:10px}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#e6eff9;border:1px solid var(--line);font-size:11px;font-weight:900}.small{font-size:12px}
+@media(max-width:800px){.grid2,.grid3{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:84px;height:58px}}
 </style>
-<link rel="icon" type="image/png" sizes="32x32" href="assets/aics-icon-32.png">
-<link rel="icon" type="image/png" sizes="192x192" href="assets/aics-icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="assets/aics-icon-180.png">
-<link rel="manifest" href="manifest.webmanifest">
-<meta name="application-name" content="AICS Padel Championship Manager">
-<meta name="apple-mobile-web-app-title" content="AICS Padel">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta property="og:type" content="website">
-<meta property="og:title" content="AICS Padel Championship Manager">
-<meta property="og:description" content="Gestionale ufficiale AICS Padel Championship">
-<meta property="og:image" content="assets/aics-social-preview.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="AICS Padel Championship Manager">
-<meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
-<meta name="twitter:image" content="assets/aics-social-preview.png">
+</head>
+<body><main class="shell">
+<div class="nav"><button class="btn secondary" onclick="location.href='index.html'">← Home</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button></div>
+<header class="hero"><div class="brand"><img class="logo" src="assets/aics-logo.png"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div class="muted">Controllo campionato e pubblicazione</div></div></div><span class="badge">ADMIN</span></header>
 
-</head><body><main class="shell">
-<div class="top"><div class="nav"><button class="btn secondary" onclick="location.href='index.html'">← Home</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button></div></div>
-<header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png"><div><h1 style="margin:0">Controllo campionato</h1><div class="muted">Permessi generali e omologazione gare</div></div></div></header><div class="tricolore"></div>
-<section class="card"><h2>Interruttori globali</h2>
-<div class="switch-row"><div><b>Accesso capitani e segretari</b><div class="muted small">Blocca o riattiva tutte le attività riservate allo staff delle squadre.</div></div><input class="switch" id="captains" type="checkbox"></div>
-<div class="switch-row"><div><b>Accesso giocatori</b><div class="muted small">Blocca o riattiva l’accesso operativo dei giocatori.</div></div><input class="switch" id="players" type="checkbox"></div>
-<div class="switch-row"><div><b>Compilazione formazioni</b><div class="muted small">Interruttore generale per formazioni e distinte.</div></div><input class="switch" id="formations" type="checkbox"></div>
-<div class="switch-row"><div><b>Inserimento risultati</b><div class="muted small">Interruttore generale per risultati e conferme.</div></div><input class="switch" id="results" type="checkbox"></div>
-<div class="actions"><button class="btn primary" onclick="saveControls()">Salva impostazioni</button></div><div id="msg" class="notice hidden"></div></section>
-<section class="card"><div class="grid2"><div class="field"><label>Competizione da pubblicare</label><select id="competition"><option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option><option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option></select></div><div class="field"><label>Pubblicazione calendario</label><button class="btn success" style="width:100%" onclick="publishCalendar()">Pubblica e avvia prima formazione</button></div></div>
-<div class="notice warn"><b>Prima giornata:</b> la selezione della formazione si apre al momento della pubblicazione del calendario. Per le giornate successive si apre quando omologhi la precedente partita della squadra.</div></section>
-<section class="card"><h2>Partite da omologare</h2><div id="matches"></div></section>
-
-<section class="card" id="publicationPanel">
-  <div class="section-title">
-    <div>
-      <h2 style="margin:0">Pubblicazione portale pubblico</h2>
-      <div class="muted small">Decidi cosa rendere visibile agli utenti liberi. L’amministratore vede sempre tutto.</div>
-    </div>
-    <button class="btn secondary" onclick="loadPublication()">Aggiorna</button>
-  </div>
-  <div id="publicationControls" class="grid3"></div>
-  <div id="publicationMsg" class="notice hidden"></div>
+<section class="card">
+<h2>Interruttori globali</h2>
+<div class="switch-row"><div><b>Accesso capitani e segretari</b><div class="muted small">Attiva le aree operative dello staff.</div></div><input class="switch" id="captains" type="checkbox"></div>
+<div class="switch-row"><div><b>Accesso giocatori</b><div class="muted small">Attiva l’accesso operativo dei giocatori.</div></div><input class="switch" id="players" type="checkbox"></div>
+<div class="switch-row"><div><b>Compilazione formazioni</b><div class="muted small">Attiva formazioni e distinte.</div></div><input class="switch" id="formations" type="checkbox"></div>
+<div class="switch-row"><div><b>Inserimento risultati</b><div class="muted small">Attiva risultati e conferme.</div></div><input class="switch" id="results" type="checkbox"></div>
+<div class="actions"><button class="btn primary" onclick="saveControls()">Salva impostazioni</button></div>
 </section>
 
-<script>
-const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=i=>document.getElementById(i);
-function show(t,e=false){$('msg').textContent=t;$('msg').className='notice '+(e?'err':'ok');$('msg').classList.remove('hidden')}
+<section class="card">
+<h2>Pubblica calendario e avvia la prima formazione</h2>
+<div class="grid2">
+  <div class="field"><label>Competizione</label><select id="competition">
+    <option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option>
+    <option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option>
+  </select></div>
+  <div class="field"><label>Azione</label><button id="publishBtn" class="btn success" style="width:100%" onclick="publishCalendar()">Pubblica e avvia prima formazione</button></div>
+</div>
+<div class="notice warn"><b>Funzionamento:</b> vengono create le finestre operative di tutte le gare. Per ogni squadra si apre immediatamente la formazione della sua prima partita; le successive restano in attesa fino all’omologazione della gara precedente.</div>
+<div id="publishMsg" class="notice hidden"></div>
+</section>
 
-function publicationMessage(text,error=false){
-  const box=$('publicationMsg');
-  box.textContent=text;
-  box.className='notice '+(error?'err':'ok');
-  box.classList.remove('hidden');
+<section class="card">
+<h2>Pubblicazione portale pubblico</h2>
+<div id="publicationControls" class="grid3"></div>
+<div id="publicationMsg" class="notice hidden"></div>
+</section>
+
+<section class="card"><h2>Partite e stato formazione</h2><div id="matches"></div></section>
+</main>
+
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
+const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
+
+function box(id,text,error=false){
+  const el=$(id);el.textContent=text;el.className='notice '+(error?'err':'ok');el.classList.remove('hidden');
+}
+async function guard(){
+  const q=await sb.auth.getSession();
+  if(!q.data.session){location.href='login.html';return false}
+  const p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();
+  if(p.data?.role!=='admin'){location.href='public.html';return false}
+  return true;
+}
+async function loadControls(){
+  const r=await sb.from('championship_controls').select('*').eq('id',1).maybeSingle();
+  if(r.error)return box('publishMsg',r.error.message,true);
+  if(!r.data)return;
+  captains.checked=r.data.captains_enabled!==false;
+  players.checked=r.data.players_enabled!==false;
+  formations.checked=r.data.formations_enabled!==false;
+  results.checked=r.data.results_enabled!==false;
+}
+async function saveControls(){
+  const q=await sb.auth.getSession();
+  const r=await sb.from('championship_controls').upsert({
+    id:1,captains_enabled:captains.checked,players_enabled:players.checked,
+    formations_enabled:formations.checked,results_enabled:results.checked,
+    updated_at:new Date().toISOString(),updated_by:q.data.session.user.id
+  });
+  if(r.error)return box('publishMsg',r.error.message,true);
+  box('publishMsg','Impostazioni globali aggiornate.');
+}
+async function publishCalendar(){
+  if(!confirm('Pubblicare il calendario e aprire la prima formazione di ogni squadra?'))return;
+  publishBtn.disabled=true;publishBtn.textContent='Pubblicazione in corso…';
+  box('publishMsg','Operazione avviata. Sto creando le finestre delle formazioni…');
+  try{
+    const r=await sb.rpc('publish_competition_calendar',{p_competition_code:competition.value});
+    if(r.error)throw r.error;
+    const data=r.data||{};
+    box('publishMsg',
+      `Operazione completata.\nPartite attivate: ${data.fixtures_activated??data}\nPrime formazioni aperte: ${data.first_lineups_opened??'verifica elenco sotto'}`
+    );
+    await loadMatches();
+  }catch(e){
+    box('publishMsg','Pubblicazione non riuscita: '+(e.message||String(e)),true);
+  }finally{
+    publishBtn.disabled=false;publishBtn.textContent='Pubblica e avvia prima formazione';
+  }
 }
 async function loadPublication(){
-  const result=await s.from('championship_publication').select('*').order('competition_code');
-  if(result.error)return publicationMessage(result.error.message,true);
-  const map=Object.fromEntries((result.data||[]).map(r=>[r.competition_code,r]));
-  const codes=['SERIE_A','SERIE_B','SERIE_C','COPPA_ITALIA','SUPERCOPPA'];
-  $('publicationControls').innerHTML=codes.map(code=>{
+  const r=await sb.from('championship_publication').select('*');
+  if(r.error)return box('publicationMsg',r.error.message,true);
+  const map=Object.fromEntries((r.data||[]).map(x=>[x.competition_code,x]));
+  $('publicationControls').innerHTML=Object.keys(labels).map(code=>{
     const active=map[code]?.is_published!==false;
-    return `<div class="card" style="margin:0;padding:12px;text-align:center">
-      <img src="${publicationLogos[code]}" alt="${publicationLabels[code]}" style="width:72px;height:72px;object-fit:contain" onerror="this.style.display='none'">
-      <b style="display:block">${publicationLabels[code]}</b>
-      <label style="display:flex;justify-content:center;gap:8px;margin-top:10px">
-        <input type="checkbox" ${active?'checked':''} onchange="setPublication('${code}',this.checked)">
-        <span>${active?'Pubblicata':'Non pubblicata'}</span>
-      </label>
-    </div>`;
+    return `<div class="match" style="text-align:center"><b>${labels[code]}</b><label style="margin-top:9px"><input style="width:auto" type="checkbox" ${active?'checked':''} onchange="setPublication('${code}',this.checked)"> ${active?'Pubblicata':'Nascosta'}</label></div>`;
   }).join('');
 }
-async function setPublication(code,isPublished){
-  const result=await s.from('championship_publication').upsert({
-    competition_code:code,
-    is_published:isPublished,
-    published_at:isPublished?new Date().toISOString():null,
-    updated_at:new Date().toISOString()
+async function setPublication(code,value){
+  const r=await sb.from('championship_publication').upsert({
+    competition_code:code,is_published:value,published_at:value?new Date().toISOString():null,updated_at:new Date().toISOString()
   },{onConflict:'competition_code'});
-  if(result.error)return publicationMessage(result.error.message,true);
-  publicationMessage(`${publicationLabels[code]}: ${isPublished?'pubblicata':'nascosta'} sul portale pubblico.`);
+  if(r.error)return box('publicationMsg',r.error.message,true);
+  box('publicationMsg',`${labels[code]} ${value?'pubblicata':'nascosta'} nel portale libero.`);
   loadPublication();
 }
-async function guard(){let q=await sb.auth.getSession();if(!q.data.session)return location.href='login.html';let p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).single();if(p.error||p.data.role!=='admin')location.href='index.html'}
-async function loadControls(){let r=await sb.from('championship_controls').select('*').eq('id',1).single();if(r.error)return show(r.error.message,true);captains.checked=r.data.captains_enabled;players.checked=r.data.players_enabled;formations.checked=r.data.formations_enabled;results.checked=r.data.results_enabled}
-async function saveControls(){let q=await sb.auth.getSession();let r=await sb.from('championship_controls').update({captains_enabled:captains.checked,players_enabled:players.checked,formations_enabled:formations.checked,results_enabled:results.checked,updated_at:new Date().toISOString(),updated_by:q.data.session.user.id}).eq('id',1);if(r.error)return show(r.error.message,true);show('Impostazioni aggiornate.')}
-async function publishCalendar(){if(!confirm('Pubblicare il calendario e aprire la prima formazione di ogni squadra?'))return;let r=await sb.rpc('publish_competition_calendar',{p_competition_code:competition.value});if(r.error)return show(r.error.message,true);show('Calendario pubblicato: '+r.data+' partite attivate.');loadMatches()}
-async function loadMatches(){let [f,w,t]=await Promise.all([sb.from('fixtures').select('*').order('scheduled_at',{ascending:false}).limit(80),sb.from('match_workflows').select('*'),sb.from('teams').select('id,name')]);let names=Object.fromEntries((t.data||[]).map(x=>[x.id,x.name])),wf=Object.fromEntries((w.data||[]).map(x=>[x.fixture_id,x]));$('matches').innerHTML=(f.data||[]).map(x=>{let z=wf[x.id]||{};return `<div class="match"><div class="match-head"><div><b>${names[x.home_team_id]||x.home_placeholder||'Da definire'} – ${names[x.away_team_id]||x.away_placeholder||'Da definire'}</b><div class="muted small">${x.scheduled_at?new Date(x.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${x.venue||''}</div></div><span class="badge">${z.homologated_at?'Omologata':'Non omologata'}</span></div><div class="actions" style="margin-top:10px"><button class="btn secondary" onclick="location.href='match-center.html?id=${x.id}'">Apri gara</button>${z.homologated_at?'':`<button class="btn success" onclick="homologate('${x.id}')">Omologa e apri formazione successiva</button>`}</div></div>`}).join('')||'<div class="notice">Nessuna partita.</div>'}
-async function homologate(id){if(!confirm('Omologare la partita? Si aprirà automaticamente la formazione della gara successiva per le squadre interessate.'))return;let r=await sb.rpc('homologate_match',{p_fixture_id:id});if(r.error)return show(r.error.message,true);show('Partita omologata.');loadMatches()}
-guard().then(()=>{loadPublication();return ()=>Promise.all([loadControls(),loadMatches()]));
-</script></main>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
-  });
+async function loadMatches(){
+  const [f,w,t]=await Promise.all([
+    sb.from('fixtures').select('*').order('scheduled_at',{ascending:true}).limit(150),
+    sb.from('match_workflows').select('*'),
+    sb.from('teams').select('id,name,logo_url')
+  ]);
+  const error=f.error||w.error||t.error;if(error)return box('publishMsg',error.message,true);
+  const teams=Object.fromEntries((t.data||[]).map(x=>[x.id,x]));
+  const workflows=Object.fromEntries((w.data||[]).map(x=>[x.fixture_id,x]));
+  $('matches').innerHTML=(f.data||[]).map(x=>{
+    const wf=workflows[x.id];
+    const home=teams[x.home_team_id],away=teams[x.away_team_id];
+    return `<div class="match"><div class="match-head"><div><b>${home?.name||x.home_placeholder||'Da definire'} – ${away?.name||x.away_placeholder||'Da definire'}</b><div class="muted small">${x.scheduled_at?new Date(x.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${x.venue||''}</div></div><span class="badge">${!wf?'NON PUBBLICATA':wf.formation_open_at?'FORMAZIONE APERTA':'IN ATTESA'}</span></div><div class="actions" style="margin-top:8px"><button class="btn secondary" onclick="location.href='match-center.html?id=${x.id}'">Apri gara</button></div></div>`;
+  }).join('')||'<div class="notice">Nessuna partita.</div>';
 }
+window.publishCalendar=publishCalendar;window.setPublication=setPublication;
+guard().then(ok=>{if(ok)Promise.all([loadControls(),loadPublication(),loadMatches()])});
 </script>
-
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
 </body></html>

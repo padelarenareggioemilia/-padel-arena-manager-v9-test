@@ -7,6 +7,22 @@
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:12px 13px;border-radius:12px;border:1px solid #365474;background:#071523;color:#fff;font:inherit}.notice{padding:12px;border-radius:13px;background:#09182a;border:1px solid var(--line);margin:10px 0}.ok{border-color:#4ade80;background:#0b2a20}.err{border-color:#ef4444;background:#351316}
 .comp-logo{width:125px;height:125px;object-fit:contain;background:#fff;border-radius:18px;padding:4px}.group{border:1px solid #3b5e80;background:#09182a;border-radius:18px;padding:14px;margin:10px 0}.team-pill{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px;border-radius:12px;background:#10233b;border:1px solid #315676;margin:7px 0}.fixture{display:grid;grid-template-columns:130px 1fr 180px 150px auto;gap:10px;align-items:center;padding:11px;border:1px solid #315676;border-radius:14px;background:#09182a;margin:8px 0}.small{font-size:12px}.badge{display:inline-flex;padding:6px 9px;border-radius:999px;background:#17304e;border:1px solid #416b91;font-size:12px;font-weight:900}.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px}
 @media(max-width:850px){.grid2,.grid3{grid-template-columns:1fr}.fixture{grid-template-columns:1fr}.fixture .btn{width:100%}.hero{align-items:flex-start}.comp-logo{width:95px;height:95px}}
+
+.conflict-overlay{position:fixed;inset:0;background:rgba(4,24,50,.62);z-index:9999;display:flex;align-items:center;justify-content:center;padding:18px}
+.conflict-card{width:min(980px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:22px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.32)}
+.conflict-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.conflict-match{padding:13px;border-radius:14px;background:#edf4fb;border:1px solid #bfd0e2;font-size:18px;font-weight:1000}
+.conflict-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.solution-card{border:1px solid #bfd0e2;border-radius:15px;padding:13px;background:#fff}
+.solution-card.ok{border-color:#6fbd8a;background:#f1fbf5}
+.solution-card.no{border-color:#d98a93;background:#fff5f6}
+.solution-card h3{margin:0 0 7px}
+.solution-card .reason{font-size:12px;color:#647c98;white-space:pre-line}
+.solution-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.btn-mini{padding:8px 10px!important;font-size:12px!important;border-radius:10px!important}
+.diagnostic-list{margin:0;padding-left:18px}
+.manual-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+@media(max-width:820px){.conflict-grid,.manual-grid{grid-template-columns:1fr}}
 </style><style>
 :root{
   --aics-blue:#164a95;
@@ -311,7 +327,7 @@ controllando anche le partite già presenti nelle altre competizioni.
 const c=window.PAM_V9_CONFIG;
 const s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);
 const $=id=>document.getElementById(id);
-let teams=[],groups=[],members=[],fixtures=[],allFixtures=[],blackouts=[],pendingCalendar=[];
+let teams=[],groups=[],members=[],fixtures=[],allFixtures=[],blackouts=[],pendingCalendar=[],activeConflict=null;
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 
@@ -679,9 +695,193 @@ function autoResolveConflicts(payload,competitionCode){
     resolved,
     unresolved,
     remainingFacilityConflicts:finalFacility.filter(c=>payload.includes(c.a)||payload.includes(c.b)),
-    remainingTeamConflicts:finalTeam
+    remainingTeamConflicts:finalTeam,
+    existing
   };
 }
+
+
+function dateOnlyFromISO(value){
+  const d=new Date(value);
+  const pad=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function timeOnlyFromISO(value){
+  const d=new Date(value);
+  const pad=n=>String(n).padStart(2,'0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function teamScheduleSummary(team){
+  return `${team?.home_match_day||'giorno non impostato'} ${normalizeTime(team?.home_match_time)||'ora non impostata'} · ${team?.home_court||'campo non impostato'}`;
+}
+function explainConflict(match,payload,existing){
+  const home=teamById(match.home_team_id);
+  const away=teamById(match.away_team_id);
+  const reasons=[];
+  const checks=[];
+
+  checks.push('Inversione casa/trasferta');
+  checks.push('Settimana precedente');
+  checks.push('Settimana successiva');
+  checks.push('Ricerca fino a quattro settimane prima e dopo');
+  checks.push('Conflitti con campionato e Coppa Italia');
+  checks.push('Conflitti di squadra e di impianto');
+
+  const all=[...payload.filter(x=>x!==match),...existing];
+  const sameFacility=all.filter(other=>other._facility_key===match._facility_key&&overlaps(match,other));
+  const sameTeam=all.filter(other=>overlaps(match,other)&&[
+    match.home_team_id,match.away_team_id
+  ].some(id=>id===other.home_team_id||id===other.away_team_id));
+
+  if(sameFacility.length){
+    reasons.push(`Impianto occupato da ${sameFacility.map(x=>`${x._home_name} – ${x._away_name}`).join(', ')}`);
+  }
+  if(sameTeam.length){
+    reasons.push(`Una delle due squadre ha già un’altra gara nello stesso intervallo.`);
+  }
+  if(home)reasons.push(`${home.name}: disponibilità ${teamScheduleSummary(home)}.`);
+  if(away)reasons.push(`${away.name}: disponibilità ${teamScheduleSummary(away)}.`);
+  if(!reasons.length)reasons.push('Nessuno slot libero trovato entro i limiti impostati.');
+
+  return {reasons,checks};
+}
+function solutionCard(title,ok,description,actionLabel,actionJs){
+  return `<div class="solution-card ${ok?'ok':'no'}">
+    <h3>${ok?'✅':'✖'} ${esc(title)}</h3>
+    <div class="reason">${esc(description)}</div>
+    ${ok?`<div class="solution-actions"><button class="btn success btn-mini" onclick="${actionJs}">${esc(actionLabel)}</button></div>`:''}
+  </div>`;
+}
+function openConflictAssistant(match,payload,existing,attempts){
+  activeConflict={match,payload,existing,attempts};
+  const home=teamById(match.home_team_id);
+  const away=teamById(match.away_team_id);
+  $('conflictMatch').textContent=`${home?.name||match._home_name} – ${away?.name||match._away_name}`;
+
+  const details=explainConflict(match,payload,existing);
+  $('conflictReasons').innerHTML=details.reasons.map(x=>`<li>${esc(x)}</li>`).join('');
+  $('conflictChecks').innerHTML=details.checks.map(x=>`<li>${esc(x)}</li>`).join('');
+
+  const cards=[];
+  attempts.forEach((a,index)=>{
+    cards.push(solutionCard(
+      a.title,
+      a.ok,
+      a.ok?a.description:a.reason,
+      'Applica',
+      `applySuggestedConflictSolution(${index})`
+    ));
+  });
+  $('conflictSolutions').innerHTML=cards.join('');
+
+  $('manualHomeTeam').innerHTML=`
+    <option value="${home?.id||''}">${esc(home?.name||'Squadra di casa')}</option>
+    <option value="${away?.id||''}">${esc(away?.name||'Squadra ospite')}</option>`;
+  $('manualDate').value=dateOnlyFromISO(match.scheduled_at);
+  $('manualTime').value=timeOnlyFromISO(match.scheduled_at);
+  $('manualVenue').value=match.venue||home?.home_court||'';
+
+  $('conflictAssistantMsg').classList.add('hidden');
+  $('conflictAssistant').classList.remove('hidden');
+}
+function closeConflictAssistant(){
+  $('conflictAssistant').classList.add('hidden');
+}
+function assistantMsg(text,error=false){
+  const box=$('conflictAssistantMsg');
+  box.textContent=text;
+  box.className='notice '+(error?'err':'ok');
+  box.classList.remove('hidden');
+}
+function createSuggestionAttempts(match,payload,existing,competitionCode){
+  const attempts=[];
+  const home=teamById(match.home_team_id);
+  const away=teamById(match.away_team_id);
+
+  const swap=candidateSwapHome(match,competitionCode);
+  attempts.push({
+    title:'Inverti casa e trasferta',
+    ok:candidateIsValid(swap,match,payload,existing),
+    candidate:swap,
+    description:swap?`${away?.name||'Squadra ospite'} gioca in casa il ${localPartsFromISO(swap.scheduledAt).date} alle ${localPartsFromISO(swap.scheduledAt).time}.`:'',
+    reason:'Anche il campo della squadra ospite risulta occupato o una squadra ha già una gara.'
+  });
+
+  [-1,1,-2,2,-3,3,-4,4].forEach(offset=>{
+    const c=candidateAtWeekOffset(match,home,away,offset,competitionCode);
+    const ok=candidateIsValid(c,match,payload,existing);
+    attempts.push({
+      title:offset<0?`Anticipa di ${Math.abs(offset)} settimana/e`:`Posticipa di ${offset} settimana/e`,
+      ok,candidate:c,
+      description:c?`Nuova data: ${localPartsFromISO(c.scheduledAt).weekday} ${localPartsFromISO(c.scheduledAt).date} ore ${localPartsFromISO(c.scheduledAt).time}.`:'',
+      reason:'Lo slot proposto è occupato o crea un conflitto con un’altra gara.'
+    });
+  });
+  return attempts;
+}
+function applySuggestedConflictSolution(index){
+  if(!activeConflict)return;
+  const attempt=activeConflict.attempts[index];
+  if(!attempt?.ok||!attempt.candidate)return;
+  const {match}=activeConflict;
+  updateMatchSchedule(
+    match,
+    attempt.candidate.home,
+    attempt.candidate.away,
+    attempt.candidate.scheduledAt,
+    attempt.title
+  );
+  assistantMsg('Soluzione applicata. Sto rigenerando l’anteprima…');
+  closeConflictAssistant();
+  setTimeout(previewCalendar,100);
+}
+function applyManualConflictSolution(){
+  if(!activeConflict)return;
+  const homeId=$('manualHomeTeam').value;
+  const home=teamById(homeId);
+  const away=teamById(
+    homeId===activeConflict.match.home_team_id
+      ? activeConflict.match.away_team_id
+      : activeConflict.match.home_team_id
+  );
+  if(!home||!away)return assistantMsg('Squadre non valide.',true);
+  if(!$('manualDate').value||!$('manualTime').value||!$('manualVenue').value.trim()){
+    return assistantMsg('Inserisci data, ora e campo.',true);
+  }
+
+  const scheduledAt=localDateTimeToISO($('manualDate').value,$('manualTime').value);
+  const test={...activeConflict.match};
+  updateMatchSchedule(test,home,away,scheduledAt,'Eccezione manuale');
+  test.venue=$('manualVenue').value.trim();
+  test._facility_key=facilityKey(home,test.venue);
+  test._facility_label=[test.venue,home.club_address,home.club_city].filter(Boolean).join(' · ');
+
+  const others=[
+    ...activeConflict.payload.filter(x=>x!==activeConflict.match),
+    ...activeConflict.existing
+  ];
+  if(hasFacilityConflict(test,others)||hasTeamConflict(test,others)){
+    return assistantMsg('La soluzione manuale crea ancora un conflitto. Scegli un altro giorno, orario o campo.',true);
+  }
+
+  Object.assign(activeConflict.match,test);
+  assistantMsg('Eccezione manuale applicata.');
+  closeConflictAssistant();
+  setTimeout(previewCalendar,100);
+}
+function openHomeTeamEditor(){
+  if(!activeConflict)return;
+  location.href=`team.html?id=${encodeURIComponent(activeConflict.match.home_team_id)}&return=calendar`;
+}
+function openAwayTeamEditor(){
+  if(!activeConflict)return;
+  location.href=`team.html?id=${encodeURIComponent(activeConflict.match.away_team_id)}&return=calendar`;
+}
+window.closeConflictAssistant=closeConflictAssistant;
+window.applySuggestedConflictSolution=applySuggestedConflictSolution;
+window.applyManualConflictSolution=applyManualConflictSolution;
+window.openHomeTeamEditor=openHomeTeamEditor;
+window.openAwayTeamEditor=openAwayTeamEditor;
 
 async function buildCalendarPayload(){
   if(!$('startDate').value) throw new Error('Inserisci la data di partenza.');
@@ -764,15 +964,28 @@ async function buildCalendarPayload(){
     resolution.remainingFacilityConflicts.length ||
     resolution.remainingTeamConflicts.length
   ){
-    const names=[...new Set([
-      ...resolution.unresolved.map(m=>`${m._home_name} – ${m._away_name}`),
-      ...resolution.remainingTeamConflicts.map(m=>`${m._home_name} – ${m._away_name}`)
-    ])];
-    throw new Error(
-      'L’app ha provato automaticamente inversione casa/trasferta e spostamenti fino a quattro settimane, '+
-      'ma non ha trovato una soluzione libera per: '+names.join(', ')+
-      '. Modifica manualmente una disponibilità oppure una data esclusa.'
+    const conflictMatch=
+      resolution.unresolved[0] ||
+      resolution.remainingTeamConflicts[0] ||
+      resolution.remainingFacilityConflicts[0]?.a;
+
+    const attempts=createSuggestionAttempts(
+      conflictMatch,
+      payload,
+      resolution.existing||[],
+      code
     );
+
+    openConflictAssistant(
+      conflictMatch,
+      payload,
+      resolution.existing||[],
+      attempts
+    );
+
+    const err=new Error('CONFLICT_ASSISTANT_OPENED');
+    err.isConflictAssistant=true;
+    throw err;
   }
 
   payload._resolvedCount=resolution.resolved.length;
@@ -818,6 +1031,7 @@ async function previewCalendar(){
     pendingCalendar=[];
     $('calendarPreviewCard').classList.add('hidden');
     $('confirmCalendarBtn').classList.add('hidden');
+    if(error?.isConflictAssistant||error?.message==='CONFLICT_ASSISTANT_OPENED')return;
     msg(error.message||String(error),true);
   }
 }
@@ -1070,6 +1284,50 @@ $('startDate').onchange=clearCalendarPreview;
 $('interval').onchange=clearCalendarPreview;
 guard().then(()=>Promise.all([loadFixtures(),loadBlackouts()]));
 </script>
+
+<div id="conflictAssistant" class="conflict-overlay hidden">
+  <div class="conflict-card">
+    <div class="conflict-head">
+      <div>
+        <h2 style="margin:0">Assistente intelligente calendari</h2>
+        <div class="muted small">Analisi del conflitto e soluzioni applicabili.</div>
+      </div>
+      <button type="button" class="btn secondary btn-mini" onclick="closeConflictAssistant()">Chiudi</button>
+    </div>
+
+    <div id="conflictMatch" class="conflict-match" style="margin-top:12px"></div>
+
+    <div class="grid2" style="margin-top:12px">
+      <div class="notice">
+        <b>Perché non riesco?</b>
+        <ul id="conflictReasons" class="diagnostic-list"></ul>
+      </div>
+      <div class="notice">
+        <b>Controlli già eseguiti</b>
+        <ul id="conflictChecks" class="diagnostic-list"></ul>
+      </div>
+    </div>
+
+    <h3>Soluzioni disponibili</h3>
+    <div id="conflictSolutions" class="conflict-grid"></div>
+
+    <h3>Imposta un’eccezione manuale</h3>
+    <div class="manual-grid">
+      <div class="field"><label>Casa</label><select id="manualHomeTeam"></select></div>
+      <div class="field"><label>Data</label><input id="manualDate" type="date"></div>
+      <div class="field"><label>Ora</label><input id="manualTime" type="time"></div>
+      <div class="field"><label>Campo</label><input id="manualVenue"></div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn primary" onclick="applyManualConflictSolution()">Applica eccezione manuale</button>
+      <button type="button" class="btn secondary" onclick="openHomeTeamEditor()">Modifica disponibilità squadra di casa</button>
+      <button type="button" class="btn secondary" onclick="openAwayTeamEditor()">Modifica disponibilità squadra ospite</button>
+    </div>
+
+    <div id="conflictAssistantMsg" class="notice hidden"></div>
+  </div>
+</div>
+
 </main>
 
 <script>

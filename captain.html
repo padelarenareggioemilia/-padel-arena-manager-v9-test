@@ -180,13 +180,14 @@ function m(x,z=false){let a=document.getElementById('m');a.textContent=x;a.class
 async function login(){let r=await s.auth.signInWithPassword({email:em.value.trim(),password:pw.value});if(r.error)return m(r.error.message,true);claim()}
 async function signup(){let r=await s.auth.signUp({email:em.value.trim(),password:pw.value,options:{data:{first_name:team.captain_name}}});
  if(r.error)return m(r.error.message,true);if(!r.data.session)return m('Account creato. Conferma l’email.');claim()}
-async function claim(){let r=await s.rpc('claim_team_as_captain',{p_token:t});if(r.error)return m(r.error.message,true);team=r.data;portal()}
+async function claim(){let r=await s.rpc('claim_team_as_captain',{p_token:t});if(r.error)return m(r.error.message,true);team=r.data;await portal();setTimeout(()=>{loadCaptainWorkspace();loadSecretaries()},50)}
 function formatDate(v){if(!v)return 'Non indicata';const d=new Date(v+'T12:00:00');return d.toLocaleDateString('it-IT')}
 async function portal(){
  let r=await s.from('roster_requests').select('*').eq('team_id',team.id).order('created_at',{ascending:false});
  b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}<h2>${e(team.name)}</h2>
  ${warning}<div class="actions"><button class="btn primary" onclick="copyPlayers()">Copia link giocatori</button>
- <button class="btn secondary" onclick="portal()">Aggiorna</button></div><hr>
+ <button class="btn secondary" onclick="portal()">Aggiorna</button>
+ <button class="btn success" onclick="document.getElementById('captainManagement').scrollIntoView({behavior:'smooth'})">Inserisci giocatore manualmente</button></div><hr>
  <div class="notice"><b>Segretari di squadra:</b> il capitano può nominare da 0 a 3 giocatori approvati con account. I segretari avranno le stesse funzioni operative del capitano per formazioni e risultati.</div><h3>Richieste giocatori</h3>${(r.data||[]).map(x=>`<div class="notice player-row">
  ${x.photo_url?`<img class="player-photo" src="${e(x.photo_url)}" alt="Foto tessera">`:`<div class="player-photo"></div>`}
  <div><b>${e(x.first_name)} ${e(x.last_name)}</b>
@@ -294,7 +295,7 @@ function captainMsg(text,error=false){
 
 function currentTeamIdFromUrl(){
   const p=new URLSearchParams(location.search);
-  return p.get('team')||p.get('id')||p.get('team_id');
+  return p.get('team')||p.get('id')||p.get('team_id')||(typeof team!=='undefined'&&team?.id)||null;
 }
 
 async function loadCaptainWorkspace(){
@@ -325,7 +326,7 @@ async function loadCaptainWorkspace(){
     captainAccessEnabled=Boolean(role && captainTeam?.captain_access_enabled!==false);
 
     const panel=document.getElementById('captainManagement');
-    panel.classList.toggle('permission-off',!captainAccessEnabled);
+    panel.classList.remove('permission-off');
 
     if(!captainAccessEnabled){
       captainMsg('Il tuo account è riconosciuto, ma le funzioni operative del capitano non risultano abilitate dall’amministratore.',true);
