@@ -1,19 +1,25 @@
-PADEL ARENA MANAGER V9.3.1 — LOGO SQUADRA
+PADEL ARENA MANAGER V9.4.0 — IMPORTA / ESPORTA EXCEL E CSV
 
-CORREZIONE
-- Il logo può essere caricato o sostituito anche dopo la creazione della squadra.
-- Il campo è disponibile direttamente nella scheda tecnica, dentro “Modifica squadra”.
-- Anteprima immediata del nuovo logo.
-- Formati ammessi: JPG, PNG e WEBP.
-- Limite massimo: 5 MB.
-- Se non viene scelto un nuovo file, il logo già presente resta invariato.
-- Il file viene salvato nel bucket Supabase “team-logos”.
-- Incluso tutto il lavoro della V9.3.0 e il fix B&B Team.
+FUNZIONE RISERVATA ALL'AMMINISTRATORE
+- Esportazione squadre in Excel o CSV.
+- Esportazione giocatori in Excel o CSV.
+- File Excel con intestazioni e filtro automatico.
+- Filtri per Serie A, Serie B, Serie C e stato del giocatore.
+- Modelli vuoti pronti per l'importazione.
+- Importazione Excel e CSV con anteprima.
+- Riconoscimento dei duplicati tramite ID, nome squadra o email giocatore.
+- Scelta tra aggiornare o saltare i record già presenti.
+- Nessun dato viene salvato prima della conferma finale.
+- Messaggi di errore con numero della riga del file.
+- Le colonne esportate sono pensate per essere ordinate e filtrate in Excel.
 
 INSTALLAZIONE
-Su GitHub sostituisci integralmente soltanto:
-- team.html
+1. Esegui integralmente SUPABASE_V9_4_UPDATE.sql nel Supabase V9 Test.
+2. Su GitHub carica:
+   - data-exchange.html
+   - index.html
+   oppure sostituisci tutti i file del pacchetto.
+3. Fai Commit changes e attendi circa un minuto.
 
-Puoi anche caricare tutto il pacchetto per mantenere i file allineati.
-Non serve eseguire una nuova query SQL se il bucket “team-logos” è già stato creato con gli aggiornamenti precedenti.
-Nessuna squadra e nessun dato vengono cancellati.
+Il file Excel viene elaborato direttamente nel browser.
+Nessuna squadra o giocatore viene cancellato automaticamente.

@@ -251,6 +251,10 @@ function openInlineEditor() {
       : '<span>NESSUN LOGO</span>';
   }
   if (logoFileName) logoFileName.textContent = '';
+  const replaceButton = document.getElementById('replaceLogoBtn');
+  if (replaceButton) replaceButton.disabled = true;
+  const removeButton = document.getElementById('removeLogoBtn');
+  if (removeButton) removeButton.disabled = !currentTeam.logo_url;
 
   editor.scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -289,7 +293,134 @@ function previewTeamLogo(event) {
   const url = URL.createObjectURL(newLogoFile);
   preview.innerHTML = `<img src="${url}" alt="Anteprima nuovo logo">`;
   fileName.textContent = newLogoFile.name;
+  const replaceButton = document.getElementById('replaceLogoBtn');
+  if (replaceButton) replaceButton.disabled = false;
 }
+
+
+async function replaceTeamLogoNow() {
+  if (!currentTeam) return;
+  if (!newLogoFile) {
+    setEditMessage('Seleziona prima il nuovo logo.', true);
+    return;
+  }
+
+  const button = document.getElementById('replaceLogoBtn');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Caricamento…';
+  }
+
+  try {
+    const newUrl = await uploadTeamLogo(currentTeam.id);
+
+    const update = await sb
+      .from('teams')
+      .update({
+        logo_url: newUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', currentTeam.id)
+      .select('id,logo_url')
+      .maybeSingle();
+
+    if (update.error) throw update.error;
+    if (!update.data?.logo_url) {
+      throw new Error('Il nuovo logo è stato caricato ma non è stato collegato alla squadra.');
+    }
+
+    currentTeam.logo_url = update.data.logo_url;
+    newLogoFile = null;
+
+    const input = document.getElementById('editLogoFile');
+    if (input) input.value = '';
+
+    const preview = document.getElementById('editLogoPreview');
+    if (preview) {
+      preview.innerHTML =
+        `<img src="${esc(update.data.logo_url)}?v=${Date.now()}" alt="Nuovo logo">`;
+    }
+
+    const fileName = document.getElementById('editLogoFileName');
+    if (fileName) fileName.textContent = '';
+
+    const removeButton = document.getElementById('removeLogoBtn');
+    if (removeButton) removeButton.disabled = false;
+
+    setEditMessage('Logo sostituito correttamente.');
+
+    setTimeout(() => {
+      window.location.replace(
+        'team.html?id=' + encodeURIComponent(currentTeam.id) + '&v=' + Date.now()
+      );
+    }, 700);
+  } catch (error) {
+    setEditMessage(
+      error?.message || 'Errore durante la sostituzione del logo.',
+      true
+    );
+    if (button) button.disabled = false;
+  } finally {
+    if (button) button.textContent = 'Sostituisci logo adesso';
+  }
+}
+
+async function removeTeamLogoNow() {
+  if (!currentTeam?.logo_url) {
+    setEditMessage('La squadra non ha un logo da rimuovere.', true);
+    return;
+  }
+
+  if (!confirm(
+    'Rimuovere il logo attuale della squadra? Potrai inserirne uno nuovo in qualsiasi momento.'
+  )) return;
+
+  try {
+    const update = await sb
+      .from('teams')
+      .update({
+        logo_url: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', currentTeam.id)
+      .select('id')
+      .maybeSingle();
+
+    if (update.error) throw update.error;
+
+    currentTeam.logo_url = null;
+    newLogoFile = null;
+
+    const input = document.getElementById('editLogoFile');
+    if (input) input.value = '';
+
+    const preview = document.getElementById('editLogoPreview');
+    if (preview) preview.innerHTML = '<span>NESSUN LOGO</span>';
+
+    const removeButton = document.getElementById('removeLogoBtn');
+    if (removeButton) removeButton.disabled = true;
+
+    const replaceButton = document.getElementById('replaceLogoBtn');
+    if (replaceButton) replaceButton.disabled = true;
+
+    setEditMessage('Logo rimosso correttamente.');
+
+    setTimeout(() => {
+      window.location.replace(
+        'team.html?id=' + encodeURIComponent(currentTeam.id) + '&v=' + Date.now()
+      );
+    }, 700);
+  } catch (error) {
+    setEditMessage(
+      error?.message || 'Errore durante la rimozione del logo.',
+      true
+    );
+  }
+}
+
+window.replaceTeamLogoNow = replaceTeamLogoNow;
+window.removeTeamLogoNow = removeTeamLogoNow;
+
 
 async function uploadTeamLogo(teamId) {
   if (!newLogoFile) return currentTeam?.logo_url || null;
@@ -495,10 +626,29 @@ async function init() {
                 onchange="previewTeamLogo(event)"
               >
               <div id="editLogoFileName" class="edit-logo-help"></div>
+              <div class="actions" style="margin-top:10px">
+                <button
+                  id="replaceLogoBtn"
+                  class="btn primary"
+                  type="button"
+                  onclick="replaceTeamLogoNow()"
+                  disabled
+                >
+                  Sostituisci logo adesso
+                </button>
+                <button
+                  id="removeLogoBtn"
+                  class="btn danger"
+                  type="button"
+                  onclick="removeTeamLogoNow()"
+                >
+                  Rimuovi logo attuale
+                </button>
+              </div>
               <div class="edit-logo-help">
-                Puoi caricare o sostituire il logo in qualsiasi momento.
+                Scegli un'immagine e premi <b>Sostituisci logo adesso</b>.
+                La modifica viene salvata immediatamente, senza dover salvare anche tutti gli altri dati.
                 Formati accettati: JPG, PNG e WEBP. Dimensione massima: 5 MB.
-                Se non selezioni un nuovo file, il logo attuale resta invariato.
               </div>
             </div>
           </div>

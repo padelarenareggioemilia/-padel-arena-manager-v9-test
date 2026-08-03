@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Importa / Esporta dati</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root{
+ --blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;
+ --bg:#f4f8fc;--panel:#fff;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;
+ --line:#b9cde3;--shadow:0 14px 34px rgba(8,47,104,.13)
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--text);font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(90deg,rgba(0,146,70,.05),transparent 22%,transparent 78%,rgba(206,43,55,.05)),radial-gradient(circle at 50% 0%,rgba(22,74,149,.12),transparent 35%),var(--bg)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:999}
+.shell{max-width:1240px;margin:auto;padding:22px 14px 90px}.top,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:var(--shadow)}
+.hero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px;border-radius:24px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:15px}.brand-logo{width:125px;height:74px;object-fit:contain;background:#fff;border-radius:15px;padding:7px}.muted{color:var(--muted)}.hero .muted{color:#d7e5f5}
+.nav,.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:12px;padding:12px 14px;font:inherit;font-weight:900;cursor:pointer}.primary{color:#fff;background:linear-gradient(135deg,#2e6fba,var(--blue))}.secondary{color:var(--blue2);background:#fff;border:1px solid #2e6fba}.danger{color:#fff;background:var(--red)}.success{color:#fff;background:var(--green)}.btn:disabled{opacity:.45;cursor:not-allowed}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--text);font:inherit}
+.notice{padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--soft);margin:10px 0}.ok{background:#eaf8f0;border-color:var(--green)}.err{background:#fdecef;border-color:var(--red)}.warn{background:#fff8e6;border-color:#e1b94a}.hidden{display:none!important}
+.tricolore{height:5px;border-radius:999px;margin-top:10px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);border:1px solid #d7e3ef}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}.tab{padding:11px 14px;border-radius:12px;border:1px solid var(--line);font-weight:900;background:#fff;color:var(--blue2);cursor:pointer}.tab.active{background:var(--blue);color:#fff}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:15px;max-height:520px}table{border-collapse:collapse;width:max-content;min-width:100%;font-size:12px}th,td{padding:9px 10px;border-bottom:1px solid #dce6f2;border-right:1px solid #e6edf5;white-space:nowrap}th{position:sticky;top:0;z-index:2;background:var(--blue);color:#fff;text-align:left}tr:nth-child(even) td{background:#f8fbff}.status{font-weight:900}.status.ok{color:var(--green);background:none}.status.skip{color:#aa6a00;background:none}.status.err{color:var(--red);background:none}
+.dropzone{border:2px dashed #7fa4c8;border-radius:18px;padding:24px;text-align:center;background:#f8fbff}.small{font-size:12px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kpi{padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}.kpi strong{display:block;font-size:24px;color:var(--blue)}
+@media(max-width:850px){.grid2,.grid3,.kpis{grid-template-columns:1fr}.hero{align-items:flex-start}.brand-logo{width:98px;height:62px}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="top">
+    <div class="nav">
+      <button class="btn secondary" onclick="location.href='index.html'">← Home</button>
+      <button class="btn secondary" onclick="location.href='admin-control.html'">Controllo campionato</button>
+    </div>
+    <div class="tricolore"></div>
+  </div>
+
+  <header class="hero">
+    <div class="brand">
+      <img class="brand-logo" src="assets/aics-logo.png" alt="AICS">
+      <div>
+        <h1 style="margin:0">Importa / Esporta Excel e CSV</h1>
+        <div class="muted">Funzione riservata esclusivamente all’amministratore</div>
+      </div>
+    </div>
+  </header>
+  <div class="tricolore"></div>
+
+  <section class="card">
+    <div class="tabs">
+      <button id="tabTeams" class="tab active" onclick="setEntity('teams')">Squadre</button>
+      <button id="tabPlayers" class="tab" onclick="setEntity('players')">Giocatori</button>
+    </div>
+    <div class="notice">
+      I file esportati sono già strutturati con intestazioni filtrabili in Excel.
+      Puoi ordinare, filtrare e modificare i dati, quindi reimportarli nell’app.
+    </div>
+  </section>
+
+  <section class="kpis">
+    <div class="kpi"><strong id="kTotal">0</strong>Righe lette</div>
+    <div class="kpi"><strong id="kNew">0</strong>Nuove</div>
+    <div class="kpi"><strong id="kUpdate">0</strong>Da aggiornare</div>
+    <div class="kpi"><strong id="kErrors">0</strong>Errori</div>
+  </section>
+
+  <section class="card">
+    <h2>Esporta dati</h2>
+    <div class="grid3">
+      <div class="field">
+        <label>Formato</label>
+        <select id="exportFormat">
+          <option value="xlsx">Excel (.xlsx)</option>
+          <option value="csv">CSV (.csv)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Serie</label>
+        <select id="seriesFilter">
+          <option value="">Tutte</option>
+          <option>Serie A</option>
+          <option>Serie B</option>
+          <option>Serie C</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Stato giocatore</label>
+        <select id="playerStatusFilter">
+          <option value="">Tutti</option>
+          <option value="pending">In attesa</option>
+          <option value="approved">Approvati</option>
+          <option value="rejected">Rifiutati</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" onclick="exportData()">Esporta dati attuali</button>
+      <button class="btn secondary" onclick="downloadTemplate()">Scarica modello vuoto</button>
+    </div>
+    <div id="exportMsg" class="notice hidden"></div>
+  </section>
+
+  <section class="card">
+    <h2>Importa dati</h2>
+    <div class="dropzone">
+      <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" onchange="readFile(event)">
+      <p><b>Seleziona un file Excel o CSV</b></p>
+      <div class="muted small">
+        Prima viene mostrata un’anteprima. Nessun dato viene salvato finché non premi “Conferma importazione”.
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:14px">
+      <div class="field">
+        <label>Gestione duplicati</label>
+        <select id="duplicateMode">
+          <option value="update">Aggiorna i record esistenti</option>
+          <option value="skip">Salta i record esistenti</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Riconoscimento duplicati</label>
+        <select id="duplicateKey">
+          <option value="auto">Automatico</option>
+          <option value="name">Nome squadra / Email giocatore</option>
+          <option value="id">ID database</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="confirmImportBtn" class="btn success" onclick="confirmImport()" disabled>Conferma importazione</button>
+      <button class="btn secondary" onclick="clearPreview()">Annulla</button>
+    </div>
+    <div id="importMsg" class="notice hidden"></div>
+  </section>
+
+  <section id="previewCard" class="card hidden">
+    <h2>Anteprima importazione</h2>
+    <div class="table-wrap"><table id="previewTable"></table></div>
+  </section>
+</main>
+
+<script>
+const cfg = window.PAM_V9_CONFIG;
+const sb = supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey);
+const $ = id => document.getElementById(id);
+
+let entity = 'teams';
+let importedRows = [];
+let analyzedRows = [];
+let currentUser = null;
+
+const TEAM_HEADERS = [
+  'ID','Nome squadra','Serie','Club / società','Codice fiscale / P. IVA',
+  'Indirizzo','CAP','Comune','Provincia','Telefono club','Email club',
+  'Campo di casa','Giorno partite in casa','Orario partite in casa',
+  'Colori sociali','Logo URL','Capitano','Email capitano','Telefono capitano',
+  'Accesso capitano attivo','Note'
+];
+
+const PLAYER_HEADERS = [
+  'ID richiesta','ID squadra','Nome squadra','Serie','Nome','Cognome','Email',
+  'Telefono','Data di nascita','Luogo di nascita','Comune di residenza',
+  'Provincia','Sesso','Classifica FITP','Scadenza certificato medico',
+  'Foto URL','Stato','Account collegato','Ruolo squadra','Note'
+];
+
+function show(id,text,error=false){
+  const el=$(id);el.textContent=text;el.className='notice '+(error?'err':'ok');el.classList.remove('hidden');
+}
+
+async function guard(){
+  const session = await sb.auth.getSession();
+  if(!session.data.session) return location.href='login.html';
+  currentUser = session.data.session.user;
+  const profile = await sb.from('profiles').select('role').eq('id',currentUser.id).single();
+  if(profile.error || profile.data.role!=='admin'){
+    alert('Funzione riservata all’amministratore.');
+    location.href='index.html';
+  }
+}
+
+function setEntity(value){
+  entity=value;
+  $('tabTeams').classList.toggle('active',value==='teams');
+  $('tabPlayers').classList.toggle('active',value==='players');
+  $('playerStatusFilter').disabled=value!=='players';
+  clearPreview();
+}
+
+function norm(value){
+  return String(value??'').trim();
+}
+
+function lower(value){
+  return norm(value).toLowerCase();
+}
+
+function boolValue(value,defaultValue=true){
+  const v=lower(value);
+  if(['false','no','0','disattivo','disabilitato'].includes(v)) return false;
+  if(['true','si','sì','1','attivo','abilitato'].includes(v)) return true;
+  return defaultValue;
+}
+
+function excelDate(value){
+  if(!value) return null;
+  if(value instanceof Date) return value.toISOString().slice(0,10);
+  if(typeof value==='number'){
+    const d=XLSX.SSF.parse_date_code(value);
+    if(d) return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;
+  }
+  const s=norm(value);
+  const it=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if(it) return `${it[3]}-${it[2].padStart(2,'0')}-${it[1].padStart(2,'0')}`;
+  const iso=s.match(/^\d{4}-\d{2}-\d{2}/);
+  return iso?s.slice(0,10):null;
+}
+
+function normalizeTime(value){
+  if(value===null||value===undefined||value==='') return null;
+  if(typeof value==='number'){
+    const total=Math.round(value*24*60);
+    return `${String(Math.floor(total/60)%24).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+  }
+  const m=norm(value).match(/(\d{1,2}):(\d{2})/);
+  return m?`${m[1].padStart(2,'0')}:${m[2]}`:null;
+}
+
+function safeFilename(name){
+  return name.replace(/[^a-z0-9_-]+/gi,'_');
+}
+
+async function getTeams(){
+  let query=sb.from('teams').select('*').order('series').order('name');
+  if($('seriesFilter').value) query=query.eq('series',$('seriesFilter').value);
+  const r=await query;
+  if(r.error) throw r.error;
+  return r.data||[];
+}
+
+async function getPlayers(){
+  let teamsQuery=sb.from('teams').select('id,name,series');
+  if($('seriesFilter').value) teamsQuery=teamsQuery.eq('series',$('seriesFilter').value);
+  const tr=await teamsQuery;
+  if(tr.error) throw tr.error;
+  const allowed=new Set((tr.data||[]).map(t=>t.id));
+  const names=Object.fromEntries((tr.data||[]).map(t=>[t.id,t]));
+
+  let rq=sb.from('roster_requests').select('*').order('last_name').order('first_name');
+  if($('playerStatusFilter').value) rq=rq.eq('status',$('playerStatusFilter').value);
+  const rr=await rq;
+  if(rr.error) throw rr.error;
+
+  const roles=await sb.from('team_user_roles').select('*');
+  const roleMap={};
+  (roles.data||[]).forEach(x=>roleMap[`${x.team_id}:${x.user_id}`]=x.role);
+
+  return (rr.data||[]).filter(p=>allowed.has(p.team_id)).map(p=>({
+    ...p,
+    team_name:names[p.team_id]?.name||'',
+    series:names[p.team_id]?.series||'',
+    team_role:p.user_id?roleMap[`${p.team_id}:${p.user_id}`]||'player':''
+  }));
+}
+
+function teamsToRows(data){
+  return data.map(t=>[
+    t.id,t.name,t.series,t.club_name,t.club_fiscal_code,t.club_address,
+    t.club_postal_code,t.club_city,t.club_province,t.club_phone,t.club_email,
+    t.home_court,t.home_match_day,t.home_match_time?String(t.home_match_time).slice(0,5):'',
+    t.team_colors,t.logo_url,t.captain_name,t.captain_email,t.captain_phone,
+    t.captain_access_enabled!==false?'SI':'NO',t.notes
+  ]);
+}
+
+function playersToRows(data){
+  return data.map(p=>[
+    p.id,p.team_id,p.team_name,p.series,p.first_name,p.last_name,p.email,
+    p.phone,p.birth_date,p.birth_place,p.residence_town,p.residence_province,
+    p.gender,p.fitp_ranking,p.medical_certificate_expiry,p.photo_url,p.status,
+    p.user_id?'SI':'NO',p.team_role,p.notes
+  ]);
+}
+
+function createWorkbook(headers,rows,sheetName){
+  const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+  ws['!autofilter']={ref:`A1:${XLSX.utils.encode_col(headers.length-1)}${rows.length+1}`};
+  ws['!freeze']={xSplit:0,ySplit:1};
+  ws['!cols']=headers.map((h,i)=>({wch:Math.min(34,Math.max(12,h.length+2,...rows.slice(0,100).map(r=>String(r[i]??'').length+2)))}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,sheetName);
+  return wb;
+}
+
+async function exportData(){
+  try{
+    const format=$('exportFormat').value;
+    const data=entity==='teams'?await getTeams():await getPlayers();
+    const headers=entity==='teams'?TEAM_HEADERS:PLAYER_HEADERS;
+    const rows=entity==='teams'?teamsToRows(data):playersToRows(data);
+    const label=entity==='teams'?'Squadre':'Giocatori';
+    const stamp=new Date().toISOString().slice(0,10);
+    const wb=createWorkbook(headers,rows,label);
+
+    if(format==='xlsx'){
+      XLSX.writeFile(wb,`Padel_Arena_${safeFilename(label)}_${stamp}.xlsx`);
+    }else{
+      const csv=XLSX.utils.sheet_to_csv(wb.Sheets[label],{FS:';',RS:'\n'});
+      const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download=`Padel_Arena_${safeFilename(label)}_${stamp}.csv`;a.click();URL.revokeObjectURL(url);
+    }
+    show('exportMsg',`${rows.length} righe esportate correttamente.`);
+  }catch(error){show('exportMsg',error.message||String(error),true)}
+}
+
+function downloadTemplate(){
+  const headers=entity==='teams'?TEAM_HEADERS:PLAYER_HEADERS;
+  const example=entity==='teams'
+    ? [['','ESEMPIO SQUADRA','Serie C','Club esempio','','Via Roma 1','42100','Reggio Emilia','RE','','','Campo 1','Venerdì','20:30','','','','capitano@email.it','','SI','']]
+    : [['','','ESEMPIO SQUADRA','Serie C','Mario','Rossi','mario@email.it','','1990-01-01','Reggio Emilia','Reggio Emilia','RE','Maschile','NC','2027-05-31','','pending','NO','player','']];
+  const wb=createWorkbook(headers,example,entity==='teams'?'Squadre':'Giocatori');
+  XLSX.writeFile(wb,entity==='teams'?'MODELLO_IMPORT_SQUADRE.xlsx':'MODELLO_IMPORT_GIOCATORI.xlsx');
+}
+
+async function readFile(event){
+  clearPreview();
+  const file=event.target.files?.[0];
+  if(!file) return;
+  try{
+    const buffer=await file.arrayBuffer();
+    const wb=XLSX.read(buffer,{type:'array',cellDates:true});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    importedRows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
+    if(!importedRows.length) throw new Error('Il file non contiene righe dati.');
+    await analyzeRows();
+  }catch(error){show('importMsg',error.message||String(error),true)}
+}
+
+function getField(row,names){
+  for(const name of names) if(Object.prototype.hasOwnProperty.call(row,name)) return row[name];
+  const keys=Object.keys(row);
+  for(const name of names){
+    const key=keys.find(k=>lower(k)===lower(name));
+    if(key) return row[key];
+  }
+  return '';
+}
+
+function mapTeam(row){
+  return {
+    id:norm(getField(row,['ID','id'])),
+    name:norm(getField(row,['Nome squadra','Squadra','name'])),
+    series:norm(getField(row,['Serie','series'])),
+    club_name:norm(getField(row,['Club / società','Società','Club','club_name'])),
+    club_fiscal_code:norm(getField(row,['Codice fiscale / P. IVA','Codice fiscale','P. IVA','club_fiscal_code'])),
+    club_address:norm(getField(row,['Indirizzo','club_address'])),
+    club_postal_code:norm(getField(row,['CAP','club_postal_code'])),
+    club_city:norm(getField(row,['Comune','Città','club_city'])),
+    club_province:norm(getField(row,['Provincia','club_province'])).toUpperCase(),
+    club_phone:norm(getField(row,['Telefono club','club_phone'])),
+    club_email:lower(getField(row,['Email club','club_email'])),
+    home_court:norm(getField(row,['Campo di casa','home_court'])),
+    home_match_day:norm(getField(row,['Giorno partite in casa','home_match_day'])),
+    home_match_time:normalizeTime(getField(row,['Orario partite in casa','home_match_time'])),
+    team_colors:norm(getField(row,['Colori sociali','team_colors'])),
+    logo_url:norm(getField(row,['Logo URL','logo_url'])),
+    captain_name:norm(getField(row,['Capitano','captain_name'])),
+    captain_email:lower(getField(row,['Email capitano','captain_email'])),
+    captain_phone:norm(getField(row,['Telefono capitano','captain_phone'])),
+    captain_access_enabled:boolValue(getField(row,['Accesso capitano attivo','captain_access_enabled']),true),
+    notes:norm(getField(row,['Note','notes']))
+  };
+}
+
+function mapPlayer(row){
+  return {
+    id:norm(getField(row,['ID richiesta','ID','id'])),
+    team_id:norm(getField(row,['ID squadra','team_id'])),
+    team_name:norm(getField(row,['Nome squadra','Squadra','team_name'])),
+    series:norm(getField(row,['Serie','series'])),
+    first_name:norm(getField(row,['Nome','first_name'])),
+    last_name:norm(getField(row,['Cognome','last_name'])),
+    email:lower(getField(row,['Email','email'])),
+    phone:norm(getField(row,['Telefono','phone'])),
+    birth_date:excelDate(getField(row,['Data di nascita','birth_date'])),
+    birth_place:norm(getField(row,['Luogo di nascita','birth_place'])),
+    residence_town:norm(getField(row,['Comune di residenza','residence_town'])),
+    residence_province:norm(getField(row,['Provincia','residence_province'])).toUpperCase(),
+    gender:norm(getField(row,['Sesso','gender'])),
+    fitp_ranking:norm(getField(row,['Classifica FITP','fitp_ranking'])).toUpperCase(),
+    medical_certificate_expiry:excelDate(getField(row,['Scadenza certificato medico','medical_certificate_expiry'])),
+    photo_url:norm(getField(row,['Foto URL','photo_url'])),
+    status:lower(getField(row,['Stato','status']))||'pending',
+    notes:norm(getField(row,['Note','notes']))
+  };
+}
+
+async function analyzeRows(){
+  const mapped=importedRows.map((row,index)=>({index:index+2,data:entity==='teams'?mapTeam(row):mapPlayer(row)}));
+  let existing=[];
+  if(entity==='teams') existing=await getTeams();
+  else existing=await getPlayers();
+
+  const byId=new Map(existing.map(x=>[x.id,x]));
+  const byKey=new Map(existing.map(x=>[
+    entity==='teams'?lower(x.name):`${x.team_id}|${lower(x.email)}`,x
+  ]));
+
+  analyzedRows=mapped.map(item=>{
+    const d=item.data;
+    const errors=[];
+    if(entity==='teams'){
+      if(!d.name) errors.push('Nome squadra mancante');
+      if(!['Serie A','Serie B','Serie C'].includes(d.series)) errors.push('Serie non valida');
+      if(!d.captain_name) errors.push('Capitano mancante');
+      if(!d.captain_email) errors.push('Email capitano mancante');
+    }else{
+      if(!d.first_name) errors.push('Nome mancante');
+      if(!d.last_name) errors.push('Cognome mancante');
+      if(!d.email) errors.push('Email mancante');
+      if(!d.team_id&&!d.team_name) errors.push('Squadra mancante');
+      if(!['pending','approved','rejected'].includes(d.status)) errors.push('Stato non valido');
+    }
+
+    let found=null;
+    const keyMode=$('duplicateKey').value;
+    if((keyMode==='id'||keyMode==='auto')&&d.id) found=byId.get(d.id)||null;
+    if(!found&&(keyMode==='name'||keyMode==='auto')){
+      const key=entity==='teams'?lower(d.name):`${d.team_id}|${lower(d.email)}`;
+      found=byKey.get(key)||null;
+    }
+
+    return {...item,errors,existing:found,action:errors.length?'error':found?($('duplicateMode').value==='update'?'update':'skip'):'insert'};
+  });
+
+  renderPreview();
+}
+
+function renderPreview(){
+  const cols=entity==='teams'
+    ? ['Riga','Azione','Nome squadra','Serie','Club','Capitano','Email capitano','Errori']
+    : ['Riga','Azione','Nome','Cognome','Email','Squadra','FITP','Stato','Errori'];
+
+  const rows=analyzedRows.map(x=>entity==='teams'
+    ? [x.index,x.action,x.data.name,x.data.series,x.data.club_name,x.data.captain_name,x.data.captain_email,x.errors.join('; ')]
+    : [x.index,x.action,x.data.first_name,x.data.last_name,x.data.email,x.data.team_name||x.data.team_id,x.data.fitp_ranking,x.data.status,x.errors.join('; ')]
+  );
+
+  $('previewTable').innerHTML='<thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+
+    rows.map((r,i)=>'<tr>'+r.map((v,j)=>j===1?`<td class="status ${v}">${v}</td>`:`<td>${String(v??'')}</td>`).join('')+'</tr>').join('')+'</tbody>';
+
+  $('previewCard').classList.remove('hidden');
+  $('kTotal').textContent=analyzedRows.length;
+  $('kNew').textContent=analyzedRows.filter(x=>x.action==='insert').length;
+  $('kUpdate').textContent=analyzedRows.filter(x=>x.action==='update').length;
+  $('kErrors').textContent=analyzedRows.filter(x=>x.action==='error').length;
+  $('confirmImportBtn').disabled=!analyzedRows.some(x=>['insert','update'].includes(x.action))||analyzedRows.some(x=>x.action==='error');
+  show('importMsg','Anteprima pronta. Controlla i dati prima di confermare.');
+}
+
+async function resolveTeam(player,teamMap){
+  if(player.team_id&&teamMap.byId.has(player.team_id)) return player.team_id;
+  if(player.team_name&&teamMap.byName.has(lower(player.team_name))) return teamMap.byName.get(lower(player.team_name)).id;
+  return null;
+}
+
+async function confirmImport(){
+  if(!confirm(`Confermare l’importazione di ${analyzedRows.filter(x=>['insert','update'].includes(x.action)).length} record?`)) return;
+  $('confirmImportBtn').disabled=true;
+
+  try{
+    let success=0,skipped=0;
+    const adminId=currentUser.id;
+
+    let teamMap={byId:new Map(),byName:new Map()};
+    if(entity==='players'){
+      const tr=await sb.from('teams').select('id,name');
+      if(tr.error) throw tr.error;
+      (tr.data||[]).forEach(t=>{teamMap.byId.set(t.id,t);teamMap.byName.set(lower(t.name),t)});
+    }
+
+    for(const item of analyzedRows){
+      if(item.action==='skip'||item.action==='error'){skipped++;continue}
+      const d={...item.data};
+      delete d.id;
+      delete d.team_name;
+      delete d.series;
+
+      if(entity==='teams'){
+        d.created_by=adminId;
+        d.updated_at=new Date().toISOString();
+        let r;
+        if(item.action==='update') r=await sb.from('teams').update(d).eq('id',item.existing.id);
+        else r=await sb.from('teams').insert(d);
+        if(r.error) throw new Error(`Riga ${item.index}: ${r.error.message}`);
+      }else{
+        const teamId=await resolveTeam(item.data,teamMap);
+        if(!teamId) throw new Error(`Riga ${item.index}: squadra non trovata`);
+        d.team_id=teamId;
+        if(item.action==='update'){
+          let r=await sb.from('roster_requests').update(d).eq('id',item.existing.id);
+          if(r.error) throw new Error(`Riga ${item.index}: ${r.error.message}`);
+        }else{
+          let r=await sb.from('roster_requests').insert(d);
+          if(r.error) throw new Error(`Riga ${item.index}: ${r.error.message}`);
+        }
+      }
+      success++;
+    }
+
+    show('importMsg',`Importazione completata: ${success} record salvati, ${skipped} saltati.`);
+    clearPreview(false);
+  }catch(error){
+    show('importMsg',error.message||String(error),true);
+    $('confirmImportBtn').disabled=false;
+  }
+}
+
+function clearPreview(resetFile=true){
+  importedRows=[];analyzedRows=[];
+  $('previewCard').classList.add('hidden');
+  $('previewTable').innerHTML='';
+  $('confirmImportBtn').disabled=true;
+  ['kTotal','kNew','kUpdate','kErrors'].forEach(id=>$(id).textContent='0');
+  if(resetFile)$('fileInput').value='';
+}
+
+$('duplicateMode').onchange=()=>importedRows.length&&analyzeRows();
+$('duplicateKey').onchange=()=>importedRows.length&&analyzeRows();
+guard();
+</script>
+</body>
+</html>
