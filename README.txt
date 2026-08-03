@@ -1,16 +1,19 @@
-PADEL ARENA MANAGER V9.1.2
+PADEL ARENA MANAGER V9.1.3
 
 NOVITÀ
-- Foto tessera obbligatoria per l'iscrizione del giocatore.
-- Classifica FITP al posto del livello.
-- Data di scadenza del certificato medico.
-- Foto, classifica e scadenza visibili al capitano.
-- Avviso formale sulla responsabilità per dati o documenti falsi sia nel portale capitano sia nella pagina giocatore.
+- Pulsante APRI su ogni squadra.
+- Pagina dettaglio completa della squadra.
+- Elenco generale con filtro Tutte / Serie A / Serie B / Serie C.
+- Seconda pagina con squadre già divise in Serie A, Serie B, Serie C e Coppa Italia.
+- Il comando Elimina non è più esposto nella card:
+  è nascosto nel menu ⋮, piccolo e visibile solo nell'area admin.
+- Eliminazione protetta con digitazione esatta del nome della squadra.
+- Nessuna query SQL necessaria.
 
 INSTALLAZIONE
-1. Esegui integralmente SUPABASE_V9_1_UPDATE.sql nel Supabase V9 Test.
-2. Su GitHub sostituisci completamente player.html e captain.html.
-3. Puoi sostituire anche gli altri file del pacchetto: sono inclusi per avere una versione completa e coerente.
-4. Commit changes e attendi circa un minuto.
-
-I dati e le squadre già presenti non vengono cancellati.
+Su GitHub V9 Test sostituisci/completa:
+- index.html
+- team.html
+- competitions.html
+Mantieni gli altri file presenti.
+Poi fai Commit changes.
