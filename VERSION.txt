@@ -1,3 +1,3 @@
-AICS PADEL CHAMPIONSHIP V9.7.6
-Build: flusso operativo completo
+AICS PADEL CHAMPIONSHIP V9.7.11
+Build: importatore intelligente loghi
 Data: 2026-08-04

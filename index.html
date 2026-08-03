@@ -229,7 +229,14 @@ $('form').onsubmit=e=>{e.preventDefault();saveTeam()};$('logoFile').onchange=e=>
     }
   }
 })();
-</script></main>
+</script>
+<section class="card">
+  <h2>Archivio loghi squadre</h2>
+  <div class="notice">Importa in blocco uno ZIP, abbina automaticamente i file alle squadre e controlla tutto prima del caricamento.</div>
+  <button class="btn primary" onclick="location.href='logo-import.html'">Importatore intelligente loghi</button>
+</section>
+
+</main>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
