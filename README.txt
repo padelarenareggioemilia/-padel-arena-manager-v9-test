@@ -1,30 +1,26 @@
-PADEL ARENA MANAGER V9.4.3 — IDENTITÀ AICS COMPLETA
+PADEL ARENA MANAGER V9.4.4 — IMPORT MODULO GOOGLE AICS
 
-NOVITÀ
-- Logo AICS come favicon del sito.
-- Logo AICS come icona su iPhone, iPad e Android.
-- Manifest Web App completo.
-- Titolo uniforme: AICS Padel Championship Manager.
-- Anteprima link per WhatsApp, Telegram, Facebook e social con logo AICS.
-- Immagine Open Graph dedicata.
-- Colori AICS e richiamo al tricolore.
-- Service worker per rendere la Web App installabile.
+CORREZIONE
+- L'importatore riconosce direttamente il file:
+  “ELENCO SQUADRE AICS PADEL CHAMPIONSHIP 2027.xlsx”.
+- Non è necessario rinominare o spostare le colonne.
+- Riconosce le intestazioni originali di Google Forms.
+- Traduce automaticamente:
+  - Serie A con limite 3ª fascia → Serie A;
+  - Serie B con limite 4ª fascia → Serie B;
+  - Serie C non classificati → Serie C.
+- Estrae l'orario da testi come “15:00 SOLO SABATO E DOMENICA”.
+- Riconosce giorno, club, indirizzo, CAP, comune, provincia,
+  campo di casa, referente, email e telefono.
+- I duplicati vengono confrontati ignorando maiuscole, accenti,
+  apostrofi, punteggiatura e spazi superflui.
+- Il file caricato contiene 38 squadre:
+  se le prime 37 sono già presenti, l'anteprima deve mostrare
+  ASD Happy Time come unica nuova squadra.
+- Nessun dato viene inserito prima della conferma finale.
 
 INSTALLAZIONE
-1. Su GitHub sostituisci tutti i file del pacchetto.
-2. Carica integralmente la cartella assets.
-3. Assicurati che siano presenti:
-   - manifest.webmanifest
-   - service-worker.js
-4. Fai Commit changes.
-5. Attendi circa un minuto.
-6. Su iPhone, apri il link in Safari e usa:
-   Condividi → Aggiungi alla schermata Home.
+Su GitHub sostituisci integralmente:
+- data-exchange.html
 
-NOTA
-Le anteprime dei link su WhatsApp possono usare la cache.
-Dopo l'aggiornamento potrebbe essere necessario inviare il link con un parametro nuovo,
-ad esempio ?v=943, per forzare l'aggiornamento dell'anteprima.
-
-Nessun dato Supabase viene modificato.
 Non serve eseguire SQL.

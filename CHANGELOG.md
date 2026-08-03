@@ -1,5 +1,12 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.4.4 — Import modulo Google AICS
+- Supporto diretto all'esportazione Google Forms del campionato 2027.
+- Mappatura automatica delle intestazioni originali.
+- Normalizzazione avanzata dei duplicati.
+- Riconoscimento automatico della serie e dell'orario.
+
+
 ## V9.4.3 — Identità AICS completa
 - Favicon AICS.
 - Icone iPhone, Android e Web App.

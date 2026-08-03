@@ -79,6 +79,8 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
     <div class="notice">
       I file esportati sono già strutturati con intestazioni filtrabili in Excel.
       Puoi ordinare, filtrare e modificare i dati, quindi reimportarli nell’app.
+      L’importatore riconosce anche l’esportazione originale del modulo Google
+      “AICS Padel Championship 2027”, senza dover modificare le intestazioni.
     </div>
   </section>
 
@@ -187,7 +189,8 @@ const TEAM_HEADERS = [
   'Indirizzo','CAP','Comune','Provincia','Telefono club','Email club',
   'Campo di casa','Giorno partite in casa','Orario partite in casa',
   'Colori sociali','Logo URL','Capitano','Email capitano','Telefono capitano',
-  'Accesso capitano attivo','Note'
+  'Accesso capitano attivo','Data nascita referente','Luogo nascita referente',
+  'Residenza referente','Dichiarazione categoria originale','Note'
 ];
 
 const PLAYER_HEADERS = [
@@ -221,11 +224,38 @@ function setEntity(value){
 }
 
 function norm(value){
-  return String(value??'').trim();
+  return String(value??'').replace(/\s+/g,' ').trim();
 }
 
 function lower(value){
   return norm(value).toLowerCase();
+}
+
+function normalizedKey(value){
+  return lower(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function parseSeries(value){
+  const v=normalizedKey(value);
+  if(v.includes('serie a')) return 'Serie A';
+  if(v.includes('serie b')) return 'Serie B';
+  if(v.includes('serie c')) return 'Serie C';
+  return norm(value);
+}
+
+function parseHomeDay(value){
+  const v=normalizedKey(value);
+  const days=[
+    ['lunedi','Lunedì'],['martedi','Martedì'],['mercoledi','Mercoledì'],
+    ['giovedi','Giovedì'],['venerdi','Venerdì'],['sabato','Sabato'],['domenica','Domenica']
+  ];
+  const found=days.find(([key])=>v.includes(key));
+  return found?found[1]:norm(value);
 }
 
 function boolValue(value,defaultValue=true){
@@ -330,7 +360,9 @@ function teamsToRows(data){
     t.club_postal_code,t.club_city,t.club_province,t.club_phone,t.club_email,
     t.home_court,t.home_match_day,t.home_match_time?String(t.home_match_time).slice(0,5):'',
     t.team_colors,t.logo_url,t.captain_name,t.captain_email,t.captain_phone,
-    t.captain_access_enabled!==false?'SI':'NO',t.notes
+    t.captain_access_enabled!==false?'SI':'NO',
+    t.captain_birth_date,t.captain_birth_place,t.captain_residence,
+    t.declared_competition,t.notes
   ]);
 }
 
@@ -378,7 +410,7 @@ async function exportData(){
 function downloadTemplate(){
   const headers=entity==='teams'?TEAM_HEADERS:PLAYER_HEADERS;
   const example=entity==='teams'
-    ? [['','ESEMPIO SQUADRA','Serie C','Club esempio','','Via Roma 1','42100','Reggio Emilia','RE','','','Campo 1','Venerdì','20:30','','','','capitano@email.it','','SI','']]
+    ? [['','ESEMPIO SQUADRA','Serie C','Club esempio','','Via Roma 1','42100','Reggio Emilia','RE','','','Campo 1','Venerdì','20:30','','','','capitano@email.it','','SI','','','','Serie C','']]
     : [['','','ESEMPIO SQUADRA','Serie C','Mario','Rossi','mario@email.it','','1990-01-01','Reggio Emilia','Reggio Emilia','RE','Maschile','NC','2027-05-31','','pending','NO','player','']];
   const wb=createWorkbook(headers,example,entity==='teams'?'Squadre':'Giocatori');
   XLSX.writeFile(wb,entity==='teams'?'MODELLO_IMPORT_SQUADRE.xlsx':'MODELLO_IMPORT_GIOCATORI.xlsx');
@@ -394,46 +426,179 @@ async function readFile(event){
     const ws=wb.Sheets[wb.SheetNames[0]];
     importedRows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
     if(!importedRows.length) throw new Error('Il file non contiene righe dati.');
+
+    const firstHeaders=Object.keys(importedRows[0]||{});
+    const looksLikeGoogleForm=firstHeaders.some(h=>normalizedKey(h).includes('nome della squadra'))
+      && firstHeaders.some(h=>normalizedKey(h).includes('ragione sociale del club'));
+
+    if(entity!=='teams' && looksLikeGoogleForm){
+      setEntity('teams');
+      importedRows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:true});
+    }
+
+    show(
+      'importMsg',
+      looksLikeGoogleForm
+        ? `File Google Forms AICS riconosciuto: ${importedRows.length} squadre lette.`
+        : `${importedRows.length} righe lette dal file.`
+    );
+
     await analyzeRows();
   }catch(error){show('importMsg',error.message||String(error),true)}
 }
 
 function getField(row,names){
-  for(const name of names) if(Object.prototype.hasOwnProperty.call(row,name)) return row[name];
+  for(const name of names){
+    if(Object.prototype.hasOwnProperty.call(row,name)) return row[name];
+  }
+
   const keys=Object.keys(row);
   for(const name of names){
-    const key=keys.find(k=>lower(k)===lower(name));
-    if(key) return row[key];
+    const exact=keys.find(k=>normalizedKey(k)===normalizedKey(name));
+    if(exact) return row[exact];
   }
+
+  // Permette di riconoscere intestazioni molto lunghe provenienti da Google Forms.
+  for(const name of names){
+    const wanted=normalizedKey(name);
+    const partial=keys.find(k=>{
+      const actual=normalizedKey(k);
+      return actual.includes(wanted)||wanted.includes(actual);
+    });
+    if(partial) return row[partial];
+  }
+
   return '';
 }
 
 function mapTeam(row){
+  const declaredCompetition=getField(row,[
+    'Serie',
+    'ISCRIVO LA MIA SQUADRA AL CAMPIONATO DI :',
+    'ISCRIVO LA MIA SQUADRA AL CAMPIONATO DI',
+    'Campionato',
+    'Categoria'
+  ]);
+
+  const homeTimeSource=getField(row,[
+    'Orario partite in casa',
+    'ORA INIZIO DELLE PARTITE IN CASA',
+    'home_match_time'
+  ]);
+
   return {
     id:norm(getField(row,['ID','id'])),
-    name:norm(getField(row,['Nome squadra','Squadra','name'])),
-    series:norm(getField(row,['Serie','series'])),
-    club_name:norm(getField(row,['Club / società','Società','Club','club_name'])),
-    club_fiscal_code:norm(getField(row,['Codice fiscale / P. IVA','Codice fiscale','P. IVA','club_fiscal_code'])),
-    club_address:norm(getField(row,['Indirizzo','club_address'])),
-    club_postal_code:norm(getField(row,['CAP','club_postal_code'])),
-    club_city:norm(getField(row,['Comune','Città','club_city'])),
-    club_province:norm(getField(row,['Provincia','club_province'])).toUpperCase(),
-    club_phone:norm(getField(row,['Telefono club','club_phone'])),
-    club_email:lower(getField(row,['Email club','club_email'])),
-    home_court:norm(getField(row,['Campo di casa','home_court'])),
-    home_match_day:norm(getField(row,['Giorno partite in casa','home_match_day'])),
-    home_match_time:normalizeTime(getField(row,['Orario partite in casa','home_match_time'])),
-    team_colors:norm(getField(row,['Colori sociali','team_colors'])),
-    logo_url:norm(getField(row,['Logo URL','logo_url'])),
-    captain_name:norm(getField(row,['Capitano','captain_name'])),
-    captain_email:lower(getField(row,['Email capitano','captain_email'])),
-    captain_phone:norm(getField(row,['Telefono capitano','captain_phone'])),
-    captain_access_enabled:boolValue(getField(row,['Accesso capitano attivo','captain_access_enabled']),true),
+    name:norm(getField(row,[
+      'Nome squadra',
+      'Squadra',
+      'NOME DELLA SQUADRA',
+      'name'
+    ])),
+    series:parseSeries(declaredCompetition),
+    club_name:norm(getField(row,[
+      'Club / società',
+      'Società',
+      'Club',
+      'RAGIONE SOCIALE DEL CLUB',
+      'club_name'
+    ])),
+    club_fiscal_code:norm(getField(row,[
+      'Codice fiscale / P. IVA',
+      'Codice fiscale',
+      'P. IVA',
+      'CODICE FISCALE O P. IVA',
+      'club_fiscal_code'
+    ])),
+    club_address:norm(getField(row,[
+      'Indirizzo',
+      'IN (VIA, VIALE, PIAZZA...)',
+      'club_address'
+    ])),
+    club_postal_code:norm(getField(row,[
+      'CAP',
+      'club_postal_code'
+    ])),
+    club_city:norm(getField(row,[
+      'Comune',
+      'Città',
+      'COMUNE DI',
+      'club_city'
+    ])),
+    club_province:norm(getField(row,[
+      'Provincia',
+      'IN PROVINCIA DI',
+      'club_province'
+    ])).toUpperCase(),
+    club_phone:norm(getField(row,[
+      'Telefono club',
+      'TELEFONO',
+      'club_phone'
+    ])),
+    club_email:lower(getField(row,[
+      'Email club',
+      'INDIRIZZO EMAIL',
+      'club_email'
+    ])),
+    home_court:norm(getField(row,[
+      'Campo di casa',
+      'INDIRIZZO COMPLETO DEL CAMPO DI CASA COMPRESO DI CAP E NUMERO CIVICO',
+      'home_court'
+    ])),
+    home_match_day:parseHomeDay(getField(row,[
+      'Giorno partite in casa',
+      'GIORNO DELLE PARTITE IN CASA',
+      'home_match_day'
+    ])),
+    home_match_time:normalizeTime(homeTimeSource),
+    team_colors:norm(getField(row,[
+      'Colori sociali',
+      'team_colors'
+    ])),
+    logo_url:norm(getField(row,[
+      'Logo URL',
+      'logo_url'
+    ])),
+    captain_name:norm(getField(row,[
+      'Capitano',
+      'Referente',
+      'NOME E COGNOME DEL REFERENTE SQUADRA',
+      'captain_name'
+    ])),
+    captain_email:lower(getField(row,[
+      'Email capitano',
+      'Email referente',
+      'INDIRIZZO E-MAIL REFERENTE',
+      'captain_email'
+    ])),
+    captain_phone:norm(getField(row,[
+      'Telefono capitano',
+      'Telefono referente',
+      'NUMERO DI TELEFONO REFERENTE',
+      'captain_phone'
+    ])),
+    captain_birth_date:excelDate(getField(row,[
+      'Data di nascita referente',
+      'DATA DI NASCITA REFERENTE',
+      'captain_birth_date'
+    ])),
+    captain_birth_place:norm(getField(row,[
+      'Luogo di nascita referente',
+      'LUOGO DI NASCITA REFERENTE',
+      'captain_birth_place'
+    ])),
+    captain_residence:norm(getField(row,[
+      'Comune residenza referente',
+      'COMUNE RESIDENZA REFERENTE',
+      'captain_residence'
+    ])),
+    declared_competition:norm(declaredCompetition),
+    captain_access_enabled:boolValue(getField(row,[
+      'Accesso capitano attivo',
+      'captain_access_enabled'
+    ]),true),
     notes:norm(getField(row,['Note','notes']))
   };
 }
-
 function mapPlayer(row){
   return {
     id:norm(getField(row,['ID richiesta','ID','id'])),
@@ -465,7 +630,7 @@ async function analyzeRows(){
 
   const byId=new Map(existing.map(x=>[x.id,x]));
   const byKey=new Map(existing.map(x=>[
-    entity==='teams'?lower(x.name):`${x.team_id}|${lower(x.email)}`,x
+    entity==='teams'?normalizedKey(x.name):`${x.team_id}|${lower(x.email)}`,x
   ]));
 
   analyzedRows=mapped.map(item=>{
@@ -488,7 +653,7 @@ async function analyzeRows(){
     const keyMode=$('duplicateKey').value;
     if((keyMode==='id'||keyMode==='auto')&&d.id) found=byId.get(d.id)||null;
     if(!found&&(keyMode==='name'||keyMode==='auto')){
-      const key=entity==='teams'?lower(d.name):`${d.team_id}|${lower(d.email)}`;
+      const key=entity==='teams'?normalizedKey(d.name):`${d.team_id}|${lower(d.email)}`;
       found=byKey.get(key)||null;
     }
 
