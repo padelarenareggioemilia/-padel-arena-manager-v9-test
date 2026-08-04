@@ -11,6 +11,20 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:20}
 .shell{max-width:1180px;margin:auto;padding:18px 12px 70px}.hero,.card{border:1px solid var(--line);border-radius:20px;box-shadow:0 13px 28px rgba(8,47,104,.1)}.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:15px}.brand{display:flex;gap:13px;align-items:center}.logo{width:100px;height:78px;object-fit:contain;background:#fff;border-radius:13px;padding:5px}.hero h1{margin:0}.card{background:#fff;padding:15px;margin:12px 0}.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.comp{border:1px solid var(--line);background:#fff;border-radius:17px;padding:14px;cursor:pointer;text-align:center;min-height:165px}.comp:hover{transform:translateY(-2px);box-shadow:0 12px 25px rgba(8,47,104,.13)}.comp img{width:92px;height:92px;object-fit:contain}.comp strong{display:block;font-size:19px;margin-top:4px}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.tab{border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:12px;padding:12px;font-weight:900;cursor:pointer}.tab.active{background:var(--blue);color:#fff}.fixture{display:grid;grid-template-columns:115px 1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #dce6f0}.score{font-size:20px;font-weight:1000}.muted{color:var(--muted)}.small{font-size:12px}.notice{padding:12px;border-radius:12px;background:var(--soft);border:1px solid var(--line)}.hidden{display:none!important}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{padding:10px;border-bottom:1px solid #dce6f0;text-align:center}th{background:var(--blue);color:#fff}td:nth-child(2),th:nth-child(2){text-align:left}.group-title{padding:9px 12px;border-left:5px solid var(--green);background:var(--soft);border-radius:0 10px 10px 0}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}
 @media(max-width:800px){.grid5{grid-template-columns:1fr 1fr}.tabs{grid-template-columns:1fr 1fr}.fixture{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:82px;height:64px}}
+
+.account-tools{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px;margin:12px 0}
+.account-tools h2{margin:0 0 8px}.account-tools-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.account-tools input{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px}
+.account-status{padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--soft);margin-top:9px}
+.account-status.ok{background:#ebf8f0;border-color:#79bf90}.account-status.err{background:#fdecef;border-color:#dd7a85}
+@media(max-width:700px){.account-tools-grid{grid-template-columns:1fr}}
+
+.login-modal{position:fixed;inset:0;background:rgba(3,24,52,.72);display:grid;place-items:center;padding:18px;z-index:9999}
+.login-box{width:min(520px,100%);background:#fff;border-radius:20px;padding:18px;border:1px solid var(--line);box-shadow:0 25px 60px rgba(0,0,0,.3)}
+.login-box h2{margin:0 0 8px}.login-box label{display:block;font-weight:900;margin:10px 0 5px}
+.login-box input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px}
+.login-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
 </style>
 <link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
@@ -21,11 +35,28 @@
     <img id="headerLogo" class="logo" src="assets/aics-logo.png" alt="AICS">
     <div>
       <h1 id="headerTitle">AICS PADEL CHAMPIONSHIP</h1>
-      <div id="headerSubtitle">Seleziona la competizione che desideri consultare</div>
+      <div id="headerSubtitle">Seleziona la competizione che desideri consultare</div><div style="font-size:11px;opacity:.8;margin-top:4px">BUILD 1.3.2</div>
     </div>
   </div>
-  <button id="headerButton" class="btn secondary" onclick="location.href='login.html'">Accedi al tuo account</button>
+  <button id="headerButton" class="btn secondary" onclick="openLoginModal()">Accedi al tuo account</button>
 </header>
+<section class="account-tools">
+  <div class="account-tools-grid">
+    <div>
+      <h2>Cambia account</h2>
+      <div class="muted small">Chiude completamente la sessione attiva e lascia aperta la pagina di accesso.</div>
+      <button class="btn secondary" style="margin-top:9px" onclick="logoutFromPublic()">Logout / Cambia account</button>
+    </div>
+    <div>
+      <h2>Sei un giocatore del campionato?</h2>
+      <div class="muted small">Inserisci l’indirizzo email comunicato al capitano per recuperare la tua anagrafica già approvata.</div>
+      <input id="playerRecoveryEmail" type="email" placeholder="Indirizzo email">
+      <button class="btn primary" style="margin-top:9px" onclick="recoverPlayerFromPublic()">Recupera la mia iscrizione</button>
+    </div>
+  </div>
+  <div id="accountPublicStatus" class="account-status hidden"></div>
+</section>
+
 
 <section id="landingView" class="card">
   <div class="notice">Clicca sullo stemma per aprire calendario, risultati e classifica della singola competizione.</div>
@@ -45,20 +76,202 @@
 </section>
 
 <div id="errorBox" class="notice hidden"></div>
+
+<section id="loginModal" class="login-modal hidden" aria-hidden="true">
+  <div class="login-box">
+    <h2>Accedi al tuo account</h2>
+    <div class="muted small">Admin, capitano, segretario o giocatore.</div>
+    <label for="modalEmail">Email</label>
+    <input id="modalEmail" type="email" autocomplete="username">
+    <label for="modalPassword">Password</label>
+    <input id="modalPassword" type="password" autocomplete="current-password">
+    <div id="modalLoginStatus" class="account-status hidden"></div>
+    <div class="login-actions">
+      <button class="btn primary" onclick="loginFromPublic()">Accedi</button>
+      <button class="btn secondary" onclick="closeLoginModal()">Annulla</button>
+      <button class="btn secondary" onclick="logoutFromPublic()">Logout / Cambia account</button>
+    </div>
+  </div>
+</section>
+
 </main>
 
 <script>
 const cfg=window.PAM_V9_CONFIG;
 const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+
+function publicAccountMessage(text,error=false){
+  const box=document.getElementById('accountPublicStatus');
+  if(!box)return;
+  box.textContent=text;
+  box.className='account-status '+(error?'err':'ok');
+  box.classList.remove('hidden');
+}
+function modalMessage(text,error=false){
+  const box=document.getElementById('modalLoginStatus');
+  if(!box)return;
+  box.textContent=text;
+  box.className='account-status '+(error?'err':'ok');
+  box.classList.remove('hidden');
+}
+function openLoginModal(){
+  document.getElementById('loginModal').classList.remove('hidden');
+  document.getElementById('loginModal').setAttribute('aria-hidden','false');
+  setTimeout(()=>document.getElementById('modalEmail')?.focus(),50);
+}
+function closeLoginModal(){
+  document.getElementById('loginModal').classList.add('hidden');
+  document.getElementById('loginModal').setAttribute('aria-hidden','true');
+}
+async function clearLocalSession(){
+  try{await sb.auth.signOut({scope:'local'});}catch(e){}
+  try{
+    Object.keys(localStorage).forEach(k=>{
+      if(k.includes('supabase')||k.startsWith('sb-'))localStorage.removeItem(k);
+    });
+    sessionStorage.clear();
+  }catch(e){}
+}
+async function destinationForUser(user){
+  const uid=user.id;
+  const email=(user.email||'').trim().toLowerCase();
+
+  const profile=await sb.from('profiles').select('role').eq('id',uid).maybeSingle();
+  if(profile.error)throw profile.error;
+  if(profile.data?.role==='admin')return 'index.html';
+
+  const roles=await sb.from('team_user_roles')
+    .select('role,team_id,active')
+    .eq('user_id',uid)
+    .eq('active',true);
+  if(roles.error)throw roles.error;
+
+  const staff=(roles.data||[]).find(x=>['captain','secretary'].includes(x.role));
+  if(staff)return `captain.html?team=${encodeURIComponent(staff.team_id)}`;
+
+  const playerRole=(roles.data||[]).find(x=>x.role==='player');
+  if(playerRole)return `player.html?team=${encodeURIComponent(playerRole.team_id)}`;
+
+  if(email){
+    const captain=await sb.from('teams').select('id').ilike('captain_email',email).limit(1).maybeSingle();
+    if(!captain.error&&captain.data?.id)return `captain.html?team=${encodeURIComponent(captain.data.id)}`;
+
+    const roster=await sb.from('roster_requests')
+      .select('team_id,status')
+      .ilike('email',email)
+      .eq('status','approved')
+      .limit(1)
+      .maybeSingle();
+    if(!roster.error&&roster.data?.team_id)return `player.html?team=${encodeURIComponent(roster.data.team_id)}`;
+  }
+
+  return 'public.html';
+}
+async function withTimeout(promise,ms,label){
+  let timer;
+  try{
+    return await Promise.race([
+      promise,
+      new Promise((_,reject)=>{
+        timer=setTimeout(()=>reject(new Error(label+' non risponde entro '+Math.round(ms/1000)+' secondi')),ms);
+      })
+    ]);
+  }finally{clearTimeout(timer)}
+}
+
+async function loginFromPublic(){
+  const email=(document.getElementById('modalEmail')?.value||'').trim();
+  const password=document.getElementById('modalPassword')?.value||'';
+  if(!email||!password)return modalMessage('Inserisci email e password.',true);
+
+  const button=[...document.querySelectorAll('#loginModal button')].find(b=>b.textContent.trim()==='Accedi');
+  if(button){button.disabled=true;button.textContent='Accesso in corso…'}
+
+  try{
+    modalMessage('Verifica credenziali…');
+    await clearLocalSession();
+
+    const result=await withTimeout(
+      sb.auth.signInWithPassword({email,password}),
+      12000,
+      'Il servizio di accesso'
+    );
+    if(result.error)throw result.error;
+    if(!result.data?.user)throw new Error('Accesso eseguito ma utente non disponibile.');
+
+    modalMessage('Credenziali corrette. Apro la tua area…');
+
+    let destination='public.html';
+    try{
+      destination=await withTimeout(
+        destinationForUser(result.data.user),
+        10000,
+        'Il controllo del ruolo'
+      );
+    }catch(routeError){
+      // Fallback sicuro: sessione valida, quindi non blocchiamo l'utente nel modale.
+      console.error('Errore instradamento account:',routeError);
+      destination='account-home.html';
+    }
+
+    location.replace(destination);
+  }catch(error){
+    modalMessage(error.message||String(error),true);
+  }finally{
+    if(button){button.disabled=false;button.textContent='Accedi'}
+  }
+}
+async function logoutFromPublic(){
+  publicAccountMessage('Sessione chiusa. Ora puoi accedere con un altro account.');
+  await clearLocalSession();
+  document.getElementById('modalEmail').value='';
+  document.getElementById('modalPassword').value='';
+  openLoginModal();
+}
+async function recoverPlayerFromPublic(){
+  const email=(document.getElementById('playerRecoveryEmail')?.value||'').trim().toLowerCase();
+  if(!email){
+    publicAccountMessage('Inserisci il tuo indirizzo email.',true);
+    return;
+  }
+
+  publicAccountMessage('Controllo iscrizione in corso…');
+
+  try{
+    const check=await withTimeout(
+      sb.rpc('check_player_registration_email',{p_email:email}),
+      10000,
+      'Il controllo iscrizione'
+    );
+
+    if(check.error)throw check.error;
+
+    if(!check.data?.found){
+      publicAccountMessage('Nessuna iscrizione approvata trovata con questa email.',true);
+      return;
+    }
+
+    sessionStorage.setItem('player_claim_email',email);
+    location.href='player-account.html?email='+encodeURIComponent(email)+'&v=132';
+  }catch(error){
+    publicAccountMessage(error.message||String(error),true);
+  }
+}
+window.openLoginModal=openLoginModal;
+window.closeLoginModal=closeLoginModal;
+window.loginFromPublic=loginFromPublic;
+window.logoutFromPublic=logoutFromPublic;
+window.recoverPlayerFromPublic=recoverPlayerFromPublic;
+
 const $=id=>document.getElementById(id);
 
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
 const logos={
-  SERIE_A:'assets/aics-serie-a-2027.png?v=11',
-  SERIE_B:'assets/aics-serie-b-2027.png?v=11',
-  SERIE_C:'assets/aics-serie-c-2027.png?v=11',
-  COPPA_ITALIA:'assets/aics-coppa-italia-2027.png?v=11',
-  SUPERCOPPA:'assets/aics-supercoppa-2027.png?v=11'
+  SERIE_A:'assets/serie-a.png?v=12',
+  SERIE_B:'assets/serie-b.png?v=12',
+  SERIE_C:'assets/serie-c.png?v=12',
+  COPPA_ITALIA:'assets/coppa-italia.png?v=12',
+  SUPERCOPPA:'assets/supercoppa.png?v=12'
 };
 
 const code=new URLSearchParams(location.search).get('code');
