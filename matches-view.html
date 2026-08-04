@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS PADEL CHAMPIONSHIP · Le mie partite</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--bg:#f4f8fc;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;--line:#b9cde3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:20}
+.shell{max-width:1250px;margin:auto;padding:18px 12px 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 13px 28px rgba(8,47,104,.1)}
+.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;display:flex;justify-content:space-between;align-items:center;gap:14px}.brand{display:flex;gap:13px;align-items:center}.logo{width:100px;height:72px;object-fit:contain;background:#fff;border-radius:13px;padding:6px}
+.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.success{background:var(--green);color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.muted{color:var(--muted)}.small{font-size:12px}.hidden{display:none!important}
+.scope-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.scope-option{border:1px solid var(--line);border-radius:15px;padding:13px;background:#fff;cursor:pointer}.scope-option:has(input:checked){outline:3px solid var(--green);background:#f1fbf5}.scope-option input{width:auto}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.field label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}.field select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px}
+.matchday{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin:12px 0;background:#fff}.matchday-head{width:100%;border:0;background:var(--soft);padding:13px 15px;font:inherit;font-weight:1000;display:flex;justify-content:space-between;cursor:pointer;color:var(--text)}.matchday.collapsed .matchday-body{display:none}.matchday-body{padding:0 12px 10px}
+.fixture{display:grid;grid-template-columns:125px 1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #dce6f0}.fixture:last-child{border-bottom:0}.teamline{display:flex;align-items:center;gap:7px}.team-logo{width:34px;height:34px;object-fit:contain;border-radius:8px;border:1px solid #d5e1ed;background:#fff}.score{font-size:19px;font-weight:1000}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:9px 0}.ok{background:#ebf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}
+.export{position:relative}.export-menu{position:absolute;right:0;top:43px;z-index:50;min-width:220px;background:#fff;border:1px solid var(--line);border-radius:13px;padding:6px;box-shadow:0 14px 30px rgba(0,0,0,.16)}.export-menu button{width:100%;border:0;background:#fff;text-align:left;padding:10px;border-radius:8px;font-weight:850;cursor:pointer}.export-menu button:hover{background:var(--soft)}
+@media(max-width:800px){.scope-grid,.filters{grid-template-columns:1fr}.fixture{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:80px;height:60px}}
+@media print{body:before,.actions,.card.controls,.export{display:none!important}.hero{background:#fff;color:#000;box-shadow:none}.card,.matchday{box-shadow:none;break-inside:avoid}.shell{max-width:none;padding:0}}
+</style>
+<link rel="stylesheet" href="app-theme.css?v=980stable">
+</head>
+<body><main class="shell">
+<div class="actions"><button class="btn secondary" onclick="history.length>1?history.back():location.href='public.html'">← Indietro</button></div>
+<header class="hero">
+  <div class="brand"><img class="logo" src="assets/aics-logo.png"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div id="roleText">Vista partite personalizzata</div></div></div>
+  <div class="export">
+    <button class="btn secondary" onclick="toggleExport()">⋮ Stampa / Condividi</button>
+    <div id="exportMenu" class="export-menu hidden">
+      <button onclick="printPdf()">📄 Stampa / Salva in PDF</button>
+      <button id="excelButton" class="hidden" onclick="exportExcel()">📊 Esporta in Excel</button>
+      <button onclick="shareCurrentView()">↗ Condividi questa vista</button>
+    </div>
+  </div>
+</header>
+
+<section class="card controls">
+  <h2 style="margin-top:0">Quali partite vuoi vedere?</h2>
+  <div class="scope-grid">
+    <label class="scope-option"><input type="radio" name="scope" value="team" onchange="scopeChanged()"> <b>Solo la mia squadra</b><div class="muted small">Mostra esclusivamente le gare della squadra selezionata.</div></label>
+    <label class="scope-option"><input type="radio" name="scope" value="category" onchange="scopeChanged()"> <b>Tutta la mia categoria</b><div class="muted small">Mostra tutte le partite della Serie A, B o C.</div></label>
+    <label class="scope-option"><input type="radio" name="scope" value="all" onchange="scopeChanged()"> <b>Tutte le partite</b><div class="muted small">Mostra tutte le competizioni disponibili.</div></label>
+  </div>
+  <div class="filters">
+    <div id="teamFilterBox" class="field"><label>Squadra</label><select id="teamFilter" onchange="filtersChanged()"></select></div>
+    <div id="categoryFilterBox" class="field"><label>Categoria</label><select id="categoryFilter" onchange="filtersChanged()"><option>Serie A</option><option>Serie B</option><option>Serie C</option></select></div>
+  </div>
+  <div id="saveMsg" class="notice hidden"></div>
+</section>
+
+<section class="card">
+  <div class="actions" style="justify-content:space-between"><div><h2 id="viewTitle" style="margin:0">Partite</h2><div id="viewSubtitle" class="muted"></div></div><button class="btn secondary" onclick="loadData()">Aggiorna</button></div>
+  <div id="matches"><div class="notice">Caricamento…</div></div>
+</section>
+</main>
+
+<script>
+const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
+let session=null,role='player',isAdmin=false,teams=[],fixtures=[],statuses=[],myTeamIds=[],mySeries=[],preference=null;
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+function team(id){return teams.find(t=>t.id===id)}
+function tname(id,p){return team(id)?.name||p||'Da definire'}
+function tlogo(id){return team(id)?.logo_url||'assets/aics-logo.png'}
+function workflow(id){return statuses.find(x=>x.fixture_id===id)?.workflow_data||{}}
+function score(id){const w=workflow(id),r=w.result_data||w.result||w.match_result;return r?.home_score!=null?`${r.home_score} – ${r.away_score}`:''}
+function roundKey(f){return f.round_number!=null?Number(f.round_number):(f.scheduled_at?new Date(f.scheduled_at).toISOString().slice(0,10):'Senza giornata')}
+function roundLabel(k){return typeof k==='number'?`Giornata ${k}`:(k==='Senza giornata'?k:new Date(`${k}T12:00:00`).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))}
+function toggleExport(){$('exportMenu').classList.toggle('hidden')}
+function message(text,error=false){const e=$('saveMsg');e.textContent=text;e.className='notice '+(error?'err':'ok');e.classList.remove('hidden')}
+function selectedScope(){return document.querySelector('input[name=scope]:checked')?.value||'team'}
+function filteredFixtures(){
+  const scope=selectedScope();
+  if(scope==='all')return fixtures;
+  if(scope==='category')return fixtures.filter(f=>[team(f.home_team_id)?.series,team(f.away_team_id)?.series].includes($('categoryFilter').value));
+  const id=$('teamFilter').value;return fixtures.filter(f=>f.home_team_id===id||f.away_team_id===id);
+}
+function fixtureHtml(f){return `<div class="fixture"><div class="small muted">${f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Data da definire'}</div><div><div class="teamline"><img class="team-logo" src="${esc(tlogo(f.home_team_id))}"><b>${esc(tname(f.home_team_id,f.home_placeholder))}</b></div><div class="muted small">contro</div><div class="teamline"><img class="team-logo" src="${esc(tlogo(f.away_team_id))}"><b>${esc(tname(f.away_team_id,f.away_placeholder))}</b></div><div class="small muted">${esc(f.competition_code||'')} · ${esc(f.venue||'')}</div></div><div class="score">${score(f.id)||'Da giocare'}</div></div>`}
+function render(){
+  const list=filteredFixtures().sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
+  const scope=selectedScope();
+  $('teamFilterBox').classList.toggle('hidden',scope!=='team');
+  $('categoryFilterBox').classList.toggle('hidden',scope!=='category');
+  $('viewTitle').textContent=scope==='all'?'Tutte le partite':scope==='category'?`Partite ${$('categoryFilter').value}`:`Partite ${tname($('teamFilter').value)}`;
+  $('viewSubtitle').textContent=`${list.length} ${list.length===1?'partita':'partite'} visualizzate`;
+  const map=new Map();list.forEach(f=>{const k=roundKey(f);if(!map.has(k))map.set(k,[]);map.get(k).push(f)});
+  $('matches').innerHTML=list.length?[...map.entries()].sort((a,b)=>{
+    if(typeof a[0]==='number'&&typeof b[0]==='number')return a[0]-b[0];
+    return new Date(a[1][0]?.scheduled_at||0)-new Date(b[1][0]?.scheduled_at||0);
+  }).map(([k,items])=>`<section class="matchday"><button class="matchday-head" onclick="this.closest('.matchday').classList.toggle('collapsed')"><span>${roundLabel(k)}</span><span>${items.length} ${items.length===1?'partita':'partite'} ▾</span></button><div class="matchday-body">${items.map(fixtureHtml).join('')}</div></section>`).join(''):'<div class="notice">Nessuna partita corrisponde ai filtri selezionati.</div>';
+}
+async function savePreference(){
+  if(!session)return;
+  const payload={user_id:session.user.id,scope:selectedScope(),selected_team_id:$('teamFilter').value||null,selected_series:$('categoryFilter').value||null,updated_at:new Date().toISOString()};
+  const r=await sb.from('user_match_view_preferences').upsert(payload,{onConflict:'user_id'});
+  if(r.error)return message('Preferenza non salvata: '+r.error.message,true);
+  message('Preferenza salvata.');
+}
+function scopeChanged(){render();savePreference()}
+function filtersChanged(){render();savePreference()}
+function rowsForExport(){return filteredFixtures().map(f=>({Giornata:roundLabel(roundKey(f)),Competizione:f.competition_code||'',Data:f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT'):'',Casa:tname(f.home_team_id,f.home_placeholder),Ospite:tname(f.away_team_id,f.away_placeholder),Campo:f.venue||'',Risultato:score(f.id)||''}))}
+function printPdf(){toggleExport();window.print()}
+function exportExcel(){
+  const rows=rowsForExport(),keys=Object.keys(rows[0]||{});if(!rows.length)return;
+  const html=`<html><meta charset="utf-8"><table><tr>${keys.map(k=>`<th>${esc(k)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${keys.map(k=>`<td>${esc(r[k])}</td>`).join('')}</tr>`).join('')}</table></html>`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:'application/vnd.ms-excel'}));a.download='Partite_AICS_Padel.xls';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toggleExport();
+}
+async function shareCurrentView(){
+  const text=`${$('viewTitle').textContent}\n${location.href}`;
+  try{if(navigator.share)await navigator.share({title:$('viewTitle').textContent,text,url:location.href});else{await navigator.clipboard.writeText(text);message('Link copiato negli appunti.')}}catch(e){}
+  toggleExport();
+}
+async function loadData(){
+  const s=await sb.auth.getSession();session=s.data.session;if(!session)return location.href='login.html';
+  const [p,t,f,w,r,rr,pref]=await Promise.all([
+    sb.from('profiles').select('role').eq('id',session.user.id).maybeSingle(),
+    sb.from('teams').select('id,name,series,logo_url').order('name'),
+    sb.from('fixtures').select('*').order('scheduled_at'),
+    sb.from('match_workflows').select('*'),
+    sb.from('team_user_roles').select('team_id,role,active').eq('user_id',session.user.id).eq('active',true),
+    sb.from('roster_requests').select('team_id,status').eq('user_id',session.user.id),
+    sb.from('user_match_view_preferences').select('*').eq('user_id',session.user.id).maybeSingle()
+  ]);
+  const error=t.error||f.error;if(error){$('matches').innerHTML=`<div class="notice err">${esc(error.message)}</div>`;return}
+  role=p.data?.role||'player';isAdmin=role==='admin';teams=t.data||[];fixtures=f.data||[];statuses=w.error?[]:(w.data||[]);
+  myTeamIds=[...new Set([...(r.data||[]).filter(x=>['captain','secretary'].includes(x.role)).map(x=>x.team_id),...(rr.data||[]).filter(x=>x.status==='approved').map(x=>x.team_id)])];
+  mySeries=[...new Set(myTeamIds.map(id=>team(id)?.series).filter(Boolean))];
+  $('roleText').textContent=isAdmin?'Amministratore · tutte le squadre':role==='captain'?'Capitano · vista personalizzata':'Giocatore · vista personalizzata';
+  $('excelButton').classList.toggle('hidden',!isAdmin);
+  const selectable=isAdmin?teams:teams.filter(x=>myTeamIds.includes(x.id));
+  $('teamFilter').innerHTML=selectable.map(x=>`<option value="${x.id}">${esc(x.name)} · ${esc(x.series||'')}</option>`).join('');
+  if(!isAdmin && mySeries.length===1)$('categoryFilter').value=mySeries[0];
+  preference=pref.error?null:pref.data;
+  let scope=preference?.scope||(isAdmin?'all':'team');
+  if(!isAdmin && scope==='team'&&!selectable.length)scope='category';
+  document.querySelector(`input[name=scope][value="${scope}"]`).checked=true;
+  if(preference?.selected_team_id && selectable.some(x=>x.id===preference.selected_team_id))$('teamFilter').value=preference.selected_team_id;
+  if(preference?.selected_series)$('categoryFilter').value=preference.selected_series;
+  render();
+}
+window.scopeChanged=scopeChanged;window.filtersChanged=filtersChanged;window.toggleExport=toggleExport;window.printPdf=printPdf;window.exportExcel=exportExcel;window.shareCurrentView=shareCurrentView;window.loadData=loadData;
+loadData();
+</script><script src="app-ui.js?v=980stable"></script>
+</body></html>

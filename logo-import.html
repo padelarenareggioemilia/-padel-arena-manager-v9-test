@@ -31,6 +31,7 @@ select{width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;ba
 .switch{width:auto;transform:scale(1.2)}.row-actions{display:flex;gap:6px;align-items:center}
 @media(max-width:820px){.grid4{grid-template-columns:1fr 1fr}.hero{align-items:flex-start}.brand img{width:86px;height:60px}}
 </style>
+<link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body>
 <main class="shell">
@@ -327,5 +328,6 @@ zone.addEventListener('drop',e=>handleZip(e.dataTransfer.files[0]));
 const allowed=await guard();
 if(allowed)msg('Pronto. Carica il tuo archivio ZIP dei loghi.');
 </script>
+<script src="app-ui.js?v=980stable"></script>
 </body>
 </html>

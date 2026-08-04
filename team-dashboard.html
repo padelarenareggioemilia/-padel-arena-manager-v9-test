@@ -9,7 +9,14 @@
 :root{--blue:#164a95;--green:#009246;--red:#ce2b37;--bg:#f4f8fc;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;--line:#b9cde3}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}.shell{max-width:1150px;margin:auto;padding:18px 12px 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:15px;margin:12px 0}.hero{display:flex;align-items:center;justify-content:space-between;gap:14px;background:linear-gradient(135deg,#164a95,#082f68);color:#fff}.brand{display:flex;align-items:center;gap:13px}.team-logo,.mini-logo{object-fit:contain;background:#fff;border-radius:12px;border:1px solid var(--line)}.team-logo{width:92px;height:92px;padding:5px}.mini-logo{width:34px;height:34px;padding:2px;vertical-align:middle;margin-right:7px}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}.tab{border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:11px;padding:10px 12px;font-weight:900;cursor:pointer}.tab.active{background:var(--blue);color:#fff}.fixture{display:grid;grid-template-columns:120px 1fr auto;gap:12px;padding:12px;border-bottom:1px solid #dce6f0;align-items:center}.score{font-size:19px;font-weight:1000}.muted{color:var(--muted)}.small{font-size:12px}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}.hidden{display:none!important}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:720px}th,td{padding:10px;border-bottom:1px solid #dce6f0;text-align:center}th{background:var(--blue);color:#fff}td:nth-child(2),th:nth-child(2){text-align:left}.export-wrap{position:relative}.export-menu{position:absolute;right:0;top:42px;z-index:30;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;min-width:190px;box-shadow:0 12px 28px rgba(0,0,0,.15)}.export-menu button{width:100%;border:0;background:#fff;text-align:left;padding:9px;border-radius:8px;font-weight:800;cursor:pointer}.export-menu button:hover{background:var(--soft)}
 @media(max-width:760px){.fixture{grid-template-columns:1fr}.hero{align-items:flex-start}.team-logo{width:70px;height:70px}}
+
+.matchday-block{border:1px solid var(--line);border-radius:16px;margin:12px 0;overflow:hidden;background:#fff}
+.matchday-head{width:100%;border:0;background:linear-gradient(90deg,#edf4fb,#f8fbfe);color:var(--text);padding:13px 15px;display:flex;justify-content:space-between;align-items:center;font:inherit;font-weight:1000;cursor:pointer;text-align:left}
+.matchday-count{font-size:12px;color:var(--muted);font-weight:900}
+.matchday-body{padding:0 12px 10px}
+.matchday-block.collapsed .matchday-body{display:none}
 </style>
+<link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body><main class="shell">
 <div class="actions"><button class="btn secondary" onclick="history.back()">← Indietro</button></div>
@@ -23,6 +30,44 @@
 const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
 const teamId=new URLSearchParams(location.search).get('team');
 let team=null,teams=[],fixtures=[],groups=[],members=[],statuses=[],view='matches',authorized=false;
+
+function fixtureRoundKey(f){
+  if(f.round_number!=null && f.round_number!=='') return Number(f.round_number);
+  if(f.scheduled_at) return new Date(f.scheduled_at).toISOString().slice(0,10);
+  return 'SENZA_GIORNATA';
+}
+function fixtureRoundLabel(key){
+  if(typeof key==='number' || /^\d+$/.test(String(key))) return `Giornata ${key}`;
+  if(key==='SENZA_GIORNATA') return 'Partite senza giornata';
+  const d=new Date(`${key}T12:00:00`);
+  return Number.isNaN(d.getTime())?String(key):d.toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+function groupFixturesByRound(list){
+  const map=new Map();
+  (list||[]).forEach(f=>{
+    const key=fixtureRoundKey(f);
+    if(!map.has(key)) map.set(key,[]);
+    map.get(key).push(f);
+  });
+  return [...map.entries()].sort((a,b)=>{
+    if(typeof a[0]==='number' && typeof b[0]==='number') return a[0]-b[0];
+    return new Date(a[1][0]?.scheduled_at||0)-new Date(b[1][0]?.scheduled_at||0);
+  });
+}
+function groupedFixturesHtml(list,renderFixture){
+  return groupFixturesByRound(list).map(([key,items])=>`
+    <section class="matchday-block">
+      <button type="button" class="matchday-head" onclick="this.closest('.matchday-block').classList.toggle('collapsed')">
+        <span>${fixtureRoundLabel(key)}</span>
+        <span class="matchday-count">${items.length} ${items.length===1?'partita':'partite'} ▾</span>
+      </button>
+      <div class="matchday-body">
+        ${items.sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0)).map(renderFixture).join('')}
+      </div>
+    </section>
+  `).join('');
+}
+
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 function tname(id,p){return teams.find(x=>x.id===id)?.name||p||'Da definire'}
 function tlogo(id){return teams.find(x=>x.id===id)?.logo_url||'assets/aics-logo.png'}
@@ -46,13 +91,14 @@ function standings(){
 }
 function standingsTable(){
   const rows=standings();return `<div class="table-wrap"><table id="standingsTable"><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>MF</th><th>MS</th><th>Diff.</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td><img class="mini-logo" src="${esc(tlogo(r.id))}">${esc(tname(r.id))}</td><td>${r.g}</td><td>${r.v}</td><td>${r.n}</td><td>${r.p}</td><td>${r.mf}</td><td>${r.ms}</td><td>${r.mf-r.ms}</td><td><b>${r.pt}</b></td></tr>`).join('')}</tbody></table></div>`}
-function render(){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='matches'){const own=fixtures.filter(f=>f.home_team_id===teamId||f.away_team_id===teamId).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));$('content').innerHTML=own.length?own.map(fixtureHtml).join(''):'<div class="notice">Nessuna partita della squadra.</div>'}else $('content').innerHTML=standingsTable()}
+function render(){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===view));if(view==='matches'){const own=fixtures.filter(f=>f.home_team_id===teamId||f.away_team_id===teamId).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));$('content').innerHTML=own.length?groupedFixturesHtml(own,fixtureHtml):'<div class="notice">Nessuna partita della squadra.</div>'}else $('content').innerHTML=standingsTable()}
 function setView(v){view=v;render()}
 function toggleExport(){$('exportMenu').classList.toggle('hidden')}
 function download(name,type,data){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 function calendarRows(){return fixtures.filter(f=>f.home_team_id===teamId||f.away_team_id===teamId).map(f=>({Data:new Date(f.scheduled_at).toLocaleString('it-IT'),Casa:tname(f.home_team_id,f.home_placeholder),Ospite:tname(f.away_team_id,f.away_placeholder),Campo:f.venue||'',Risultato:score(f.id)||''}))}
 function exportHtmlExcel(name,rows){const keys=Object.keys(rows[0]||{});const html=`<html><meta charset="utf-8"><table><tr>${keys.map(k=>`<th>${esc(k)}</th>`).join('')}</tr>${rows.map(r=>`<tr>${keys.map(k=>`<td>${esc(r[k])}</td>`).join('')}</tr>`).join('')}</table></html>`;download(name,'application/vnd.ms-excel',html)}
-function printRows(title,html){const w=window.open('','_blank');w.document.write(`<html><head><title>${esc(title)}</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:7px}h1{color:#164a95}</style></head><body><h1>${esc(title)}</h1>${html}<script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()}
+function printRows(title,html){const w=window.open('','_blank');w.document.write(`<html><head><title>${esc(title)}</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:7px}h1{color:#164a95}</style></head><body><h1>${esc(title)}</h1>${html}<script>window.onload=()=>window.print()<\/script><script src="app-ui.js?v=980stable"></script>
+</body></html>`);w.document.close()}
 function exportCalendarExcel(){exportHtmlExcel(`Calendario_${team.name}.xls`,calendarRows())}
 function exportCalendarPdf(){const rows=calendarRows();printRows(`Calendario ${team.name}`,`<table><tr><th>Data</th><th>Casa</th><th>Ospite</th><th>Campo</th><th>Risultato</th></tr>${rows.map(r=>`<tr><td>${esc(r.Data)}</td><td>${esc(r.Casa)}</td><td>${esc(r.Ospite)}</td><td>${esc(r.Campo)}</td><td>${esc(r.Risultato)}</td></tr>`).join('')}</table>`)}
 function standingRows(){return standings().map((r,i)=>({Posizione:i+1,Squadra:tname(r.id),G:r.g,V:r.v,N:r.n,P:r.p,MF:r.mf,MS:r.ms,Differenza:r.mf-r.ms,Punti:r.pt}))}

@@ -12,6 +12,7 @@
 .shell{max-width:1180px;margin:auto;padding:18px 12px 70px}.hero,.card{border:1px solid var(--line);border-radius:20px;box-shadow:0 13px 28px rgba(8,47,104,.1)}.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:15px}.brand{display:flex;gap:13px;align-items:center}.logo{width:100px;height:78px;object-fit:contain;background:#fff;border-radius:13px;padding:5px}.hero h1{margin:0}.card{background:#fff;padding:15px;margin:12px 0}.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.comp{border:1px solid var(--line);background:#fff;border-radius:17px;padding:14px;cursor:pointer;text-align:center;min-height:165px}.comp:hover{transform:translateY(-2px);box-shadow:0 12px 25px rgba(8,47,104,.13)}.comp img{width:92px;height:92px;object-fit:contain}.comp strong{display:block;font-size:19px;margin-top:4px}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.tab{border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:12px;padding:12px;font-weight:900;cursor:pointer}.tab.active{background:var(--blue);color:#fff}.fixture{display:grid;grid-template-columns:115px 1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #dce6f0}.score{font-size:20px;font-weight:1000}.muted{color:var(--muted)}.small{font-size:12px}.notice{padding:12px;border-radius:12px;background:var(--soft);border:1px solid var(--line)}.hidden{display:none!important}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{padding:10px;border-bottom:1px solid #dce6f0;text-align:center}th{background:var(--blue);color:#fff}td:nth-child(2),th:nth-child(2){text-align:left}.group-title{padding:9px 12px;border-left:5px solid var(--green);background:var(--soft);border-radius:0 10px 10px 0}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}
 @media(max-width:800px){.grid5{grid-template-columns:1fr 1fr}.tabs{grid-template-columns:1fr 1fr}.fixture{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:82px;height:64px}}
 </style>
+<link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body>
 <main class="shell">
@@ -155,5 +156,6 @@ async function loadCompetition(){
 window.setView=setView;
 if(code)loadCompetition();else loadLanding();
 </script>
+<script src="app-ui.js?v=980stable"></script>
 </body>
 </html>

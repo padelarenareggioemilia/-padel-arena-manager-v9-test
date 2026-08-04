@@ -137,9 +137,31 @@ label{color:var(--aics-blue-dark)!important}
 <meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
 <meta name="twitter:image" content="assets/aics-social-preview.png">
 
+<link rel="stylesheet" href="app-theme.css?v=980stable">
 </head><body><main class="shell">
 <header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png" alt="AICS"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div class="muted">Squadre, serie e accessi</div></div></div><span class="notice">SUPABASE CONNESSO</span></header><div class="tricolore"></div>
-<div class="top"><div class="nav"><button class="btn secondary" onclick="history.length>1?history.back():location.href='index.html'">← Indietro</button><button class="btn secondary" onclick="location.href='index.html'">⌂ Home</button><button class="btn secondary" onclick="menu.classList.toggle('hidden')">☰ Menu</button></div><div id="menu" class="actions hidden" style="margin-top:8px"><button class="btn primary" onclick="openForm()">Nuova squadra</button><button class="btn secondary" onclick="location.href='competitions.html'">Competizioni</button><button class="btn secondary" onclick="location.href='groups.html'">Gironi</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button><button class="btn secondary" onclick="location.href='cup-italia.html'">Coppa Italia 32</button><button class="btn secondary" onclick="location.href='admin-control.html'">Controllo campionato</button><button class="btn secondary" onclick="location.href='data-exchange.html'">Importa / Esporta Excel e CSV</button><button class="btn secondary" onclick="loadTeams()">Aggiorna</button><button class="btn danger" onclick="logout()">Esci</button></div></div>
+<section class="card" id="controlCenter">
+  <div class="pam-section-title"><div><h2>Centro di controllo</h2><div class="muted">Le funzioni principali in un solo punto.</div></div><button class="btn secondary tiny" onclick="loadHealthCenter()">Aggiorna controlli</button></div>
+  <div class="pam-dashboard">
+    <div class="pam-shortcut" onclick="location.href='calendar.html'"><div class="pam-shortcut-icon">📅</div><div><b>Calendari</b><span>Genera, modifica e pubblica</span></div></div>
+    <div class="pam-shortcut" onclick="location.href='groups.html'"><div class="pam-shortcut-icon">🏆</div><div><b>Gironi e competizioni</b><span>Serie e Coppa Italia</span></div></div>
+    <div class="pam-shortcut" onclick="location.href='matches-view.html'"><div class="pam-shortcut-icon">🎾</div><div><b>Vista partite</b><span>Filtra, stampa e condividi</span></div></div>
+    <div class="pam-shortcut" onclick="location.href='admin-control.html'"><div class="pam-shortcut-icon">⚙️</div><div><b>Controllo campionato</b><span>Pubblicazione e autorizzazioni</span></div></div>
+    <div class="pam-shortcut" onclick="location.href='cup-italia.html'"><div class="pam-shortcut-icon">🇮🇹</div><div><b>Coppa Italia</b><span>Gironi e tabellone a 32</span></div></div>
+    <div class="pam-shortcut" onclick="location.href='data-exchange.html'"><div class="pam-shortcut-icon">📊</div><div><b>Importa / Esporta</b><span>Excel e CSV</span></div></div>
+    <div class="pam-shortcut" onclick="location.href='logo-import.html'"><div class="pam-shortcut-icon">🖼️</div><div><b>Archivio loghi</b><span>Importazione intelligente ZIP</span></div></div>
+    <div class="pam-shortcut" onclick="location.href='public.html'"><div class="pam-shortcut-icon">🌐</div><div><b>Portale pubblico</b><span>Controlla ciò che vedono gli utenti</span></div></div>
+  </div>
+  <div class="pam-health" id="healthCards">
+    <div class="pam-health-card"><strong id="healthTeams">–</strong>Squadre valide</div>
+    <div class="pam-health-card warn"><strong id="healthNoSeries">–</strong>Senza serie</div>
+    <div class="pam-health-card warn"><strong id="healthNoLogo">–</strong>Senza logo</div>
+    <div class="pam-health-card bad"><strong id="healthConflicts">–</strong>Conflitti impianto</div>
+  </div>
+  <div id="healthMsg" class="notice hidden"></div>
+</section>
+
+<div class="top"><div class="nav"><button class="btn secondary" onclick="history.length>1?history.back():location.href='index.html'">← Indietro</button><button class="btn secondary" onclick="location.href='index.html'">⌂ Home</button><button class="btn secondary" onclick="menu.classList.toggle('hidden')">☰ Menu</button></div><div id="menu" class="actions hidden" style="margin-top:8px"><button class="btn primary" onclick="openForm()">Nuova squadra</button><button class="btn secondary" onclick="location.href='competitions.html'">Competizioni</button><button class="btn secondary" onclick="location.href='groups.html'">Gironi</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button><button class="btn secondary" onclick="location.href='matches-view.html'">Vista partite personalizzata</button><button class="btn secondary" onclick="location.href='cup-italia.html'">Coppa Italia 32</button><button class="btn secondary" onclick="location.href='admin-control.html'">Controllo campionato</button><button class="btn secondary" onclick="location.href='data-exchange.html'">Importa / Esporta Excel e CSV</button><button class="btn secondary" onclick="loadTeams();loadHealthCenter()">Aggiorna</button><button class="btn danger" onclick="logout()">Esci</button></div></div>
 <section class="kpis">
 <div class="kpi"><strong id="nTeams">0</strong>Squadre totali</div>
 <div class="kpi"><strong id="nSerieA">0</strong>Serie A</div>
@@ -216,6 +238,25 @@ async function confirmDelete(){
    setTimeout(async()=>{closeDelete();await loadTeams()},600);
  }catch(e){deleteMessage(e?.message||'Errore durante l’eliminazione.',true);$('confirmDeleteBtn').disabled=false}
 }
+
+async function loadHealthCenter(){
+  try{
+    const [tt,ff]=await Promise.all([s.from('teams').select('id,series,logo_url,club_address,club_city,home_court'),s.from('fixtures').select('id,scheduled_at,venue,home_team_id,away_team_id')]);
+    if(tt.error)throw tt.error;if(ff.error)throw ff.error;
+    const teams=tt.data||[],fixtures=ff.data||[];
+    healthTeams.textContent=teams.filter(x=>x.series).length;
+    healthNoSeries.textContent=teams.filter(x=>!x.series||!String(x.series).trim()).length;
+    healthNoLogo.textContent=teams.filter(x=>!x.logo_url).length;
+    let conflicts=0;
+    const key=f=>`${String(f.venue||'').trim().toLowerCase()}|${new Date(f.scheduled_at).toISOString().slice(0,16)}`;
+    const seen=new Map();fixtures.forEach(f=>{if(!f.scheduled_at)return;const k=key(f);seen.set(k,(seen.get(k)||0)+1)});seen.forEach(v=>{if(v>1)conflicts+=v-1});
+    healthConflicts.textContent=conflicts;
+    healthMsg.textContent=conflicts||healthNoSeries.textContent!=='0'?'Sono presenti anomalie da controllare. Apri le sezioni dedicate per correggerle.':'Controllo completato: nessuna anomalia urgente.';
+    healthMsg.className='notice '+(conflicts?'err':'ok');healthMsg.classList.remove('hidden');
+  }catch(e){healthMsg.textContent=e.message||String(e);healthMsg.className='notice err';healthMsg.classList.remove('hidden')}
+}
+window.loadHealthCenter=loadHealthCenter;
+
 async function logout(){await s.auth.signOut();location.href='login.html'}
 window.openForm=openForm;window.openTeam=openTeam;window.copyLink=copyLink;window.editTeam=editTeam;window.toggleMore=toggleMore;window.requestDelete=requestDelete;window.closeDelete=closeDelete;window.checkDeleteName=checkDeleteName;window.confirmDelete=confirmDelete;window.setFilter=setFilter;
 $('form').onsubmit=e=>{e.preventDefault();saveTeam()};$('logoFile').onchange=e=>{file=e.target.files[0]||null;if(file)$('preview').innerHTML=`<img src="${URL.createObjectURL(file)}">`};document.addEventListener('click',closeAllMenus);
@@ -246,4 +287,5 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
+<script src="app-ui.js?v=980stable"></script>
 </body></html>

@@ -14,10 +14,17 @@
 .notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:9px 0;white-space:pre-line}.ok{background:#ebf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}.warn{background:#fff7dd;border-color:#d9b757}.hidden{display:none!important}.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;margin:8px 0}.switch{width:auto;transform:scale(1.3)}
 .match{border:1px solid var(--line);border-radius:14px;padding:12px;margin:9px 0}.match-head{display:flex;justify-content:space-between;gap:10px}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#e6eff9;border:1px solid var(--line);font-size:11px;font-weight:900}.small{font-size:12px}
 @media(max-width:800px){.grid2,.grid3{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:84px;height:58px}}
+
+.matchday-block{border:1px solid var(--line);border-radius:16px;margin:12px 0;overflow:hidden;background:#fff}
+.matchday-head{width:100%;border:0;background:linear-gradient(90deg,#edf4fb,#f8fbfe);color:var(--text);padding:13px 15px;display:flex;justify-content:space-between;align-items:center;font:inherit;font-weight:1000;cursor:pointer;text-align:left}
+.matchday-count{font-size:12px;color:var(--muted);font-weight:900}
+.matchday-body{padding:0 12px 10px}
+.matchday-block.collapsed .matchday-body{display:none}
 </style>
+<link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body><main class="shell">
-<div class="nav"><button class="btn secondary" onclick="location.href='index.html'">← Home</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button></div>
+<div class="nav"><button class="btn secondary" onclick="location.href='index.html'">← Home</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button><button class="btn secondary" onclick="location.href='matches-view.html'">Vista partite</button></div>
 <header class="hero"><div class="brand"><img class="logo" src="assets/aics-logo.png"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div class="muted">Controllo campionato e pubblicazione</div></div></div><span class="badge">ADMIN</span></header>
 
 <section class="card">
@@ -55,6 +62,44 @@
 const cfg=window.PAM_V9_CONFIG;
 const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 const $=id=>document.getElementById(id);
+
+function fixtureRoundKey(f){
+  if(f.round_number!=null && f.round_number!=='') return Number(f.round_number);
+  if(f.scheduled_at) return new Date(f.scheduled_at).toISOString().slice(0,10);
+  return 'SENZA_GIORNATA';
+}
+function fixtureRoundLabel(key){
+  if(typeof key==='number' || /^\d+$/.test(String(key))) return `Giornata ${key}`;
+  if(key==='SENZA_GIORNATA') return 'Partite senza giornata';
+  const d=new Date(`${key}T12:00:00`);
+  return Number.isNaN(d.getTime())?String(key):d.toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+function groupFixturesByRound(list){
+  const map=new Map();
+  (list||[]).forEach(f=>{
+    const key=fixtureRoundKey(f);
+    if(!map.has(key)) map.set(key,[]);
+    map.get(key).push(f);
+  });
+  return [...map.entries()].sort((a,b)=>{
+    if(typeof a[0]==='number' && typeof b[0]==='number') return a[0]-b[0];
+    return new Date(a[1][0]?.scheduled_at||0)-new Date(b[1][0]?.scheduled_at||0);
+  });
+}
+function groupedFixturesHtml(list,renderFixture){
+  return groupFixturesByRound(list).map(([key,items])=>`
+    <section class="matchday-block">
+      <button type="button" class="matchday-head" onclick="this.closest('.matchday-block').classList.toggle('collapsed')">
+        <span>${fixtureRoundLabel(key)}</span>
+        <span class="matchday-count">${items.length} ${items.length===1?'partita':'partite'} ▾</span>
+      </button>
+      <div class="matchday-body">
+        ${items.sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0)).map(renderFixture).join('')}
+      </div>
+    </section>
+  `).join('');
+}
+
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
 
 function box(id,text,error=false){
@@ -130,13 +175,16 @@ async function loadMatches(){
   const error=f.error||w.error||t.error;if(error)return box('publishMsg',error.message,true);
   const teams=Object.fromEntries((t.data||[]).map(x=>[x.id,x]));
   const workflows=Object.fromEntries((w.data||[]).map(x=>[x.fixture_id,x]));
-  $('matches').innerHTML=(f.data||[]).map(x=>{
+  const renderAdminMatch=x=>{
     const wf=workflows[x.id];
     const home=teams[x.home_team_id],away=teams[x.away_team_id];
     return `<div class="match"><div class="match-head"><div><b>${home?.name||x.home_placeholder||'Da definire'} – ${away?.name||x.away_placeholder||'Da definire'}</b><div class="muted small">${x.scheduled_at?new Date(x.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${x.venue||''}</div></div><span class="badge">${!wf?'NON PUBBLICATA':wf.formation_open_at?'FORMAZIONE APERTA':'IN ATTESA'}</span></div><div class="actions" style="margin-top:8px"><button class="btn secondary" onclick="location.href='match-center.html?id=${x.id}'">Apri gara</button></div></div>`;
-  }).join('')||'<div class="notice">Nessuna partita.</div>';
+  };
+  const adminList=f.data||[];
+  $('matches').innerHTML=adminList.length?groupedFixturesHtml(adminList,renderAdminMatch):'<div class="notice">Nessuna partita.</div>';
 }
 window.publishCalendar=publishCalendar;window.setPublication=setPublication;
 guard().then(ok=>{if(ok)Promise.all([loadControls(),loadPublication(),loadMatches()])});
 </script>
+<script src="app-ui.js?v=980stable"></script>
 </body></html>

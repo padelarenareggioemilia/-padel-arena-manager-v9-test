@@ -144,6 +144,7 @@ label{color:var(--aics-blue-dark)!important}
 <meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
 <meta name="twitter:image" content="assets/aics-social-preview.png">
 
+<link rel="stylesheet" href="app-theme.css?v=980stable">
 </head><body><main class="shell">
 <header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png" alt="AICS"><div><h1>Portale Capitano</h1>
 <div class="muted">Gestione della propria squadra</div></div></div></header><div class="tricolore"></div>
@@ -186,7 +187,7 @@ async function portal(){
  let r=await s.from('roster_requests').select('*').eq('team_id',team.id).order('created_at',{ascending:false});
  b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}<h2>${e(team.name)}</h2>
  ${warning}<div class="actions"><button class="btn primary" onclick="copyPlayers()">Copia link giocatori</button>
- <button class="btn secondary" onclick="portal()">Aggiorna</button>
+ <button class="btn secondary" onclick="portal()">Aggiorna</button><button class="btn secondary" onclick="location.href='matches-view.html'">Le mie partite</button>
  <button class="btn success" onclick="document.getElementById('captainManagement').scrollIntoView({behavior:'smooth'})">Inserisci giocatore manualmente</button></div><hr>
  <div class="notice"><b>Segretari di squadra:</b> il capitano può nominare da 0 a 3 giocatori approvati con account. I segretari avranno le stesse funzioni operative del capitano per formazioni e risultati.</div><h3>Richieste giocatori</h3>${(r.data||[]).map(x=>`<div class="notice player-row">
  ${x.photo_url?`<img class="player-photo" src="${e(x.photo_url)}" alt="Foto tessera">`:`<div class="player-photo"></div>`}
@@ -493,4 +494,5 @@ window.revokeSecretary=revokeSecretary;
 window.addEventListener('load',loadSecretaries);
 </script>
 
+<script src="app-ui.js?v=980stable"></script>
 </body></html>

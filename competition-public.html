@@ -13,6 +13,7 @@
 .btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}
 @media(max-width:760px){.tabs{grid-template-columns:1fr 1fr}.fixture{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:82px;height:64px}}
 </style>
+<link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body><main class="shell">
 <header class="hero">
@@ -88,4 +89,5 @@ async function init(){
   teams=t.data||[];groups=g.data||[];members=m.data||[];fixtures=f.data||[];statuses=w.error?[]:(w.data||[]);render();
 }
 window.setView=setView;init();
-</script></body></html>
+</script><script src="app-ui.js?v=980stable"></script>
+</body></html>

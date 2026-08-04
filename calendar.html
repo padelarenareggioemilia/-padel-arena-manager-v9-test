@@ -23,6 +23,12 @@
 .diagnostic-list{margin:0;padding-left:18px}
 .manual-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 @media(max-width:820px){.conflict-grid,.manual-grid{grid-template-columns:1fr}}
+
+.matchday-block{border:1px solid var(--line);border-radius:16px;margin:12px 0;overflow:hidden;background:#fff}
+.matchday-head{width:100%;border:0;background:linear-gradient(90deg,#edf4fb,#f8fbfe);color:var(--text);padding:13px 15px;display:flex;justify-content:space-between;align-items:center;font:inherit;font-weight:1000;cursor:pointer;text-align:left}
+.matchday-count{font-size:12px;color:var(--muted);font-weight:900}
+.matchday-body{padding:0 12px 10px}
+.matchday-block.collapsed .matchday-body{display:none}
 </style><style>
 :root{
   --aics-blue:#164a95;
@@ -150,6 +156,7 @@ label{color:var(--aics-blue-dark)!important}
 <meta name="twitter:description" content="Gestionale ufficiale AICS Padel Championship">
 <meta name="twitter:image" content="assets/aics-social-preview.png">
 
+<link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body><main class="shell">
 <div class="top">
@@ -360,6 +367,44 @@ function localDateTimeToISO(dateString,timeString){
   const local=new Date(y,m-1,d,hh,mm,0,0);
   if(Number.isNaN(local.getTime())) throw new Error(`Data o ora non valida: ${dateString} ${timeString}`);
   return local.toISOString();
+}
+
+
+function fixtureRoundKey(f){
+  if(f.round_number!=null && f.round_number!=='') return Number(f.round_number);
+  if(f.scheduled_at) return new Date(f.scheduled_at).toISOString().slice(0,10);
+  return 'SENZA_GIORNATA';
+}
+function fixtureRoundLabel(key){
+  if(typeof key==='number' || /^\d+$/.test(String(key))) return `Giornata ${key}`;
+  if(key==='SENZA_GIORNATA') return 'Partite senza giornata';
+  const d=new Date(`${key}T12:00:00`);
+  return Number.isNaN(d.getTime())?String(key):d.toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+}
+function groupFixturesByRound(list){
+  const map=new Map();
+  (list||[]).forEach(f=>{
+    const key=fixtureRoundKey(f);
+    if(!map.has(key)) map.set(key,[]);
+    map.get(key).push(f);
+  });
+  return [...map.entries()].sort((a,b)=>{
+    if(typeof a[0]==='number' && typeof b[0]==='number') return a[0]-b[0];
+    return new Date(a[1][0]?.scheduled_at||0)-new Date(b[1][0]?.scheduled_at||0);
+  });
+}
+function groupedFixturesHtml(list,renderFixture){
+  return groupFixturesByRound(list).map(([key,items])=>`
+    <section class="matchday-block">
+      <button type="button" class="matchday-head" onclick="this.closest('.matchday-block').classList.toggle('collapsed')">
+        <span>${fixtureRoundLabel(key)}</span>
+        <span class="matchday-count">${items.length} ${items.length===1?'partita':'partite'} ▾</span>
+      </button>
+      <div class="matchday-body">
+        ${items.sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0)).map(renderFixture).join('')}
+      </div>
+    </section>
+  `).join('');
 }
 
 function localPartsFromISO(value){
@@ -1087,7 +1132,7 @@ async function buildCalendarPayload(){
 
 
 function renderPendingCalendar(){
-  $('calendarPreview').innerHTML=pendingCalendar.map(match=>`
+  const renderPreviewMatch=match=>`
     <div class="fixture">
       <span class="badge">G${match.round_number}</span>
       <div>
@@ -1108,7 +1153,8 @@ function renderPendingCalendar(){
         ${match._resolution?esc(match._resolution):'COINCIDE · NESSUN CONFLITTO'}
       </div>
     </div>
-  `).join('');
+  `;
+  $('calendarPreview').innerHTML=groupedFixturesHtml(pendingCalendar,renderPreviewMatch);
 
   $('calendarPreviewCard').classList.remove('hidden');
   $('confirmCalendarBtn').classList.remove('hidden');
@@ -1507,4 +1553,5 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
+<script src="app-ui.js?v=980stable"></script>
 </body></html>
