@@ -246,6 +246,7 @@ const teamId = params.get('id');
 const box = document.getElementById('teamBox');
 let currentTeam = null;
 let newLogoFile = null;
+let adminRosterCache=[];
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
@@ -627,7 +628,7 @@ async function adminAddPlayer(){
       fitp_ranking:v.adminPlayerFitp.toUpperCase(),
       medical_certificate_expiry:v.adminPlayerMedical,
       status:'approved',decided_at:new Date().toISOString(),
-      created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+      created_at:new Date().toISOString()
     };
     const r=await sb.from('roster_requests').insert(payload).select('id').maybeSingle();
     if(r.error)throw r.error;
@@ -643,29 +644,50 @@ async function adminAddPlayer(){
 function openAdminPlayerEditor(playerId){
   const p=adminRosterCache.find(x=>x.id===playerId);
   if(!p)return adminPlayerMessage('Giocatore non trovato. Aggiorna la pagina.',true);
-  editPlayerId.value=p.id;editPlayerFirstName.value=p.first_name||'';editPlayerLastName.value=p.last_name||'';editPlayerEmail.value=p.email||'';editPlayerPhone.value=p.phone||'';editPlayerFitp.value=p.fitp_ranking||'';editPlayerMedical.value=p.medical_certificate_expiry||'';editPlayerStatus.value=p.status||'approved';editPlayerMsg.classList.add('hidden');adminPlayerEditOverlay.classList.remove('hidden');
+  editPlayerId.value=p.id;editPlayerFirstName.value=p.first_name||'';editPlayerLastName.value=p.last_name||'';editPlayerBirthDate.value=p.birth_date||'';editPlayerBirthPlace.value=p.birth_place||'';editPlayerResidenceTown.value=p.residence_town||'';editPlayerPostalCode.value=p.residence_postal_code||'';editPlayerProvince.value=p.residence_province||'';editPlayerEmail.value=p.email||'';editPlayerPhone.value=p.phone||'';editPlayerFitp.value=p.fitp_ranking||'';editPlayerMedical.value=p.medical_certificate_expiry||'';editPlayerStatus.value=p.status||'approved';editPlayerPhoto.value='';editPlayerMsg.classList.add('hidden');adminPlayerEditOverlay.classList.remove('hidden');
 }
 function closeAdminPlayerEditor(){adminPlayerEditOverlay.classList.add('hidden')}
 function editPlayerMessage(text,error=false){editPlayerMsg.textContent=text;editPlayerMsg.className='notice '+(error?'err':'ok');editPlayerMsg.classList.remove('hidden')}
 async function saveAdminPlayer(){
-  const playerId=editPlayerId.value,firstName=editPlayerFirstName.value.trim(),lastName=editPlayerLastName.value.trim();
-  if(!firstName||!lastName)return editPlayerMessage('Nome e cognome sono obbligatori.',true);
+  const playerId=editPlayerId.value;
+  const required={
+    first_name:editPlayerFirstName.value.trim(),
+    last_name:editPlayerLastName.value.trim(),
+    birth_date:editPlayerBirthDate.value,
+    birth_place:editPlayerBirthPlace.value.trim(),
+    residence_town:editPlayerResidenceTown.value.trim(),
+    residence_postal_code:editPlayerPostalCode.value.trim(),
+    residence_province:editPlayerProvince.value.trim().toUpperCase(),
+    email:editPlayerEmail.value.trim().toLowerCase(),
+    phone:editPlayerPhone.value.trim(),
+    fitp_ranking:editPlayerFitp.value.trim().toUpperCase(),
+    medical_certificate_expiry:editPlayerMedical.value,
+    status:editPlayerStatus.value
+  };
+  if(!playerId)return editPlayerMessage('Giocatore non selezionato.',true);
+  if(Object.values(required).some(v=>!v))return editPlayerMessage('Compila tutti i dati obbligatori.',true);
+  if(!/^\d{5}$/.test(required.residence_postal_code))return editPlayerMessage('Il CAP deve contenere 5 cifre.',true);
   saveAdminPlayerBtn.disabled=true;saveAdminPlayerBtn.textContent='Salvataggio…';
   try{
-    const payload={first_name:firstName,last_name:lastName,email:editPlayerEmail.value.trim().toLowerCase()||null,phone:editPlayerPhone.value.trim()||null,fitp_ranking:editPlayerFitp.value.trim()||null,medical_certificate_expiry:editPlayerMedical.value||null,status:editPlayerStatus.value,updated_at:new Date().toISOString()};
+    const payload={...required};
+    const photo=editPlayerPhoto.files[0];
+    if(photo) payload.photo_url=await uploadAdminPlayerPhoto(photo);
     const r=await sb.from('roster_requests').update(payload).eq('id',playerId).eq('team_id',currentTeam.id).select('*').maybeSingle();
-    if(r.error)throw r.error;if(!r.data?.id)throw new Error('Il database non ha confermato la modifica.');
-    await reloadAdminRoster();editPlayerMessage('Giocatore aggiornato correttamente.');setTimeout(closeAdminPlayerEditor,450);
-  }catch(e){editPlayerMessage(e.message||String(e),true)}finally{saveAdminPlayerBtn.disabled=false;saveAdminPlayerBtn.textContent='Salva modifiche'}
+    if(r.error)throw r.error;
+    if(!r.data?.id)throw new Error('Il database non ha confermato la modifica.');
+    await reloadAdminRoster();
+    editPlayerMessage('Giocatore aggiornato correttamente.');
+    setTimeout(closeAdminPlayerEditor,450);
+  }catch(e){editPlayerMessage(e.message||String(e),true)}
+  finally{saveAdminPlayerBtn.disabled=false;saveAdminPlayerBtn.textContent='Salva modifiche'}
 }
 async function deleteAdminPlayer(playerId,playerName){
   if(!confirm(`Eliminare definitivamente ${playerName} dalla squadra?\n\nL’operazione non può essere annullata.`))return;
   try{
-    const used=await sb.from('lineup_players').select('id').eq('player_id',playerId).limit(1);
-    if(!used.error&&(used.data||[]).length)throw new Error('Eliminazione bloccata: il giocatore risulta già utilizzato in una formazione.');
-    const r=await sb.from('roster_requests').delete().eq('id',playerId).eq('team_id',currentTeam.id).select('id').maybeSingle();
-    if(r.error)throw r.error;if(!r.data?.id)throw new Error('Il database non ha confermato l’eliminazione.');
-    adminPlayerMessage(`${playerName} è stato eliminato dalla squadra.`);await reloadAdminRoster();
+    const r=await sb.rpc('delete_player_safely',{p_player_id:playerId});
+    if(r.error)throw r.error;
+    adminPlayerMessage(r.data?.message||`${playerName} è stato eliminato dalla squadra.`);
+    await reloadAdminRoster();
   }catch(e){adminPlayerMessage(e.message||String(e),true)}
 }
 window.openAdminPlayerEditor=openAdminPlayerEditor;window.closeAdminPlayerEditor=closeAdminPlayerEditor;window.saveAdminPlayer=saveAdminPlayer;window.deleteAdminPlayer=deleteAdminPlayer;
@@ -917,10 +939,10 @@ async function init() {
       `).join('')
       : `<div class="notice">Nessuna richiesta giocatore presente.</div>`}
   `;
+  renderAdminRoster(requests);
 }
 
 window.copyLink = copyLink;
-setTimeout(()=>renderAdminRoster(typeof requests!=='undefined'?requests:[]),0);
 init();
 </script>
 

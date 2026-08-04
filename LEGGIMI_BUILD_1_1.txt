@@ -1,0 +1,16 @@
+V9 STABLE BUILD 1.1
+
+CORREZIONI:
+- diagnostica capitani basata su scheda tecnica + account;
+- eliminazione squadra con motivo preciso;
+- modifica giocatore completa;
+- eliminazione giocatore via funzione protetta;
+- caricamento e sostituzione foto giocatore;
+- rosa caricata correttamente nella scheda squadra;
+- loghi competizioni aggiornati con cache busting.
+
+INSTALLAZIONE:
+1. Esegui SUPABASE_V9_STABLE_BUILD_1_1.sql.
+2. Su GitHub sostituisci team.html, diagnostics.html, public.html e la cartella assets.
+3. Fai Commit changes.
+4. Apri login.html?v=stable11.
