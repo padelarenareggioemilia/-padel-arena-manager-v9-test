@@ -277,7 +277,10 @@ init();
   <div id="secretaryList"></div>
 </section>
 
-<section class='card'><h2>Verifica giocatori</h2><div class='notice'>Apri la partita interessata e usa il comando Verifica giocatori.</div></section></main>
+<section class='card'><h2>Verifica giocatori</h2><div class='notice'>Apri la partita interessata e usa il comando Verifica giocatori.</div></section><section class="card"><div class="actions">
+<button class="btn secondary" onclick="location.href='account-home.html'">Home del mio account</button>
+<button class="btn danger" onclick="logoutAndChange()">Cambia account</button>
+</div></section></main>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -513,4 +516,11 @@ window.addEventListener('load',loadSecretaries);
 </script>
 
 <script src="app-ui.js?v=980stable"></script>
-</body></html>
+<script>
+async function logoutAndChange(){
+ const client=typeof s!=='undefined'?s:(typeof sb!=='undefined'?sb:null);
+ if(client)await client.auth.signOut();
+ location.replace('login.html?change=1');
+}
+window.logoutAndChange=logoutAndChange;
+</script></body></html>

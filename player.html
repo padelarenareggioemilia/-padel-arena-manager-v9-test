@@ -234,7 +234,10 @@ async function sendRequest(){
  }catch(err){sendBtn.disabled=false;m(err.message||String(err),true)}
 }
 init();
-</script><section class='card'><h2>Tessera digitale</h2><button class='btn primary' onclick="location.href='digital-card.html'">Apri la mia tessera</button></section></main>
+</script><section class='card'><h2>Tessera digitale</h2><button class='btn primary' onclick="location.href='digital-card.html'">Apri la mia tessera</button></section><section class="card"><div class="actions">
+<button class="btn secondary" onclick="location.href='account-home.html'">Home del mio account</button>
+<button class="btn danger" onclick="logoutAndChange()">Cambia account</button>
+</div></section></main>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -245,4 +248,11 @@ if ('serviceWorker' in navigator) {
 
 <div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
 <script src="app-ui.js?v=980stable"></script>
-</body></html>
+<script>
+async function logoutAndChange(){
+ const client=typeof s!=='undefined'?s:(typeof sb!=='undefined'?sb:null);
+ if(client)await client.auth.signOut();
+ location.replace('login.html?change=1');
+}
+window.logoutAndChange=logoutAndChange;
+</script></body></html>

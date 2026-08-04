@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS PADEL CHAMPIONSHIP · Accesso</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+body{margin:0;background:#f4f8fc;font-family:system-ui;color:#0a2e5e;display:grid;place-items:center;min-height:100vh}
+.card{width:min(520px,calc(100% - 28px));background:#fff;border:1px solid #b9cde3;border-radius:20px;padding:22px;box-shadow:0 16px 36px rgba(8,47,104,.12);text-align:center}
+.btn{border:0;border-radius:10px;padding:11px 13px;font-weight:900;cursor:pointer;background:#164a95;color:#fff}
+.notice{padding:12px;border:1px solid #b9cde3;border-radius:12px;background:#edf4fb;margin:12px 0}
+</style></head>
+<body><div class="card"><img src="assets/aics-logo.png" style="width:110px;height:75px;object-fit:contain"><h1>AICS PADEL CHAMPIONSHIP</h1><div id="msg" class="notice">Controllo account in corso…</div><button class="btn" onclick="changeAccount()">Cambia account</button></div>
+<script>
+const cfg=window.PAM_V9_CONFIG,s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),msg=document.getElementById('msg');
+async function route(){
+ const q=await s.auth.getSession();
+ if(!q.data.session){location.replace('login.html');return}
+ const uid=q.data.session.user.id;
+ const p=await s.from('profiles').select('role').eq('id',uid).maybeSingle();
+ if(p.error){msg.textContent='Errore account: '+p.error.message;return}
+ if(p.data?.role==='admin'){location.replace('index.html');return}
+ const roles=await s.from('team_user_roles').select('team_id,role,active').eq('user_id',uid).eq('active',true);
+ if(roles.error){msg.textContent='Errore permessi: '+roles.error.message;return}
+ const staff=(roles.data||[]).find(x=>['captain','secretary'].includes(x.role));
+ if(staff){location.replace(`captain.html?team=${encodeURIComponent(staff.team_id)}`);return}
+ const roster=await s.from('roster_requests').select('team_id,status').eq('user_id',uid).eq('status','approved').limit(1);
+ if(!roster.error&&roster.data?.[0]?.team_id){location.replace(`player.html?team=${encodeURIComponent(roster.data[0].team_id)}`);return}
+ location.replace('public.html');
+}
+async function changeAccount(){await s.auth.signOut();location.replace('login.html?change=1')}
+window.changeAccount=changeAccount;route();
+</script></body></html>
