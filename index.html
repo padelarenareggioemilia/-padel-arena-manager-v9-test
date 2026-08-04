@@ -189,12 +189,130 @@ let me,editId=null,file=null,allTeams=[],currentFilter='Tutte';
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 function note(t,e=false){$('formMsg').textContent=t;$('formMsg').className='notice '+(e?'err':'ok');$('formMsg').classList.remove('hidden')}
 async function guard(){let q=await s.auth.getSession();if(!q.data.session){location.href='login.html';return false}let r=await s.from('profiles').select('*').eq('id',q.data.session.user.id).single();if(r.error||r.data.role!=='admin'){await s.auth.signOut();location.href='login.html';return false}me=r.data;return true}
-function reset(){editId=null;file=null;$('form').reset();$('enabled').checked=true;$('preview').innerHTML='LOGO';$('title').textContent='Crea nuova squadra';$('save').textContent='Salva squadra';$('formMsg').classList.add('hidden')}
+function reset(){editId=null;file=null;preparedLogo=null;if(preparedLogoPreview)URL.revokeObjectURL(preparedLogoPreview);preparedLogoPreview=null;savingTeam=false;$('form').reset();$('enabled').checked=true;$('preview').innerHTML='LOGO';$('title').textContent='Crea nuova squadra';$('save').textContent='Salva squadra';$('formMsg').classList.add('hidden')}
 function openForm(t=null){reset();$('editor').classList.remove('hidden');if(t){editId=t.id;$('title').textContent='Modifica squadra';$('save').textContent='Salva modifiche';let map={name:'name',series:'series',club:'club_name',address:'club_address',city:'club_city',province:'club_province',fiscal:'club_fiscal_code',court:'home_court',colors:'team_colors',captain:'captain_name',captainEmail:'captain_email',phone:'captain_phone',homeDay:'home_match_day',homeTime:'home_match_time',notes:'notes'};for(let k in map)$(k).value=t[map[k]]||'';$('enabled').checked=t.captain_access_enabled!==false;if(t.logo_url)$('preview').innerHTML=`<img src="${esc(t.logo_url)}">`}$('editor').scrollIntoView({behavior:'smooth'})}
 function closeForm(){$('editor').classList.add('hidden');reset()}
-async function upload(id){if(!file)return null;let ext=file.name.split('.').pop();let path=`teams/${id}/${Date.now()}.${ext}`;let r=await s.storage.from('team-logos').upload(path,file,{upsert:true});if(r.error)throw r.error;return s.storage.from('team-logos').getPublicUrl(path).data.publicUrl}
-async function saveTeam(){let p={name:$('name').value.trim(),series:$('series').value,club_name:$('club').value.trim(),club_address:$('address').value.trim(),club_city:$('city').value.trim(),club_province:$('province').value.trim().toUpperCase(),club_fiscal_code:$('fiscal').value.trim(),home_court:$('court').value.trim(),team_colors:$('colors').value.trim(),captain_name:$('captain').value.trim(),captain_email:$('captainEmail').value.trim().toLowerCase(),captain_phone:$('phone').value.trim(),home_match_day:$('homeDay').value,home_match_time:$('homeTime').value||null,notes:$('notes').value.trim(),captain_access_enabled:$('enabled').checked,created_by:me.id,updated_at:new Date().toISOString()};if(!p.name||!p.captain_name||!p.captain_email)return note('Compila i campi obbligatori.',true);try{let teamId=editId;if(editId){let r=await s.from('teams').update(p).eq('id',editId);if(r.error)throw r.error}else{let r=await s.from('teams').insert(p).select('id').maybeSingle();if(r.error)throw r.error;if(!r.data||!r.data.id)throw new Error('La squadra è stata salvata ma non è stato restituito il suo identificativo.');teamId=r.data.id}let url=await upload(teamId);if(url){let u=await s.from('teams').update({logo_url:url}).eq('id',teamId);if(u.error)throw u.error}note(editId?'Squadra aggiornata correttamente.':'Squadra salvata online.');await loadTeams();setTimeout(closeForm,600)}catch(e){note(e?.message||'Errore durante il salvataggio.',true)}}
-function setFilter(filter){currentFilter=filter;document.querySelectorAll('.filter').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));renderTeams()}
+async function prepareTeamLogo(selectedFile){
+  if(!selectedFile){preparedLogo=null;return null}
+  if(!selectedFile.size)throw new Error('Il file del logo è vuoto. Scaricalo completamente sul dispositivo e riprova.');
+  if(selectedFile.size>8*1024*1024)throw new Error('Il logo non può superare 8 MB.');
+  if(!['image/png','image/jpeg','image/webp'].includes(selectedFile.type)){
+    throw new Error('Formato logo non supportato. Usa PNG, JPG, JPEG oppure WEBP.');
+  }
+
+  const bitmap=await createImageBitmap(selectedFile);
+  const max=1400;
+  const scale=Math.min(1,max/Math.max(bitmap.width,bitmap.height));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+  canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+  bitmap.close();
+
+  preparedLogo=await new Promise((resolve,reject)=>
+    canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Impossibile preparare il logo.')),'image/png',0.92)
+  );
+  if(!preparedLogo?.size)throw new Error('Il logo preparato risulta vuoto.');
+  return preparedLogo;
+}
+
+async function upload(id){
+  if(!preparedLogo)return {url:null,path:null};
+  const path=`teams/${id}/${Date.now()}-logo.png`;
+  const r=await s.storage.from('team-logos').upload(path,preparedLogo,{
+    contentType:'image/png',
+    cacheControl:'3600',
+    upsert:false
+  });
+  if(r.error)throw new Error(`Caricamento logo non riuscito: ${r.error.message||'errore Storage'}`);
+  const url=s.storage.from('team-logos').getPublicUrl(path).data.publicUrl;
+  if(!url)throw new Error('Il logo è stato caricato ma non è stato restituito il suo indirizzo.');
+  return {url,path};
+}
+async function saveTeam(){
+  if(savingTeam)return;
+  const p={
+    name:$('name').value.trim(),
+    series:$('series').value,
+    club_name:$('club').value.trim(),
+    club_address:$('address').value.trim(),
+    club_city:$('city').value.trim(),
+    club_province:$('province').value.trim().toUpperCase(),
+    club_fiscal_code:$('fiscal').value.trim(),
+    home_court:$('court').value.trim(),
+    team_colors:$('colors').value.trim(),
+    captain_name:$('captain').value.trim(),
+    captain_email:$('captainEmail').value.trim().toLowerCase(),
+    captain_phone:$('phone').value.trim(),
+    home_match_day:$('homeDay').value,
+    home_match_time:$('homeTime').value||null,
+    notes:$('notes').value.trim(),
+    captain_access_enabled:$('enabled').checked,
+    created_by:me.id,
+    updated_at:new Date().toISOString()
+  };
+  if(!p.name||!p.captain_name||!p.captain_email)return note('Compila i campi obbligatori.',true);
+
+  savingTeam=true;
+  $('save').disabled=true;
+  $('save').textContent=editId?'Salvataggio modifiche…':'Creazione squadra…';
+  note(preparedLogo?'Sto caricando il logo e salvando la squadra…':'Sto salvando la squadra…');
+
+  let uploadedPath=null;
+  try{
+    if(!editId){
+      const duplicate=await s.from('teams')
+        .select('id,name,series')
+        .ilike('name',p.name)
+        .eq('series',p.series)
+        .limit(1);
+
+      if(duplicate.error)throw duplicate.error;
+      if((duplicate.data||[]).length){
+        throw new Error(`Esiste già una squadra chiamata "${p.name}" in ${p.series}.`);
+      }
+    }
+
+    const teamId=editId||crypto.randomUUID();
+    const uploaded=await upload(teamId);
+    uploadedPath=uploaded.path;
+
+    if(uploaded.url)p.logo_url=uploaded.url;
+
+    let result;
+    if(editId){
+      result=await s.from('teams')
+        .update(p)
+        .eq('id',editId)
+        .select('id,name,logo_url')
+        .maybeSingle();
+    }else{
+      result=await s.from('teams')
+        .insert({id:teamId,...p})
+        .select('id,name,logo_url')
+        .maybeSingle();
+    }
+
+    if(result.error)throw result.error;
+    if(!result.data?.id)throw new Error('Il database non ha confermato il salvataggio della squadra.');
+    if(preparedLogo && !result.data.logo_url)throw new Error('La squadra è stata salvata, ma il database non ha confermato il logo.');
+
+    note(editId?'Squadra e logo aggiornati correttamente.':'Squadra e logo salvati correttamente.');
+    await loadTeams();
+    setTimeout(closeForm,700);
+  }catch(e){
+    if(uploadedPath && !editId){
+      await s.storage.from('team-logos').remove([uploadedPath]);
+    }
+    note(e?.message||'Errore durante il salvataggio.',true);
+  }finally{
+    savingTeam=false;
+    $('save').disabled=false;
+    $('save').textContent=editId?'Salva modifiche':'Salva squadra';
+  }
+}
 function renderTeams(){let a=currentFilter==='Tutte'?allTeams:allTeams.filter(t=>t.series===currentFilter);$('teams').innerHTML=a.length?a.map(t=>{let cap=new URL(`captain.html?invite=${encodeURIComponent(t.captain_invite_token)}`,location.href).href,player=new URL(`player.html?team=${encodeURIComponent(t.player_invite_token)}`,location.href).href;return `<article class="team">${t.logo_url?`<img class="logo" src="${esc(t.logo_url)}">`:`<div class="placeholder">🏆</div>`}<div><b style="font-size:20px">${esc(t.name)}</b><div class="meta"><b>${esc(t.series||'')}</b> · ${esc(t.club_name||'')}<br>${esc(t.club_city||'')} ${t.club_province?'('+esc(t.club_province)+')':''}<br>Capitano: <b>${esc(t.captain_name||'')}</b> · ${esc(t.captain_email||'')}<br>Partite in casa: <b>${esc(t.home_match_day||'Da definire')}</b>${t.home_match_time?' alle '+esc(String(t.home_match_time).slice(0,5)):''}</div></div><div class="team-actions">
 <button class="btn primary" onclick='openTeam(${JSON.stringify(t.id)})'>Apri</button>
 <button class="btn secondary" onclick='editTeam(${JSON.stringify(t.id)})'>Modifica</button>
@@ -259,7 +377,25 @@ window.loadHealthCenter=loadHealthCenter;
 
 async function logout(){await s.auth.signOut();location.href='login.html'}
 window.openForm=openForm;window.openTeam=openTeam;window.copyLink=copyLink;window.editTeam=editTeam;window.toggleMore=toggleMore;window.requestDelete=requestDelete;window.closeDelete=closeDelete;window.checkDeleteName=checkDeleteName;window.confirmDelete=confirmDelete;window.setFilter=setFilter;
-$('form').onsubmit=e=>{e.preventDefault();saveTeam()};$('logoFile').onchange=e=>{file=e.target.files[0]||null;if(file)$('preview').innerHTML=`<img src="${URL.createObjectURL(file)}">`};document.addEventListener('click',closeAllMenus);
+$('form').onsubmit=e=>{e.preventDefault();saveTeam()};
+$('logoFile').onchange=async e=>{
+  file=e.target.files[0]||null;
+  preparedLogo=null;
+  if(preparedLogoPreview)URL.revokeObjectURL(preparedLogoPreview);
+  preparedLogoPreview=null;
+  if(!file){$('preview').innerHTML='LOGO';return}
+  try{
+    note('Preparazione del logo in corso…');
+    await prepareTeamLogo(file);
+    preparedLogoPreview=URL.createObjectURL(preparedLogo);
+    $('preview').innerHTML=`<img src="${preparedLogoPreview}">`;
+    note(`Logo pronto: ${Math.round(preparedLogo.size/1024)} KB. Ora puoi salvare la squadra.`);
+  }catch(error){
+    file=null;preparedLogo=null;$('logoFile').value='';$('preview').innerHTML='LOGO';
+    note(error.message||String(error),true);
+  }
+};
+document.addEventListener('click',closeAllMenus);
 (async()=>{
   if(await guard()){
     await loadTeams();
