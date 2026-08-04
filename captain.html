@@ -230,12 +230,19 @@ init();
 
     <div class="captain-tile">
       <h3>Inserisci giocatore</h3>
-      <div class="field"><label>Nome</label><input id="newPlayerFirstName"></div>
-      <div class="field"><label>Cognome</label><input id="newPlayerLastName"></div>
-      <div class="field"><label>Email</label><input id="newPlayerEmail" type="email"></div>
-      <div class="field"><label>Telefono</label><input id="newPlayerPhone"></div>
-      <div class="field"><label>Classifica FITP</label><input id="newPlayerFitp"></div>
-      <div class="field"><label>Scadenza certificato medico</label><input id="newPlayerMedicalExpiry" type="date"></div>
+      <div class="notice"><b>Tutti i dati sono obbligatori.</b> La foto deve essere una foto tessera con sfondo bianco.</div>
+      <div class="field"><label>Foto tessera con sfondo bianco *</label><input id="newPlayerPhoto" type="file" accept="image/jpeg,image/png,image/webp"></div>
+      <div class="field"><label>Nome *</label><input id="newPlayerFirstName"></div>
+      <div class="field"><label>Cognome *</label><input id="newPlayerLastName"></div>
+      <div class="field"><label>Data di nascita *</label><input id="newPlayerBirthDate" type="date"></div>
+      <div class="field"><label>Luogo di nascita *</label><input id="newPlayerBirthPlace"></div>
+      <div class="field"><label>Comune di residenza *</label><input id="newPlayerResidenceTown"></div>
+      <div class="field"><label>CAP *</label><input id="newPlayerPostalCode" inputmode="numeric" maxlength="5"></div>
+      <div class="field"><label>Provincia *</label><input id="newPlayerProvince" maxlength="2"></div>
+      <div class="field"><label>Email *</label><input id="newPlayerEmail" type="email"></div>
+      <div class="field"><label>Telefono *</label><input id="newPlayerPhone"></div>
+      <div class="field"><label>Classifica FITP *</label><input id="newPlayerFitp"></div>
+      <div class="field"><label>Scadenza certificato medico *</label><input id="newPlayerMedicalExpiry" type="date"></div>
       <button class="btn success" onclick="addPlayerManually()">Inserisci giocatore</button>
     </div>
 
@@ -359,35 +366,46 @@ async function saveCaptainTeam(){
   loadCaptainWorkspace();
 }
 
+
+async function uploadCaptainPlayerPhoto(file){
+  if(!file)throw new Error('Carica la foto tessera con sfondo bianco.');
+  if(file.size>5*1024*1024)throw new Error('La foto non può superare 5 MB.');
+  const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+  const safe=['jpg','jpeg','png','webp'].includes(ext)?ext:'jpg';
+  const path=`${captainTeamId}/${crypto.randomUUID()}.${safe}`;
+  const up=await s.storage.from('player-photos').upload(path,file,{contentType:file.type,upsert:false});
+  if(up.error)throw up.error;
+  return s.storage.from('player-photos').getPublicUrl(path).data.publicUrl;
+}
+
 async function addPlayerManually(){
-  if(!captainAccessEnabled) return captainMsg('Funzione non autorizzata.',true);
-
-  const firstName=document.getElementById('newPlayerFirstName').value.trim();
-  const lastName=document.getElementById('newPlayerLastName').value.trim();
-  const email=document.getElementById('newPlayerEmail').value.trim().toLowerCase();
-  if(!firstName||!lastName) return captainMsg('Inserisci nome e cognome del giocatore.',true);
-
-  const payload={
-    team_id:captainTeamId,
-    first_name:firstName,
-    last_name:lastName,
-    email:email||null,
-    phone:document.getElementById('newPlayerPhone').value.trim()||null,
-    fitp_ranking:document.getElementById('newPlayerFitp').value.trim()||null,
-    medical_certificate_expiry:document.getElementById('newPlayerMedicalExpiry').value||null,
-    status:'approved',
-    created_at:new Date().toISOString(),
-    updated_at:new Date().toISOString()
-  };
-
-  const r=await s.from('roster_requests').insert(payload);
-  if(r.error) return captainMsg(r.error.message,true);
-
-  ['newPlayerFirstName','newPlayerLastName','newPlayerEmail','newPlayerPhone','newPlayerFitp','newPlayerMedicalExpiry']
-    .forEach(id=>document.getElementById(id).value='');
-
-  captainMsg('Giocatore inserito manualmente.');
-  loadCaptainWorkspace();
+  if(!captainAccessEnabled)return captainMsg('Funzione non autorizzata.',true);
+  const ids=['newPlayerFirstName','newPlayerLastName','newPlayerBirthDate','newPlayerBirthPlace','newPlayerResidenceTown','newPlayerPostalCode','newPlayerProvince','newPlayerEmail','newPlayerPhone','newPlayerFitp','newPlayerMedicalExpiry'];
+  const v=Object.fromEntries(ids.map(id=>[id,document.getElementById(id).value.trim()]));
+  if(ids.some(id=>!v[id]))return captainMsg('Compila tutti i dati obbligatori del giocatore.',true);
+  if(!/^\d{5}$/.test(v.newPlayerPostalCode))return captainMsg('Il CAP deve contenere 5 cifre.',true);
+  try{
+    const photoUrl=await uploadCaptainPlayerPhoto(document.getElementById('newPlayerPhoto').files[0]);
+    const payload={
+      team_id:captainTeamId,photo_url:photoUrl,
+      first_name:v.newPlayerFirstName,last_name:v.newPlayerLastName,
+      birth_date:v.newPlayerBirthDate,birth_place:v.newPlayerBirthPlace,
+      residence_town:v.newPlayerResidenceTown,residence_postal_code:v.newPlayerPostalCode,
+      residence_province:v.newPlayerProvince.toUpperCase(),
+      email:v.newPlayerEmail.toLowerCase(),phone:v.newPlayerPhone,
+      fitp_ranking:v.newPlayerFitp.toUpperCase(),
+      medical_certificate_expiry:v.newPlayerMedicalExpiry,
+      status:'approved',decided_at:new Date().toISOString(),
+      created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    };
+    const r=await s.from('roster_requests').insert(payload).select('id').maybeSingle();
+    if(r.error)throw r.error;
+    if(!r.data?.id)throw new Error('Il database non ha confermato l’inserimento.');
+    ids.forEach(id=>document.getElementById(id).value='');
+    document.getElementById('newPlayerPhoto').value='';
+    captainMsg('Giocatore inserito con profilo completo.');
+    loadCaptainWorkspace();
+  }catch(error){captainMsg(error.message||String(error),true)}
 }
 
 function renderCaptainPlayers(){

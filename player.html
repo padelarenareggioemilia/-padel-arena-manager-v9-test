@@ -166,9 +166,9 @@ async function init(){
  <form onsubmit="event.preventDefault();sendRequest()">
  <div class="grid2">
   <div>
-   <div class="field"><label>Foto tessera del giocatore *</label>
+   <div class="field"><label>Foto tessera con sfondo bianco *</label>
     <input id="photo" type="file" accept="image/jpeg,image/png,image/webp" required>
-    <div class="doc-note">Carica una fotografia recente, frontale e riconoscibile. Formati JPG, PNG o WEBP.</div>
+    <div class="doc-note">Carica una fotografia recente, frontale, riconoscibile e con sfondo bianco. Formati JPG, PNG o WEBP.</div>
    </div>
    <div id="photoPreview" class="photo-preview">ANTEPRIMA FOTO</div>
   </div>
@@ -182,8 +182,9 @@ async function init(){
  <div class="grid2">
   <div class="field"><label>Data di nascita *</label><input id="bd" type="date"></div>
   <div class="field"><label>Luogo di nascita *</label><input id="bp"></div>
-  <div class="field"><label>Comune di residenza *</label><input id="rt"></div>
-  <div class="field"><label>Provincia *</label><input id="rp" maxlength="2"></div>
+  <div class="field"><label>Comune di residenza *</label><input id="rt" required></div>
+  <div class="field"><label>CAP *</label><input id="cap" inputmode="numeric" maxlength="5" pattern="[0-9]{5}" required></div>
+  <div class="field"><label>Provincia *</label><input id="rp" maxlength="2" required></div>
   <div class="field"><label>Sesso *</label><select id="g"><option value="">Seleziona</option><option>Maschile</option><option>Femminile</option></select></div>
   <div class="field"><label>Classifica FITP *</label><input id="fitp" placeholder="Es. NC, 4.4, 4.1, 3.5"></div>
   <div class="field"><label>Scadenza certificato medico *</label><input id="medical" type="date"></div>
@@ -216,13 +217,14 @@ async function sendRequest(){
  let p={
   first_name:fn.value.trim(),last_name:ln.value.trim(),email:em.value.trim().toLowerCase(),
   phone:ph.value.trim(),birth_date:bd.value,birth_place:bp.value.trim(),
-  residence_town:rt.value.trim(),residence_province:rp.value.trim().toUpperCase(),
+  residence_town:rt.value.trim(),residence_postal_code:cap.value.trim(),residence_province:rp.value.trim().toUpperCase(),
   gender:g.value,fitp_ranking:fitp.value.trim().toUpperCase(),
   medical_certificate_expiry:medical.value,notes:nt.value.trim()
  };
  for(let k of ['first_name','last_name','email','phone','birth_date','birth_place','residence_town',
- 'residence_province','gender','fitp_ranking','medical_certificate_expiry'])
+ 'residence_postal_code','residence_province','gender','fitp_ranking','medical_certificate_expiry'])
   if(!p[k])return m('Compila tutti i campi obbligatori.',true);
+ if(!/^\d{5}$/.test(p.residence_postal_code))return m('Il CAP deve contenere 5 cifre.',true);
  try{
    sendBtn.disabled=true;m('Caricamento foto e invio richiesta...');
    p.photo_url=await uploadPhoto();

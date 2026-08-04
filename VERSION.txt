@@ -1,3 +1,3 @@
-AICS PADEL CHAMPIONSHIP V9.8.0 STABILE COMPLETA
-Build grafica e operativa consolidata
+AICS PADEL CHAMPIONSHIP V9.8.1
+Build: dati giocatori obbligatori
 Data: 2026-08-04
