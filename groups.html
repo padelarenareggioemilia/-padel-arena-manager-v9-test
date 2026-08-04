@@ -1,5 +1,53 @@
 <!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AICS Padel Championship Manager</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+async function geocodeAllTeams(){
+  const box=document.getElementById('geoMsg');box.classList.remove('hidden');box.textContent='Geolocalizzazione in corso…';
+  const tr=await s.from('teams').select('id,name,club_address,club_city,club_province,latitude,longitude').order('name');
+  if(tr.error){box.textContent=tr.error.message;return}
+  let ok=0,fail=[];
+  for(const team of tr.data||[]){
+    if(team.latitude&&team.longitude){ok++;continue}
+    const address=[team.club_address,team.club_city,team.club_province,'Italia'].filter(Boolean).join(', ');
+    if(!address){fail.push(team.name+' (indirizzo mancante)');continue}
+    try{
+      const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=it&q=${encodeURIComponent(address)}`,{headers:{'Accept-Language':'it'}});
+      const data=await res.json();
+      if(!data[0]){fail.push(team.name);continue}
+      const up=await s.from('teams').update({latitude:Number(data[0].lat),longitude:Number(data[0].lon),geocoded_at:new Date().toISOString()}).eq('id',team.id);
+      if(up.error)fail.push(team.name);else ok++;
+      await new Promise(r=>setTimeout(r,1050));
+    }catch(e){fail.push(team.name)}
+  }
+  box.textContent=`Coordinate salvate: ${ok}. Non riconosciute: ${fail.length}${fail.length?'\n'+fail.join(', '):''}`;
+}
+function km(a,b){const R=6371,toRad=x=>x*Math.PI/180,dLat=toRad(b.latitude-a.latitude),dLon=toRad(b.longitude-a.longitude);const q=Math.sin(dLat/2)**2+Math.cos(toRad(a.latitude))*Math.cos(toRad(b.latitude))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
+async function generateGeographicGroups(){
+  const box=document.getElementById('geoMsg');box.classList.remove('hidden');
+  const tr=await s.from('teams').select('*').not('series','is',null).order('series');
+  if(tr.error){box.textContent=tr.error.message;return}
+  const missing=(tr.data||[]).filter(x=>x.latitude==null||x.longitude==null);
+  if(missing.length){box.textContent='Prima geolocalizza questi indirizzi: '+missing.map(x=>x.name).join(', ');return}
+  const bySeries={};(tr.data||[]).forEach(x=>(bySeries[x.series]??=[]).push(x));
+  const proposal={};
+  for(const [series,list] of Object.entries(bySeries)){
+    const unassigned=[...list],groups=[];
+    const desired=series==='Serie A'?1:2;
+    while(unassigned.length){
+      const seed=unassigned.shift(),g=[seed];
+      const target=Math.ceil(list.length/desired);
+      while(g.length<target&&unassigned.length){
+        let best=0,bestDist=Infinity;
+        unassigned.forEach((x,i)=>{const avg=g.reduce((sum,y)=>sum+km(x,y),0)/g.length;if(avg<bestDist){bestDist=avg;best=i}});
+        g.push(unassigned.splice(best,1)[0]);
+      }
+      groups.push(g);
+    }
+    proposal[series]=groups.map(g=>g.map(x=>x.name));
+  }
+  box.textContent='Proposta geografica reale:\n'+Object.entries(proposal).map(([s,gs])=>s+'\n'+gs.map((g,i)=>`Girone ${i+1}: ${g.join(' · ')}`).join('\n')).join('\n\n');
+}
+window.geocodeAllTeams=geocodeAllTeams;window.generateGeographicGroups=generateGeographicGroups;
+</script><script src="config.js"></script><style>
 :root{--bg:#06111f;--panel:#10233b;--panel2:#09182a;--line:#315676;--text:#f8fafc;--muted:#a9bacd;--lime:#9dff25;--blue:#16a8ff;--red:#ef4444;--amber:#f6c453}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 90% 0%,#123f61,transparent 34%),linear-gradient(180deg,#06111f,#040b14);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
 .shell{max-width:1200px;margin:auto;padding:16px 14px 90px}.hero{display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{display:flex;align-items:center;gap:13px}.mark{width:62px;height:62px;border-radius:18px;background:linear-gradient(135deg,var(--lime),var(--blue));display:grid;place-items:center;color:#07111f;font-weight:1000}.muted{color:var(--muted)}
@@ -22,6 +70,10 @@
 .confirm-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:16px}
 .btn-small-danger{background:#ce2b37;color:white;border:0;border-radius:10px;padding:9px 12px;font-weight:900;cursor:pointer;font-size:13px}
 @media(max-width:760px){.cup-menu{right:-4px;min-width:210px}.cup-actions{width:100%}}
+
+details.advanced{border:1px solid var(--line);border-radius:14px;padding:10px;margin:10px 0;background:#f8fbff}
+details.advanced summary{font-weight:1000;cursor:pointer}
+.geo-status{font-size:12px;color:var(--muted)}
 </style><style>
 :root{
   --aics-blue:#164a95;
@@ -352,7 +404,7 @@ $('competition').onchange=loadAll;guard().then(loadAll);
   </div>
 </div>
 
-</main>
+<section class="card"><details class="advanced"><summary>Geolocalizzazione reale degli indirizzi</summary><div class="notice">Usa indirizzo, città e provincia delle squadre. Le coordinate vengono salvate e usate per creare gironi per distanza reale.</div><div class="actions"><button class="btn primary" onclick="geocodeAllTeams()">Geolocalizza tutte le squadre</button><button class="btn secondary" onclick="generateGeographicGroups()">Genera gironi geografici</button></div><div id="geoMsg" class="notice hidden"></div></details></section></main>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

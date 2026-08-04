@@ -66,7 +66,7 @@ let teams=[],groups=[],members=[],fixtures=[],statuses=[],view='current';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 function teamName(id,p){return teams.find(t=>t.id===id)?.name||p||'Da definire'}
-function teamLogo(id){return teams.find(t=>t.id===id)?.logo_url||'assets/aics-logo.png'}
+function teamLogo(id){return teams.find(t=>t.id===id)?.logo_url||''}
 function statusFor(id){return statuses.find(s=>s.fixture_id===id)?.workflow_data||{}}
 function resultFor(id){const w=statusFor(id);return w.result_data||w.result||w.match_result||null}
 function score(id){const r=resultFor(id);if(!r)return '';if(r.home_score!=null)return `${r.home_score} – ${r.away_score}`;return ''}
@@ -84,7 +84,7 @@ function selectedRound(){
 function fixtureHtml(f){
   return `<div class="fixture">
     <div class="small muted">${f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Da definire'}</div>
-    <div><div><img src="${esc(teamLogo(f.home_team_id))}" style="width:30px;height:30px;object-fit:contain;vertical-align:middle;margin-right:6px"><b>${esc(teamName(f.home_team_id,f.home_placeholder))}</b></div><span class="muted">contro</span><div><img src="${esc(teamLogo(f.away_team_id))}" style="width:30px;height:30px;object-fit:contain;vertical-align:middle;margin-right:6px"><b>${esc(teamName(f.away_team_id,f.away_placeholder))}</b></div><div class="small muted">${esc(f.venue||'')}</div></div>
+    <div><div>${teamLogo(f.home_team_id)?`<img src="${esc(teamLogo(f.home_team_id))}" style="width:30px;height:30px;object-fit:contain;vertical-align:middle;margin-right:6px">`:`<span style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#164a95;color:#fff;margin-right:6px;font-size:11px">${esc(teamName(f.home_team_id,f.home_placeholder).slice(0,2).toUpperCase())}</span>`}<b>${esc(teamName(f.home_team_id,f.home_placeholder))}</b></div><span class="muted">contro</span><div>${teamLogo(f.away_team_id)?`<img src="${esc(teamLogo(f.away_team_id))}" style="width:30px;height:30px;object-fit:contain;vertical-align:middle;margin-right:6px">`:`<span style="display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#164a95;color:#fff;margin-right:6px;font-size:11px">${esc(teamName(f.away_team_id,f.away_placeholder).slice(0,2).toUpperCase())}</span>`}<b>${esc(teamName(f.away_team_id,f.away_placeholder))}</b></div><div class="small muted">${esc(f.venue||'')}</div></div>
     <div class="score">${score(f.id)||(done(f)?'Omologata':'Da giocare')}</div>
   </div>`;
 }
@@ -126,7 +126,7 @@ async function loadLanding(){
   };
   const codes=['SERIE_A','SERIE_B','SERIE_C','COPPA_ITALIA','SUPERCOPPA'];
   $('competitionCards').innerHTML=codes.map(c=>`
-    <button class="comp" ${isPublished(c)?`onclick="location.href='public.html?code=${c}'"`:'disabled'}>
+    <button class="comp" onclick="location.href='competition-public.html?code=${encodeURIComponent(c)}'">
       <img src="${logos[c]}" alt="${labels[c]}">
       <strong>${labels[c]}</strong>
       <div class="muted small">${isPublished(c)?'Apri competizione':'Non pubblicata'}</div>

@@ -1,0 +1,18 @@
+V9 STABLE BUILD 1 — FIX RICHIESTI
+
+1. Esegui SUPABASE_V9_STABLE_BUILD_1.sql in Supabase.
+2. Su GitHub sostituisci TUTTI i file del progetto con quelli contenuti nello ZIP.
+3. Carica anche la cartella assets completa.
+4. Fai Commit changes.
+5. Apri login.html?v=stable1.
+
+CORREZIONI:
+- Portale Free cliccabile.
+- Archivio completo squadre.
+- Eliminazione sicura dal Centro diagnostico.
+- Geocodifica reale indirizzi e proposta gironi per distanza.
+- Permessi Storage loghi e foto.
+- Modifica/Elimina giocatori evidenti nella scheda squadra.
+- Logo AICS non usato come logo squadra mancante.
+- Capitano riconosciuto sia dalla scheda tecnica sia dall'account.
+- Festività e impostazioni avanzate richiudibili.

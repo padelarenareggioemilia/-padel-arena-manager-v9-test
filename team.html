@@ -484,6 +484,8 @@ window.removeTeamLogoNow = removeTeamLogoNow;
 
 async function uploadTeamLogo(teamId) {
   if (!newLogoFile) return currentTeam?.logo_url || null;
+  if (!newLogoFile.size) throw new Error('Il file del logo è vuoto.');
+  if (!['image/png','image/jpeg','image/webp'].includes(newLogoFile.type)) throw new Error('Usa PNG, JPG o WEBP.');
 
   const originalExt = (newLogoFile.name.split('.').pop() || 'png').toLowerCase();
   const ext = ['jpg','jpeg','png','webp'].includes(originalExt) ? originalExt : 'png';
@@ -800,7 +802,7 @@ async function init() {
         <button id="adminAddPlayerBtn" class="btn success" onclick="adminAddPlayer()">Inserisci giocatore</button>
       </div>
       <div id="adminPlayerMsg" class="notice hidden"></div>
-      <h3>Rosa attuale</h3>
+      <h3>Rosa attuale — Modifica ed elimina giocatori</h3>
       <div id="adminRosterList"></div>
     </section>
 

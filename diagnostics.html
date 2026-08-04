@@ -125,8 +125,20 @@ async function runDiagnostics(){
 }
 async function deleteEmptyTeam(id,name){
   if(!confirm(`Eliminare il record vuoto "${name}"?\n\nLa funzione procederà solo se non esistono giocatori, partite o ruoli collegati.`))return;
-  const r=await sb.rpc('delete_empty_team_safely',{p_team_id:id});
-  if(r.error)return msg(r.error.message,true);
+  let r=await sb.rpc('delete_empty_team_safely',{p_team_id:id});
+  if(r.error){
+    const [players,fixtures,roles]=await Promise.all([
+      sb.from('roster_requests').select('id',{count:'exact',head:true}).eq('team_id',id),
+      sb.from('fixtures').select('id',{count:'exact',head:true}).or(`home_team_id.eq.${id},away_team_id.eq.${id}`),
+      sb.from('team_user_roles').select('id',{count:'exact',head:true}).eq('team_id',id)
+    ]);
+    if((players.count||0)||(fixtures.count||0)||(roles.count||0)){
+      return msg(`Impossibile eliminare: giocatori ${players.count||0}, partite ${fixtures.count||0}, ruoli ${roles.count||0}.`,true);
+    }
+    const direct=await sb.from('teams').delete().eq('id',id).select('id').maybeSingle();
+    if(direct.error||!direct.data?.id)return msg(direct.error?.message||r.error.message,true);
+    msg('Squadra eliminata correttamente.');return runDiagnostics();
+  }
   msg(r.data?.message||'Operazione completata.');runDiagnostics();
 }
 async function testStorage(bucket){
