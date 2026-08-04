@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS PADEL CHAMPIONSHIP · Tessera digitale</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--gold:#d4a62e;--bg:#f4f8fc;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;--line:#b9cde3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:30}
+.shell{max-width:1050px;margin:auto;padding:18px 12px 80px}.hero,.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 13px 28px rgba(8,47,104,.1)}
+.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;display:flex;justify-content:space-between;align-items:center;gap:14px}.brand{display:flex;gap:13px;align-items:center}.brand img{width:95px;height:68px;object-fit:contain;background:#fff;border-radius:13px;padding:5px}
+.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.success{background:var(--green);color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:9px 0}.err{background:#fdecef;border-color:#dd7a85}.ok{background:#ebf8f0;border-color:#79bf90}.hidden{display:none!important}.muted{color:var(--muted)}.small{font-size:12px}
+.card-wrap{display:flex;justify-content:center;padding:15px}.digital-card{width:370px;min-height:620px;border-radius:28px;overflow:hidden;background:#fff;border:1px solid #cbd8e6;box-shadow:0 20px 45px rgba(8,47,104,.18)}.card-top{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:18px;position:relative}.tricolor{height:7px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%)}.card-logo{width:90px;height:58px;object-fit:contain;background:#fff;border-radius:11px;padding:4px}.photo{width:128px;height:154px;border-radius:16px;object-fit:cover;background:#eef3f8;border:3px solid #fff;display:block;margin:16px auto 8px}.player-name{text-align:center;font-size:23px;font-weight:1000}.team-name{text-align:center;font-size:15px}.card-body{padding:17px}.info-row{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #e0e8f0;padding:9px 0}.info-row span:first-child{color:var(--muted);font-size:12px}.info-row strong{text-align:right}.qr-box{text-align:center;padding:16px}.qr-box canvas{border:10px solid #fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12)}.status{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:1000}.active{background:#eaf8f0;color:#17683c;border:1px solid #78bd90}.expired{background:#fdecef;color:#9d2430;border:1px solid #da7d87}.pending{background:#fff7dd;color:#7b5b08;border:1px solid #d8b753}
+@media(max-width:500px){.digital-card{width:100%}.hero{align-items:flex-start}}
+@media print{body:before,.actions,.hero,.panel>h2,.panel>.notice{display:none!important}.panel{box-shadow:none;border:0}.digital-card{box-shadow:none;margin:auto}.shell{padding:0}}
+</style>
+</head>
+<body><main class="shell">
+<div class="actions"><button class="btn secondary" onclick="history.back()">← Indietro</button></div>
+<header class="hero"><div class="brand"><img src="assets/aics-logo.png"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div>Tessera digitale giocatore</div></div></div></header>
+
+<section class="panel">
+  <h2>La mia tessera</h2>
+  <div id="msg" class="notice">Caricamento…</div>
+  <div id="cardActions" class="actions hidden">
+    <button class="btn primary" onclick="window.print()">Scarica / Stampa PDF</button>
+    <button class="btn success" onclick="saveAsImage()">Salva come immagine</button>
+  </div>
+  <div id="cardWrap" class="card-wrap hidden">
+    <div id="digitalCard" class="digital-card">
+      <div class="tricolor"></div>
+      <div class="card-top">
+        <img class="card-logo" src="assets/aics-logo.png">
+        <img id="photo" class="photo">
+        <div id="playerName" class="player-name"></div>
+        <div id="teamName" class="team-name"></div>
+      </div>
+      <div class="card-body">
+        <div class="info-row"><span>Numero tessera</span><strong id="cardNumber"></strong></div>
+        <div class="info-row"><span>Categoria</span><strong id="series"></strong></div>
+        <div class="info-row"><span>Classifica FITP</span><strong id="fitp"></strong></div>
+        <div class="info-row"><span>Certificato medico</span><strong id="medical"></strong></div>
+        <div class="info-row"><span>Stato</span><strong id="status"></strong></div>
+        <div class="qr-box"><canvas id="qr"></canvas><div class="muted small">QR personale di verifica</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
+let cardData=null;
+function setMsg(text,error=false){$('msg').textContent=text;$('msg').className='notice '+(error?'err':'ok')}
+async function init(){
+  const s=await sb.auth.getSession();
+  if(!s.data.session)return location.href='login.html';
+  const requested=new URLSearchParams(location.search).get('player');
+  const rpc=await sb.rpc('get_my_player_card',{p_player_id:requested||null});
+  if(rpc.error)return setMsg(rpc.error.message,true);
+  if(!rpc.data)return setMsg('Nessuna tessera disponibile. L’iscrizione deve essere approvata dal capitano e dall’amministratore.',true);
+  cardData=rpc.data;
+  $('photo').src=cardData.photo_url;
+  $('playerName').textContent=`${cardData.first_name} ${cardData.last_name}`;
+  $('teamName').textContent=cardData.team_name;
+  $('cardNumber').textContent=cardData.card_number;
+  $('series').textContent=cardData.series||'—';
+  $('fitp').textContent=cardData.fitp_ranking||'—';
+  $('medical').textContent=new Date(cardData.medical_certificate_expiry+'T12:00:00').toLocaleDateString('it-IT');
+  const st=cardData.card_status;
+  $('status').innerHTML=`<span class="status ${st==='active'?'active':st==='expired'?'expired':'pending'}">${st==='active'?'ATTIVA':st==='expired'?'SCADUTA':'SOSPESA'}</span>`;
+  await QRCode.toCanvas($('qr'),cardData.verify_url,{width:210,margin:1});
+  $('cardWrap').classList.remove('hidden');$('cardActions').classList.remove('hidden');
+  setMsg('Tessera digitale disponibile.');
+}
+async function saveAsImage(){
+  const card=document.getElementById('digitalCard');
+  alert('Per salvare l’immagine, usa uno screenshot oppure “Stampa / Salva PDF”. La versione immagine automatica verrà aggiunta insieme all’integrazione Wallet.');
+}
+window.saveAsImage=saveAsImage;
+init();
+</script></body></html>

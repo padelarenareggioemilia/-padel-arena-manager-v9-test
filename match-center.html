@@ -70,7 +70,7 @@ function renderResult(){$('resultCard').classList.remove('hidden');$('scores').i
 async function saveResult(){let data={matches:labels.map((l,i)=>{let o={label:l};document.querySelectorAll(`[data-r="${i}"]`).forEach(x=>o[x.dataset.k]=x.value===''?null:+x.value);return o})};let r=await sb.rpc('save_match_result',{p_fixture_id:fixtureId,p_result:data});if(r.error)return msg('resultMsg',r.error.message,true);msg('resultMsg','Risultato salvato. Modificabile fino a 26 ore dall’inizio della gara, salvo omologazione.')}
 function printDistinct(){window.print()}function printReport(){window.print()}
 init();
-</script></main>
+</script><section class='card'><button class='btn primary' onclick="location.href='verify-player.html?fixture='+new URLSearchParams(location.search).get('id')">Scansiona tessera giocatore</button></section></main>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

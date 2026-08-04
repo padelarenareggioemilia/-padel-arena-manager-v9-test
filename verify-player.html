@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS PADEL CHAMPIONSHIP · Verifica giocatore</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--green:#009246;--red:#ce2b37;--bg:#f4f8fc;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;--line:#b9cde3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}.shell{max-width:900px;margin:auto;padding:18px 12px 80px}.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:9px 0}.ok{background:#ebf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}.hidden{display:none!important}.result{display:flex;gap:14px;align-items:center}.result img{width:95px;height:115px;object-fit:cover;border-radius:14px;border:1px solid var(--line)}.big{font-size:24px;font-weight:1000}
+</style>
+</head>
+<body><main class="shell">
+<div class="actions"><button class="btn secondary" onclick="history.back()">← Indietro</button></div>
+<section class="card"><h1>Verifica giocatore in formazione</h1><div class="notice">Apri questa pagina dalla partita interessata. Lo scanner verifica che il giocatore sia tesserato, attivo e presente nella distinta della gara.</div><div id="reader"></div><div class="actions"><button class="btn primary" onclick="startScanner()">Avvia scanner</button></div></section>
+<section id="resultCard" class="card hidden"><div id="result"></div></section>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
+const fixtureId=new URLSearchParams(location.search).get('fixture');
+let scanner=null;
+async function startScanner(){
+  if(!fixtureId)return alert('Partita non specificata.');
+  scanner=new Html5Qrcode('reader');
+  await scanner.start({facingMode:'environment'},{fps:10,qrbox:250},onScan);
+}
+async function onScan(decodedText){
+  if(scanner){await scanner.stop();scanner=null}
+  let token=decodedText;
+  try{const u=new URL(decodedText);token=u.searchParams.get('token')||decodedText}catch(e){}
+  const r=await sb.rpc('verify_player_card_for_fixture',{p_fixture_id:fixtureId,p_token:token});
+  $('resultCard').classList.remove('hidden');
+  if(r.error){$('result').innerHTML=`<div class="notice err">${r.error.message}</div>`;return}
+  const d=r.data;
+  $('result').innerHTML=`<div class="result"><img src="${d.photo_url}"><div><div class="big">${d.valid?'✅ VERIFICATO':'❌ NON AUTORIZZATO'}</div><h2>${d.first_name} ${d.last_name}</h2><div>${d.team_name}</div><div class="notice ${d.valid?'ok':'err'}">${d.reason}</div></div></div><div class="actions"><button class="btn primary" onclick="startScanner()">Scansiona altro giocatore</button></div>`;
+}
+window.startScanner=startScanner;
+</script></body></html>
