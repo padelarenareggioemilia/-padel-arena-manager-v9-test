@@ -1,3 +1,3 @@
-AICS PADEL CHAMPIONSHIP V9.8.1
-Build: dati giocatori obbligatori
+AICS PADEL CHAMPIONSHIP V9.8.4
+Build: centro diagnostico
 Data: 2026-08-04
