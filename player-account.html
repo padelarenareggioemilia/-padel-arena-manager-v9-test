@@ -1,115 +1,13 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Recupera la mia iscrizione</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <style>
-    :root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui;color:var(--text);display:grid;place-items:center;min-height:100vh;padding:18px}
-    body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%)}
-    .card{width:min(620px,100%);background:#fff;border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:0 18px 46px rgba(8,47,104,.13)}
-    h1{color:var(--bd)}.field{margin:10px 0}.field label{display:block;font-weight:900;margin-bottom:5px}.field input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px}
-    .btn{border:0;border-radius:10px;padding:11px 13px;font-weight:900;cursor:pointer}.btn:disabled{opacity:.55}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.danger{background:var(--r);color:#fff}
-    .actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:11px;border:1px solid var(--line);border-radius:11px;background:#edf4fb;margin:10px 0;line-height:1.5}.ok{background:#ebf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}.hidden{display:none!important}
-    @media(max-width:600px){.actions{display:grid}.btn{width:100%}}
-  </style>
-</head>
-<body>
-<main class="card">
-  <h1>Registrati o recupera la tua iscrizione</h1>
-  <div class="notice">Usa la stessa email comunicata al capitano. Dopo la verifica dell’email, il sistema collegherà l’account alla tua anagrafica già approvata.</div>
-
-  <section id="signupBox">
-    <h2>Non hai ancora un account?</h2>
-    <div class="field"><label>Email</label><input id="email" type="email" autocomplete="email"></div>
-    <div class="field"><label>Crea password</label><input id="password" type="password" minlength="8" autocomplete="new-password"></div>
-    <button id="signupBtn" class="btn primary" onclick="signup()">Crea account</button>
-  </section>
-
-  <section id="claimBox">
-    <h2>Hai già effettuato l’accesso?</h2>
-    <button id="claimBtn" class="btn primary" onclick="claim()">Collega la mia iscrizione approvata</button>
-  </section>
-
-  <div id="msg" class="notice">Pronto.</div>
-
-  <div class="actions">
-    <button class="btn secondary" onclick="location.href='login.html?v=984'">Vai al login</button>
-    <button class="btn secondary" onclick="location.href='account-home.html?v=984'">Home del mio account</button>
-  </div>
-</main>
-
-<div style="position:fixed;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.75">V9.8.2 PLAYER ROLE FIX</div>
-
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recupera iscrizione</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<style>body{font-family:system-ui;background:#f4f8fc;color:#0a2e5e;display:grid;place-items:center;min-height:100vh;margin:0}.card{width:min(620px,calc(100% - 28px));background:#fff;border:1px solid #b9cde3;border-radius:20px;padding:20px}.field{margin:10px 0}input{width:100%;padding:11px;border:1px solid #b9cde3;border-radius:10px}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:#164a95;color:#fff}.secondary{background:#fff;color:#164a95;border:1px solid #164a95}.notice{padding:11px;border:1px solid #b9cde3;border-radius:11px;background:#edf4fb;margin:10px 0}.err{background:#fdecef}.actions{display:flex;gap:8px;flex-wrap:wrap}</style></head>
+<body><main class="card"><h1>Registrati o recupera la tua iscrizione</h1><div class="notice">Usa la stessa email comunicata al capitano.</div>
+<div class="field"><label>Email</label><input id="email" type="email"></div><div class="field"><label>Password</label><input id="password" type="password" minlength="8"></div>
+<button class="btn primary" onclick="signup()">Crea account</button><button class="btn primary" onclick="claim()">Collega iscrizione approvata</button>
+<div id="msg" class="notice">Pronto.</div><div class="actions"><button class="btn secondary" onclick="location.href='login.html?v=986'">Login</button><button class="btn secondary" onclick="location.href='account-home.html?v=986'">Home account</button></div></main>
 <script>
-const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);
-if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey){$('msg').textContent='Configurazione Supabase non disponibile.';throw new Error('PAM_V9_CONFIG mancante')}
-const s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
-let busy=false;
-
-function msg(t,e=false){$('msg').textContent=t;$('msg').className='notice '+(e?'err':'ok')}
-function setBusy(v){busy=v;$('signupBtn').disabled=v;$('claimBtn').disabled=v}
-
-async function signup(){
- if(busy)return;
- const email=$('email').value.trim().toLowerCase(),password=$('password').value;
- if(!email||password.length<8)return msg('Inserisci email e una password di almeno 8 caratteri.',true);
- setBusy(true);
- try{
-   const redirect=new URL('player-account.html?claim=1&v=984',location.href).href;
-   const r=await s.auth.signUp({email,password,options:{emailRedirectTo:redirect}});
-   if(r.error)throw r.error;
-   if(r.data.session){
-     msg('Account creato. Collegamento dell’iscrizione in corso…');
-     return await claim();
-   }
-   msg('Controlla la tua email, conferma l’account e poi torna su questa pagina.');
- }catch(err){msg(err.message||String(err),true)}
- finally{setBusy(false)}
-}
-
-async function claim(){
- if(busy)return;
- setBusy(true);
- try{
-   const session=await s.auth.getSession();
-   if(session.error)throw session.error;
-   if(!session.data.session)throw new Error('Prima accedi oppure conferma l’email del nuovo account.');
-
-   msg('Ricerca dell’iscrizione approvata in corso…');
-
-   const r=await s.rpc('claim_approved_player_profile');
-   if(r.error)throw r.error;
-
-   const data=Array.isArray(r.data)?r.data[0]:r.data;
-   const success = data?.success !== false;
-
-   if(!success)throw new Error(data?.message||'Non è stato possibile collegare l’iscrizione.');
-
-   msg(data?.message||'Iscrizione collegata correttamente. Apertura area giocatore…');
-
-   setTimeout(()=>location.replace('player-home.html?v=984'),700);
- }catch(err){
-   msg(err.message||String(err),true);
- }finally{
-   setBusy(false);
- }
-}
-
-window.signup=signup;window.claim=claim;
-
-(async()=>{
- const q=await s.auth.getSession();
- if(q.data.session){
-   $('signupBox').classList.add('hidden');
- }
- if(new URLSearchParams(location.search).get('claim')==='1'){
-   claim();
- }
-})();
-</script>
-</body>
-</html>
+const cfg=window.PAM_V9_CONFIG,s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);function m(t,e=false){msg.textContent=t;msg.className='notice '+(e?'err':'')}
+async function signup(){const email=$('email').value.trim().toLowerCase(),password=$('password').value;if(!email||password.length<8)return m('Inserisci email e password di almeno 8 caratteri.',true);const r=await s.auth.signUp({email,password,options:{emailRedirectTo:new URL('player-account.html?claim=1&v=986',location.href).href}});if(r.error)return m(r.error.message,true);if(r.data.session)return claim();m('Controlla la tua email e conferma l’account.')}
+async function claim(){const q=await s.auth.getSession();if(!q.data.session)return m('Prima effettua l’accesso.',true);const p=await s.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();if(String(p.data?.role||'').toLowerCase()==='admin')return m('Questo account è amministratore e non può essere convertito in Giocatore.',true);const r=await s.rpc('claim_approved_player_profile');if(r.error)return m(r.error.message,true);m(r.data?.message||'Iscrizione collegata.');setTimeout(()=>location.replace('player-home.html?v=986'),700)}
+window.signup=signup;window.claim=claim;if(new URLSearchParams(location.search).get('claim')==='1')claim();
+</script></body></html>

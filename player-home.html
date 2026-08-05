@@ -1,157 +1,60 @@
 <!doctype html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>AICS Padel Championship · Area Giocatore</title>
-<meta name="theme-color" content="#164a95">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
-:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97;--soft:#edf4fb}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(90deg,rgba(0,146,70,.05),transparent 23%,transparent 77%,rgba(206,43,55,.05)),var(--bg);font-family:system-ui;color:var(--text)}
-body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%);z-index:50}
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%);z-index:50}
 .shell{width:min(1050px,calc(100% - 24px));margin:auto;padding:22px 0 70px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0;box-shadow:0 13px 30px rgba(8,47,104,.11)}
-.hero{display:flex;align-items:center;gap:15px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.hero img{width:110px;height:70px;object-fit:contain;background:#fff;padding:7px;border-radius:14px}.hero h1{margin:0}.hero .muted{color:#dbe8f6}
-.muted{color:var(--muted)}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);line-height:1.5}.err{background:#fdecef;border-color:#dd7a85}.ok{background:#ebf8f0;border-color:#79bf90}
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.kpi{padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff;text-align:center}.kpi strong{display:block;font-size:25px;color:var(--b)}
+.hero{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.aics{width:105px;height:68px;object-fit:contain;background:#fff;padding:7px;border-radius:14px}.team-logo{width:82px;height:82px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:15px;padding:5px}.photo{width:110px;height:140px;object-fit:cover;border-radius:15px;border:1px solid var(--line)}
+.identity{display:grid;grid-template-columns:110px 1fr 82px 110px;gap:15px;align-items:center}.identity h2{margin:0;color:var(--bd)}.qr{width:108px;height:108px;display:grid;place-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px}
+.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb}.err{background:#fdecef;border-color:#dd7a85}.ok{background:#ebf8f0;border-color:#79bf90}.muted{color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.kpi{padding:14px;border:1px solid var(--line);border-radius:15px;text-align:center}.kpi strong{display:block;font-size:25px;color:var(--b)}
 .tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}.btn,.tab{border:0;border-radius:11px;padding:11px 13px;font-weight:900;cursor:pointer}.primary,.tab.active{background:var(--b);color:#fff}.secondary,.tab{background:#fff;color:var(--b);border:1px solid var(--b)}.danger{background:var(--r);color:#fff}.hidden{display:none!important}
-.comp{border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}.comp-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e8f1fb;font-size:12px;font-weight:900}
-.fixture{display:grid;grid-template-columns:125px 1fr auto;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:14px;margin:8px 0}.score{font-size:20px;font-weight:1000;color:var(--bd);text-align:center}.won{border-left:6px solid var(--g)}.lost{border-left:6px solid var(--r)}.draw{border-left:6px solid #d7a500}.future{border-left:6px solid var(--b)}
-.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:680px}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left}tr.me{background:#eaf2fb;font-weight:900}
-.stage{padding:12px;border-radius:13px;background:linear-gradient(90deg,rgba(0,146,70,.1),#fff,rgba(206,43,55,.1));border:1px solid var(--line);font-weight:900}
-@media(max-width:750px){.hero{align-items:flex-start}.kpis{grid-template-columns:repeat(2,1fr)}.fixture{grid-template-columns:1fr}.score{text-align:left}.actions,.tabs{display:grid}.btn,.tab{width:100%}}
-</style>
-</head>
-<body>
-<main class="shell">
-<section class="hero"><img src="assets/aics-logo.png" alt="AICS"><div><h1>Area Giocatore</h1><div class="muted" id="heroSub">AICS Padel Championship</div></div></section>
-<section class="card"><div id="status" class="notice">Caricamento dati giocatore…</div></section>
-
+.comp,.fixture{border:1px solid var(--line);border-radius:15px;padding:14px;margin:9px 0}.fixture{display:grid;grid-template-columns:130px 1fr auto;gap:12px}.score{font-size:20px;font-weight:1000}.stage{padding:11px;border-radius:12px;background:#edf4fb;font-weight:900}
+@media(max-width:760px){.identity{grid-template-columns:90px 1fr}.photo{width:90px;height:116px}.team-logo,.qr{grid-column:auto}.kpis{grid-template-columns:repeat(2,1fr)}.fixture{grid-template-columns:1fr}.tabs,.actions{display:grid}.btn,.tab{width:100%}}
+</style></head>
+<body><main class="shell">
+<section class="hero"><img class="aics" src="assets/aics-logo.png"><div><h1 style="margin:0">Area Giocatore</h1><div id="heroSub">AICS Padel Championship</div></div></section>
+<section class="card"><div id="status" class="notice">Caricamento dati…</div></section>
 <section id="app" class="hidden">
-<section class="card">
-<div class="actions" style="justify-content:space-between;align-items:center">
-<div><h2 id="teamName" style="margin:0">La mia squadra</h2><div id="teamMeta" class="muted"></div></div>
-<button class="btn primary" onclick="location.href='digital-card.html?v=985'">Apri tessera digitale</button>
-</div>
-</section>
-
-<section class="card">
-<h2>Riepilogo partite della mia squadra</h2>
-<div class="kpis">
-<div class="kpi"><strong id="played">0</strong>Giocate</div>
-<div class="kpi"><strong id="wins">0</strong>Vinte</div>
-<div class="kpi"><strong id="draws">0</strong>Pareggiate</div>
-<div class="kpi"><strong id="losses">0</strong>Perse</div>
-<div class="kpi"><strong id="upcoming">0</strong>Da giocare</div>
-</div>
-</section>
-
-<section class="card">
-<div class="tabs">
-<button class="tab active" data-view="overview" onclick="setView('overview')">Situazione competizioni</button>
-<button class="tab" data-view="calendar" onclick="setView('calendar')">Calendario completo</button>
-<button class="tab" data-view="results" onclick="setView('results')">Risultati</button>
-</div>
-</section>
-
-<section class="card"><div id="content"></div></section>
-
-<section class="card"><div class="actions">
-<button class="btn secondary" onclick="location.href='public.html?v=985'">Portale pubblico</button>
-<button class="btn secondary" onclick="location.href='account-home.html?v=985'">Verifica account</button>
-<button class="btn danger" onclick="logout()">Logout / Cambia account</button>
+<section class="card"><div class="identity">
+<img id="playerPhoto" class="photo" alt="Foto tessera">
+<div><h2 id="playerName">Giocatore</h2><div id="teamName" style="font-size:21px;font-weight:900;color:#164a95"></div><div id="teamMeta" class="muted"></div></div>
+<img id="teamLogo" class="team-logo" alt="Logo squadra">
+<div id="qrHome" class="qr"></div>
 </div></section>
-</section>
-</main>
-
-<div style="position:fixed;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.75">V9.8.4 PLAYER COMPLETE</div>
-
+<section class="card"><h2>Riepilogo partite della mia squadra</h2><div class="kpis">
+<div class="kpi"><strong id="played">0</strong>Giocate</div><div class="kpi"><strong id="wins">0</strong>Vinte</div><div class="kpi"><strong id="draws">0</strong>Pareggiate</div><div class="kpi"><strong id="losses">0</strong>Perse</div><div class="kpi"><strong id="upcoming">0</strong>Da giocare</div>
+</div></section>
+<section class="card"><div class="tabs"><button class="tab active" data-v="overview" onclick="setView('overview')">Situazione competizioni</button><button class="tab" data-v="calendar" onclick="setView('calendar')">Calendario completo</button><button class="tab" data-v="results" onclick="setView('results')">Risultati</button></div></section>
+<section class="card"><div id="content"></div></section>
+<section class="card"><div class="actions"><button class="btn primary" onclick="location.href='digital-card.html?v=986'">Tessera digitale</button><button class="btn secondary" onclick="location.href='public.html?v=986'">Portale pubblico</button><button class="btn danger" onclick="logout()">Logout / Cambia account</button></div></section>
+</section></main>
+<div style="position:fixed;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.75">V9.8.5 IDENTITY FIX</div>
 <script>
-const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);
-if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey)throw new Error('Configurazione Supabase mancante');
-const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
-let data=null,view='overview';
-const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
-const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
-const arr=x=>Array.isArray(x)?x:[];
-function teamName(id){return arr(data.teams).find(t=>t.id===id)?.name||arr(data.teams).find(t=>t.id===id)?.team_name||'Squadra'}
-function statusFor(id){return arr(data.statuses).find(x=>x.fixture_id===id)?.workflow_data||{}}
-function resultFor(f){const w=statusFor(f.id);return w.result_data||w.result||w.match_result||null}
-function scores(f){const r=resultFor(f);if(!r)return null;const h=Number(r.home_score??r.home_matches??r.home??NaN),a=Number(r.away_score??r.away_matches??r.away??NaN);return Number.isFinite(h)&&Number.isFinite(a)?{h,a}:null}
-function isDone(f){return !!(statusFor(f.id).homologated_at||scores(f))}
-function myResult(f){const s=scores(f);if(!s)return 'future';const mine=f.home_team_id===data.team_id?s.h:s.a,other=f.home_team_id===data.team_id?s.a:s.h;return mine>other?'won':mine<other?'lost':'draw'}
-function fmtDate(x){if(!x)return 'Data da definire';const d=new Date(x);return Number.isNaN(d.getTime())?String(x):d.toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
-function competition(f){return f.competition_code||f.competition||'COMPETIZIONE'}
-function stageText(f){
- return f.stage_name||f.phase_name||f.round_name||
- (f.round_number?`Giornata / turno ${f.round_number}`:'Fase da definire');
-}
-function fixtureHtml(f){
- const s=scores(f),home=teamName(f.home_team_id),away=teamName(f.away_team_id),cls=myResult(f);
- return `<article class="fixture ${cls}">
- <div><b>${esc(fmtDate(f.scheduled_at))}</b><div class="muted">${esc(labels[competition(f)]||competition(f))} · ${esc(stageText(f))}</div></div>
- <div><b>${esc(home)}</b><br><b>${esc(away)}</b><div class="muted">${esc(f.venue||'Impianto da definire')}</div></div>
- <div class="score">${s?`${s.h} – ${s.a}`:'Da giocare'}</div></article>`;
-}
-function stats(){
- const fs=arr(data.fixtures);let p=0,w=0,d=0,l=0,u=0;
- fs.forEach(f=>{if(!isDone(f)){u++;return}p++;const r=myResult(f);if(r==='won')w++;else if(r==='lost')l++;else d++});
- played.textContent=p;wins.textContent=w;draws.textContent=d;losses.textContent=l;upcoming.textContent=u;
-}
-function standingsFor(group){
- const ids=arr(data.members).filter(m=>m.group_id===group.id).map(m=>m.team_id);
- const rows={};ids.forEach(id=>rows[id]={id,g:0,v:0,n:0,p:0,mf:0,ms:0,pt:0});
- arr(data.fixtures).filter(f=>f.group_id===group.id&&isDone(f)).forEach(f=>{
-   const s=scores(f),H=rows[f.home_team_id],A=rows[f.away_team_id];if(!s||!H||!A)return;
-   H.g++;A.g++;H.mf+=s.h;H.ms+=s.a;A.mf+=s.a;A.ms+=s.h;
-   if(s.h>s.a){H.v++;A.p++;H.pt+=3}else if(s.a>s.h){A.v++;H.p++;A.pt+=3}else{H.n++;A.n++;H.pt++;A.pt++}
- });
- return Object.values(rows).sort((a,b)=>b.pt-a.pt||(b.mf-b.ms)-(a.mf-a.ms)||teamName(a.id).localeCompare(teamName(b.id)));
-}
-function overview(){
- const codes=[...new Set(arr(data.fixtures).map(competition))];
- if(!codes.length){content.innerHTML='<div class="notice">La squadra non è ancora inserita in competizioni pubblicate.</div>';return}
- content.innerHTML=codes.map(code=>{
-   const fs=arr(data.fixtures).filter(f=>competition(f)===code);
-   const done=fs.filter(isDone),next=fs.filter(f=>!isDone(f)).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at))[0];
-   const group=arr(data.groups).find(g=>g.competition_code===code);
-   let situation='';
-   if(group){
-     const rows=standingsFor(group),pos=rows.findIndex(r=>r.id===data.team_id);
-     situation=pos>=0?`<div class="stage">${pos+1}ª posizione nel ${esc(group.group_name||'girone')} · ${rows[pos].pt} punti</div>`:`<div class="stage">${esc(group.group_name||'Fase a gironi')}</div>`;
-   }else{
-     const last=done.sort((a,b)=>new Date(b.scheduled_at)-new Date(a.scheduled_at))[0];
-     situation=`<div class="stage">${esc(last?stageText(last):(next?stageText(next):'Fase ad eliminazione diretta'))}</div>`;
-   }
-   return `<div class="comp"><div class="comp-head"><h3>${esc(labels[code]||code)}</h3><span class="badge">${done.length}/${fs.length} giocate</span></div>${situation}
-   ${next?`<p><b>Prossima:</b> ${esc(fmtDate(next.scheduled_at))} · ${esc(teamName(next.home_team_id))} - ${esc(teamName(next.away_team_id))}</p>`:'<p class="muted">Nessuna partita successiva programmata.</p>'}</div>`;
- }).join('');
-}
-function render(){
- document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===view));
- if(view==='overview')return overview();
- let fs=arr(data.fixtures).slice().sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
- if(view==='results')fs=fs.filter(isDone).reverse();
- content.innerHTML=fs.length?fs.map(fixtureHtml).join(''):'<div class="notice">Nessuna partita disponibile.</div>';
-}
+const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id),sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+let data=null,view='overview';const arr=x=>Array.isArray(x)?x:[],esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+function tn(id){const t=arr(data.teams).find(x=>x.id===id);return t?.name||t?.team_name||'Squadra'}
+function wd(id){return arr(data.statuses).find(x=>x.fixture_id===id)?.workflow_data||{}}
+function sc(f){const r=wd(f.id).result_data||wd(f.id).result||null;if(!r)return null;const h=Number(r.home_score??r.home_matches??r.home),a=Number(r.away_score??r.away_matches??r.away);return Number.isFinite(h)&&Number.isFinite(a)?{h,a}:null}
+function done(f){return !!sc(f)}function myr(f){const s=sc(f);if(!s)return'future';const m=f.home_team_id===data.team_id?s.h:s.a,o=f.home_team_id===data.team_id?s.a:s.h;return m>o?'won':m<o?'lost':'draw'}
+function date(v){const d=new Date(v);return Number.isNaN(d.getTime())?'Data da definire':d.toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function comp(f){return f.competition_code||f.competition||'Competizione'}function stage(f){return f.stage_name||f.phase_name||f.round_name||(f.round_number?`Turno ${f.round_number}`:'Fase da definire')}
+function fx(f){const s=sc(f);return `<div class="fixture"><div><b>${esc(date(f.scheduled_at))}</b><div class="muted">${esc(comp(f))} · ${esc(stage(f))}</div></div><div><b>${esc(tn(f.home_team_id))}</b><br><b>${esc(tn(f.away_team_id))}</b><div class="muted">${esc(f.venue||'Impianto da definire')}</div></div><div class="score">${s?`${s.h} – ${s.a}`:'Da giocare'}</div></div>`}
+function stats(){let p=0,w=0,d=0,l=0,u=0;arr(data.fixtures).forEach(f=>{if(!done(f)){u++;return}p++;const r=myr(f);if(r==='won')w++;else if(r==='lost')l++;else d++});played.textContent=p;wins.textContent=w;draws.textContent=d;losses.textContent=l;upcoming.textContent=u}
+function render(){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.v===view));let fs=arr(data.fixtures).slice().sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));if(view==='results')fs=fs.filter(done).reverse();if(view!=='overview'){content.innerHTML=fs.length?fs.map(fx).join(''):'<div class="notice">Nessuna partita disponibile.</div>';return}
+const codes=[...new Set(fs.map(comp))];content.innerHTML=codes.map(c=>{const a=fs.filter(f=>comp(f)===c),played=a.filter(done).length,next=a.find(f=>!done(f));return `<div class="comp"><h3>${esc(c)}</h3><div class="stage">${played}/${a.length} partite giocate</div>${next?`<p><b>Prossima:</b> ${esc(date(next.scheduled_at))} · ${esc(tn(next.home_team_id))} - ${esc(tn(next.away_team_id))}</p>`:'<p class="muted">Nessuna prossima partita programmata.</p>'}</div>`}).join('')}
 function setView(v){view=v;render()}
-async function init(){
- try{
-  const q=await sb.auth.getSession();if(q.error)throw q.error;if(!q.data.session){location.replace('login.html?v=985');return}
-  const r=await sb.rpc('get_my_player_portal');if(r.error)throw r.error;
-  data=Array.isArray(r.data)?r.data[0]:r.data;
-  if(!data?.ok)throw new Error(data?.message||'Dati giocatore non disponibili.');
-  const t=data.team||{},p=data.player||{};
-  teamName.textContent=t.name||t.team_name||'La mia squadra';
-  teamMeta.textContent=[t.series,t.club_name,t.club_city].filter(Boolean).join(' · ');
-  heroSub.textContent=[p.first_name,p.last_name,t.name].filter(Boolean).join(' · ');
-  status.textContent='Profilo, squadra e competizioni caricati correttamente.';status.className='notice ok';
-  app.classList.remove('hidden');stats();render();
- }catch(e){status.textContent='Errore: '+(e.message||String(e));status.className='notice err'}
-}
-async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=985')}
+async function init(){try{const q=await sb.auth.getSession();if(!q.data.session){location.replace('login.html?v=986');return}const p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();if(String(p.data?.role||'').toLowerCase()==='admin'){location.replace('index.html?v=986');return}
+const r=await sb.rpc('get_my_player_portal');if(r.error)throw r.error;data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.ok)throw new Error(data?.message||'Dati non disponibili');
+const pl=data.player||{},t=data.team||{};playerName.textContent=[pl.first_name,pl.last_name].filter(Boolean).join(' ')||'Giocatore';teamName.textContent=t.name||t.team_name||'Squadra';teamMeta.textContent=[t.series,t.club_name,t.club_city].filter(Boolean).join(' · ');heroSub.textContent=teamName.textContent;
+playerPhoto.src=pl.photo_url||pl.profile_photo_url||'';if(!playerPhoto.src)playerPhoto.style.display='none';teamLogo.src=t.logo_url||'';if(!teamLogo.src)teamLogo.style.display='none';
+new QRCode(qrHome,{text:new URL(`digital-card.html?v=986`,location.href).href,width:96,height:96});
+status.textContent='Profilo e squadra caricati correttamente.';status.className='notice ok';app.classList.remove('hidden');stats();render()}catch(e){status.textContent='Errore: '+(e.message||String(e));status.className='notice err'}}
+async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=986')}
 window.setView=setView;window.logout=logout;init();
-</script>
-</body>
-</html>
+</script></body></html>
