@@ -250,7 +250,21 @@ function teamRow(t,current){
     </div>
   </div>`;
 }
+
+async function ensureCompetitionCanRegenerate(actionLabel){
+  const code=$('competition').value;
+  const pub=await s.from('championship_publication').select('is_published').eq('competition_code',code).maybeSingle();
+  if(pub.error&&pub.error.code!=='PGRST116')throw pub.error;
+  if(!pub.data?.is_published)return true;
+  const results=await s.from('fixtures').select('id,status').eq('competition_code',code);
+  if(results.error)throw results.error;
+  const official=(results.data||[]).filter(f=>['giocata','omologata','homologated','completed'].includes(String(f.status||'').toLowerCase()));
+  if(official.length)throw new Error(`Operazione bloccata: sono presenti ${official.length} risultati ufficiali.`);
+  return prompt(`${actionLabel}\n\nLa competizione è già pubblicata. Digita CONFERMO per procedere.`)==='CONFERMO';
+}
+
 async function createEmptyGroups(){
+ try{if(!await ensureCompetitionCanRegenerate('Rigenerazione gironi'))return msg('Operazione annullata.');}catch(e){return msg(e.message,true)}
  let n=Math.max(1,parseInt($('groupCount').value||'1'));let code=$('competition').value;
  let del=await s.from('competition_groups').delete().eq('competition_code',code);if(del.error)return msg(del.error.message,true);
  let payload=Array.from({length:n},(_,i)=>({competition_code:code,group_name:'Girone '+String.fromCharCode(65+i),sort_order:i+1}));
@@ -265,6 +279,7 @@ async function moveTeam(teamId,groupId){
 }
 function distance(a,b){if(a.latitude==null||b.latitude==null)return 9999;let R=6371,dLat=(b.latitude-a.latitude)*Math.PI/180,dLon=(b.longitude-a.longitude)*Math.PI/180,x=Math.sin(dLat/2)**2+Math.cos(a.latitude*Math.PI/180)*Math.cos(b.latitude*Math.PI/180)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
 async function autoAssign(){
+ try{if(!await ensureCompetitionCanRegenerate('Nuova assegnazione automatica'))return msg('Operazione annullata.');}catch(e){return msg(e.message,true)}
  if(!groups.length)return msg('Prima crea i gironi.',true);
  await s.from('competition_group_teams').delete().in('group_id',groups.map(g=>g.id));
  let buckets=groups.map(g=>({g,items:[]}));let sorted=[...teams];

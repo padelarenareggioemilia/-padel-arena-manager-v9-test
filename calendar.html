@@ -334,6 +334,19 @@ controllando anche le partite già presenti nelle altre competizioni.
 </section>
 
 <script>
+
+async function confirmProtectedCalendarAction(actionLabel){
+  const code=$('competition').value;
+  const pub=await s.from('championship_publication').select('is_published').eq('competition_code',code).maybeSingle();
+  if(pub.error&&pub.error.code!=='PGRST116')throw pub.error;
+  if(!pub.data?.is_published)return true;
+  const fr=await s.from('fixtures').select('id,status').eq('competition_code',code);
+  if(fr.error)throw fr.error;
+  const official=(fr.data||[]).filter(f=>['giocata','omologata','homologated','completed'].includes(String(f.status||'').toLowerCase()));
+  if(official.length)throw new Error(`Operazione bloccata: esistono ${official.length} partite con risultati ufficiali.`);
+  return prompt(`${actionLabel}\n\nIl calendario è già pubblicato. Digita CONFERMO per procedere.`)==='CONFERMO';
+}
+
 const c=window.PAM_V9_CONFIG;
 const s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);
 const $=id=>document.getElementById(id);

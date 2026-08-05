@@ -18,13 +18,13 @@ async function destinationForUser(user){
     const staff=(roles.data||[]).find(x=>['captain','secretary'].includes(x.role));
     if(staff)return `captain.html?team=${encodeURIComponent(staff.team_id)}`;
     const player=(roles.data||[]).find(x=>x.role==='player');
-    if(player)return `player.html?team=${encodeURIComponent(player.team_id)}`;
+    if(player)return `player-dashboard.html?team=${encodeURIComponent(player.team_id)}`;
   }
   if(email){
     const captain=await client.from('teams').select('id').ilike('captain_email',email).limit(1).maybeSingle();
     if(!captain.error&&captain.data?.id)return `captain.html?team=${encodeURIComponent(captain.data.id)}`;
     const roster=await client.from('roster_requests').select('team_id,status').ilike('email',email).eq('status','approved').limit(1).maybeSingle();
-    if(!roster.error&&roster.data?.team_id)return `player.html?team=${encodeURIComponent(roster.data.team_id)}`;
+    if(!roster.error&&roster.data?.team_id)return `player-dashboard.html?team=${encodeURIComponent(roster.data.team_id)}`;
   }
   return 'public.html?v=recovery10';
 }

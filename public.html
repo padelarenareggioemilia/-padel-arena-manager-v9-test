@@ -21,11 +21,14 @@
     <img id="headerLogo" class="logo" src="assets/aics-logo.png" alt="AICS">
     <div>
       <h1 id="headerTitle">AICS PADEL CHAMPIONSHIP</h1>
-      <div id="headerSubtitle">Seleziona la competizione che desideri consultare</div><div style="font-size:11px;opacity:.8;margin-top:4px">V9 RECOVERY 1.0 · MODALITÀ FREE</div>
+      <div id="headerSubtitle">Navigazione Free: calendari, risultati e classifiche</div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" onclick="location.href='login.html?v=recovery10'">Accedi</button><button class="btn secondary" onclick="location.href='public.html?v=recovery10'">Naviga Free</button></div>
+  <button id="headerButton" class="btn secondary" onclick="location.href='login.html?v=recovery95'">Accedi / Cambia account</button>
 </header>
+<section class="card" style="margin-top:12px">
+  <div class="notice"><b>Modalità Free attiva.</b> Puoi consultare Serie A, Serie B, Serie C, Coppa Italia e Supercoppa senza effettuare l'accesso.</div>
+</section>
 
 <section id="landingView" class="card">
   <div class="notice">Clicca sullo stemma per aprire calendario, risultati e classifica della singola competizione.</div>
@@ -54,11 +57,11 @@ const $=id=>document.getElementById(id);
 
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
 const logos={
-  SERIE_A:'assets/aics-serie-a-2027.png?v=11',
-  SERIE_B:'assets/aics-serie-b-2027.png?v=11',
-  SERIE_C:'assets/aics-serie-c-2027.png?v=11',
-  COPPA_ITALIA:'assets/aics-coppa-italia-2027.png?v=11',
-  SUPERCOPPA:'assets/aics-supercoppa-2027.png?v=11'
+  SERIE_A:'assets/serie-a.png?v=987',
+  SERIE_B:'assets/serie-b.png?v=987',
+  SERIE_C:'assets/serie-c.png?v=987',
+  COPPA_ITALIA:'assets/coppa-italia.png?v=987',
+  SUPERCOPPA:'assets/supercoppa.png?v=987'
 };
 
 const code=new URLSearchParams(location.search).get('code');

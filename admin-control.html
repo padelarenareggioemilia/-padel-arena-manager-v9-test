@@ -37,13 +37,13 @@
 </section>
 
 <section class="card">
-<h2>Pubblica calendario e avvia la prima formazione</h2>
+<h2>📢 PUBBLICA CALENDARI E PARTITE</h2>
 <div class="grid2">
   <div class="field"><label>Competizione</label><select id="competition">
     <option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option>
     <option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option>
   </select></div>
-  <div class="field"><label>Azione</label><button id="publishBtn" class="btn success" style="width:100%" onclick="publishCalendar()">Pubblica e avvia prima formazione</button></div>
+  <div class="field"><label>Azione</label><button id="publishBtn" class="btn success" style="width:100%" onclick="publishCalendar()">PUBBLICA DEFINITIVAMENTE</button></div>
 </div>
 <div class="notice warn"><b>Funzionamento:</b> vengono create le finestre operative di tutte le gare. Per ogni squadra si apre immediatamente la formazione della sua prima partita; le successive restano in attesa fino all’omologazione della gara precedente.</div>
 <div id="publishMsg" class="notice hidden"></div>
@@ -132,22 +132,17 @@ async function saveControls(){
   box('publishMsg','Impostazioni globali aggiornate.');
 }
 async function publishCalendar(){
-  if(!confirm('Pubblicare il calendario e aprire la prima formazione di ogni squadra?'))return;
+  const code=competition.value,label=labels[code]||code;
+  if(!confirm(`ATTENZIONE\n\nStai per pubblicare il calendario ufficiale di ${label}.\nSarà visibile a capitani, giocatori e utenti Free.\nLa rigenerazione verrà protetta.\n\nVuoi continuare?`))return;
+  if(prompt(`Per pubblicare definitivamente ${label}, digita PUBBLICA`)!=='PUBBLICA')return box('publishMsg','Pubblicazione annullata.',true);
   publishBtn.disabled=true;publishBtn.textContent='Pubblicazione in corso…';
-  box('publishMsg','Operazione avviata. Sto creando le finestre delle formazioni…');
   try{
-    const r=await sb.rpc('publish_competition_calendar',{p_competition_code:competition.value});
-    if(r.error)throw r.error;
-    const data=r.data||{};
-    box('publishMsg',
-      `Operazione completata.\nPartite attivate: ${data.fixtures_activated??data}\nPrime formazioni aperte: ${data.first_lineups_opened??'verifica elenco sotto'}`
-    );
-    await loadMatches();
-  }catch(e){
-    box('publishMsg','Pubblicazione non riuscita: '+(e.message||String(e)),true);
-  }finally{
-    publishBtn.disabled=false;publishBtn.textContent='Pubblica e avvia prima formazione';
-  }
+    const r=await sb.rpc('publish_competition_calendar',{p_competition_code:code});if(r.error)throw r.error;
+    await sb.from('championship_publication').upsert({competition_code:code,is_published:true,published_at:new Date().toISOString(),updated_at:new Date().toISOString()},{onConflict:'competition_code'});
+    box('publishMsg',`${label} pubblicata correttamente. Gironi e calendario sono protetti.`);
+    await Promise.all([loadMatches(),loadPublication()]);
+  }catch(e){box('publishMsg','Pubblicazione non riuscita: '+(e.message||String(e)),true)}
+  finally{publishBtn.disabled=false;publishBtn.textContent='PUBBLICA DEFINITIVAMENTE'}
 }
 async function loadPublication(){
   const r=await sb.from('championship_publication').select('*');

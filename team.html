@@ -586,6 +586,7 @@ function renderAdminRoster(items){
       </div>
       <div class="admin-player-actions">
         <button class="btn secondary btn-mini" onclick="openAdminPlayerEditor('${p.id}')">Modifica</button>
+        <button class="btn primary btn-mini" onclick="location.href='digital-card.html?player=${p.id}'">Tessera QR</button>
         <button class="btn danger btn-mini" onclick="deleteAdminPlayer('${p.id}',${JSON.stringify(((p.first_name||'')+' '+(p.last_name||'')).trim())})">Elimina</button>
       </div>
     </div>`).join('')||'<div class="notice">Nessun giocatore presente.</div>';

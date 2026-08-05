@@ -1,0 +1,21 @@
+AICS PADEL CHAMPIONSHIP V9.8.7
+
+Build completa basata sulla Recovery 95%, senza riscrivere le parti già funzionanti.
+
+Correzioni:
+- loghi corretti nel portale Free;
+- area giocatore con squadra, partite, certificato e tessera QR;
+- riconoscimento capitano dalla scheda tecnica;
+- pulsante unico MODIFICA SQUADRA;
+- inserimento giocatore capitano;
+- certificati medici;
+- tessere QR per capitano e Admin;
+- pubblicazione evidente;
+- conferme forti su pubblicazione e rigenerazione;
+- blocco rigenerazione con risultati ufficiali.
+
+Installazione:
+1. Esegui SUPABASE_V9_8_7_UPDATE.sql.
+2. Carica tutti i file esclusivamente nel repository V9.
+3. Non toccare il V8.
+4. Apri login.html?v=987.

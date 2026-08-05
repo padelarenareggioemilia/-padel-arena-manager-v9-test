@@ -187,7 +187,7 @@ async function portal(){
  let r=await s.from('roster_requests').select('*').eq('team_id',team.id).order('created_at',{ascending:false});
  b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}<h2>${e(team.name)}</h2>
  ${warning}<div class="actions"><button class="btn primary" onclick="copyPlayers()">Copia link giocatori</button>
- <button class="btn secondary" onclick="portal()">Aggiorna</button><button class="btn secondary" onclick="location.href='matches-view.html'">Le mie partite</button>
+ <button class="btn secondary" onclick="portal()">Aggiorna</button><button class="btn secondary" onclick="location.href='matches-view.html?team=${team.id}'">Tutte le partite della squadra</button>
  <button class="btn success" onclick="document.getElementById('captainManagement').scrollIntoView({behavior:'smooth'})">Inserisci giocatore manualmente</button></div><hr>
  <div class="notice"><b>Segretari di squadra:</b> il capitano può nominare da 0 a 3 giocatori approvati con account. I segretari avranno le stesse funzioni operative del capitano per formazioni e risultati.</div><h3>Richieste giocatori</h3>${(r.data||[]).map(x=>`<div class="notice player-row">
  ${x.photo_url?`<img class="player-photo" src="${e(x.photo_url)}" alt="Foto tessera">`:`<div class="player-photo"></div>`}
@@ -218,14 +218,14 @@ init();
 
   <div class="captain-grid">
     <div class="captain-tile">
-      <h3>Dati squadra</h3>
-      <div class="field"><label>Nome squadra</label><input id="captainTeamName"></div>
-      <div class="field"><label>Club / società</label><input id="captainClubName"></div>
-      <div class="notice">
-        Campo di casa, giorno e orario delle partite possono essere modificati esclusivamente dall’amministratore.
-      </div>
-      <div class="field"><label>Note squadra</label><textarea id="captainTeamNotes" rows="4"></textarea></div>
-      <button class="btn primary" onclick="saveCaptainTeam()">Salva dati squadra</button>
+      <details>
+        <summary class="btn primary" style="display:inline-block">MODIFICA SQUADRA</summary>
+        <div class="field"><label>Nome squadra</label><input id="captainTeamName" readonly></div>
+        <div class="field"><label>Club / società</label><input id="captainClubName" readonly></div>
+        <div class="notice">Nome squadra, club, campo, giorno e orario sono modificabili soltanto dall’amministratore.</div>
+        <div class="field"><label>Note squadra</label><textarea id="captainTeamNotes" rows="4"></textarea></div>
+        <button class="btn primary" onclick="saveCaptainTeam()">Salva le modifiche consentite</button>
+      </details>
     </div>
 
     <div class="captain-tile">
@@ -235,6 +235,7 @@ init();
       <div class="field"><label>Nome *</label><input id="newPlayerFirstName"></div>
       <div class="field"><label>Cognome *</label><input id="newPlayerLastName"></div>
       <div class="field"><label>Data di nascita *</label><input id="newPlayerBirthDate" type="date"></div>
+      <div class="field"><label>Sesso *</label><select id="newPlayerGender"><option value="">Seleziona</option><option value="M">Maschile</option><option value="F">Femminile</option></select></div>
       <div class="field"><label>Luogo di nascita *</label><input id="newPlayerBirthPlace"></div>
       <div class="field"><label>Comune di residenza *</label><input id="newPlayerResidenceTown"></div>
       <div class="field"><label>CAP *</label><input id="newPlayerPostalCode" inputmode="numeric" maxlength="5"></div>
@@ -334,7 +335,9 @@ async function loadCaptainWorkspace(){
     if(roleCheck.error) throw roleCheck.error;
 
     const role=(roleCheck.data||[]).find(r=>r.active&&['captain','secretary'].includes(r.role));
-    captainAccessEnabled=Boolean(role && captainTeam?.captain_access_enabled!==false);
+    const accountEmail=(sessionResult.data.session.user.email||'').trim().toLowerCase();
+    const captainEmail=(captainTeam?.captain_email||'').trim().toLowerCase();
+    captainAccessEnabled=Boolean(captainTeam?.captain_access_enabled!==false && (role || (accountEmail&&accountEmail===captainEmail)));
 
     const panel=document.getElementById('captainManagement');
     panel.classList.remove('permission-off');
@@ -356,16 +359,10 @@ async function loadCaptainWorkspace(){
 }
 
 async function saveCaptainTeam(){
-  if(!captainAccessEnabled) return captainMsg('Funzione non autorizzata.',true);
-  const payload={
-    name:document.getElementById('captainTeamName').value.trim(),
-    club_name:document.getElementById('captainClubName').value.trim(),
-    notes:document.getElementById('captainTeamNotes').value.trim(),
-    updated_at:new Date().toISOString()
-  };
-  const r=await s.from('teams').update(payload).eq('id',captainTeamId);
-  if(r.error) return captainMsg(r.error.message,true);
-  captainMsg('Dati squadra aggiornati correttamente.');
+  if(!captainAccessEnabled)return captainMsg('Funzione non autorizzata.',true);
+  const r=await s.rpc('captain_update_team_notes',{p_team_id:captainTeamId,p_notes:document.getElementById('captainTeamNotes').value.trim()});
+  if(r.error)return captainMsg(r.error.message,true);
+  captainMsg('Note squadra aggiornate correttamente.');
   loadCaptainWorkspace();
 }
 
@@ -383,52 +380,32 @@ async function uploadCaptainPlayerPhoto(file){
 
 async function addPlayerManually(){
   if(!captainAccessEnabled)return captainMsg('Funzione non autorizzata.',true);
-  const ids=['newPlayerFirstName','newPlayerLastName','newPlayerBirthDate','newPlayerBirthPlace','newPlayerResidenceTown','newPlayerPostalCode','newPlayerProvince','newPlayerEmail','newPlayerPhone','newPlayerFitp','newPlayerMedicalExpiry'];
+  const ids=['newPlayerFirstName','newPlayerLastName','newPlayerBirthDate','newPlayerGender','newPlayerBirthPlace','newPlayerResidenceTown','newPlayerPostalCode','newPlayerProvince','newPlayerEmail','newPlayerPhone','newPlayerFitp','newPlayerMedicalExpiry'];
   const v=Object.fromEntries(ids.map(id=>[id,document.getElementById(id).value.trim()]));
   if(ids.some(id=>!v[id]))return captainMsg('Compila tutti i dati obbligatori del giocatore.',true);
   if(!/^\d{5}$/.test(v.newPlayerPostalCode))return captainMsg('Il CAP deve contenere 5 cifre.',true);
+  const button=[...document.querySelectorAll('button')].find(x=>x.textContent.trim()==='Inserisci giocatore');
+  if(button){button.disabled=true;button.textContent='Inserimento in corso…'}
   try{
     const photoUrl=await uploadCaptainPlayerPhoto(document.getElementById('newPlayerPhoto').files[0]);
-    const payload={
-      team_id:captainTeamId,photo_url:photoUrl,
-      first_name:v.newPlayerFirstName,last_name:v.newPlayerLastName,
-      birth_date:v.newPlayerBirthDate,birth_place:v.newPlayerBirthPlace,
-      residence_town:v.newPlayerResidenceTown,residence_postal_code:v.newPlayerPostalCode,
-      residence_province:v.newPlayerProvince.toUpperCase(),
-      email:v.newPlayerEmail.toLowerCase(),phone:v.newPlayerPhone,
-      fitp_ranking:v.newPlayerFitp.toUpperCase(),
-      medical_certificate_expiry:v.newPlayerMedicalExpiry,
-      status:'approved',decided_at:new Date().toISOString(),
-      created_at:new Date().toISOString(),updated_at:new Date().toISOString()
-    };
-    const r=await s.from('roster_requests').insert(payload).select('id').maybeSingle();
+    const payload={photo_url:photoUrl,first_name:v.newPlayerFirstName,last_name:v.newPlayerLastName,birth_date:v.newPlayerBirthDate,gender:v.newPlayerGender,birth_place:v.newPlayerBirthPlace,residence_town:v.newPlayerResidenceTown,residence_postal_code:v.newPlayerPostalCode,residence_province:v.newPlayerProvince.toUpperCase(),email:v.newPlayerEmail.toLowerCase(),phone:v.newPlayerPhone,fitp_ranking:v.newPlayerFitp.toUpperCase(),medical_certificate_expiry:v.newPlayerMedicalExpiry};
+    const r=await s.rpc('captain_add_player_complete',{p_team_id:captainTeamId,p_player:payload});
     if(r.error)throw r.error;
-    if(!r.data?.id)throw new Error('Il database non ha confermato l’inserimento.');
     ids.forEach(id=>document.getElementById(id).value='');
     document.getElementById('newPlayerPhoto').value='';
-    captainMsg('Giocatore inserito con profilo completo.');
-    loadCaptainWorkspace();
+    captainMsg('Giocatore inserito e approvato correttamente.');
+    await loadCaptainWorkspace();await portal();
   }catch(error){captainMsg(error.message||String(error),true)}
+  finally{if(button){button.disabled=false;button.textContent='Inserisci giocatore'}}
 }
 
 function renderCaptainPlayers(){
   const host=document.getElementById('captainPlayers');
   host.innerHTML=captainPlayers.map(player=>`
     <div class="player-card">
-      <div class="row">
-        <div>
-          <b>${esc(player.first_name||'')} ${esc(player.last_name||'')}</b>
-          <div class="muted small">${esc(player.email||'Nessuna email')} · ${esc(player.fitp_ranking||'FITP non indicata')}</div>
-        </div>
-        <span class="badge">${esc(player.status||'approved')}</span>
-      </div>
-      <div class="actions">
-        <button class="btn secondary tiny" onclick="editCaptainPlayer('${player.id}')">Modifica</button>
-        ${player.status!=='approved'?`<button class="btn success tiny" onclick="setPlayerStatus('${player.id}','approved')">Approva</button>`:''}
-        ${player.status!=='rejected'?`<button class="btn secondary tiny" onclick="setPlayerStatus('${player.id}','rejected')">Rifiuta</button>`:''}
-      </div>
-    </div>
-  `).join('')||'<div class="notice">Nessun giocatore presente.</div>';
+      <div class="row"><div><b>${esc(player.first_name||'')} ${esc(player.last_name||'')}</b><div class="muted small">${esc(player.email||'Nessuna email')} · ${esc(player.fitp_ranking||'FITP non indicata')}</div><div class="muted small">Certificato: ${esc(player.medical_certificate_expiry||'non indicato')}</div></div><span class="badge">${esc(player.status||'approved')}</span></div>
+      <div class="actions"><button class="btn secondary tiny" onclick="editCaptainPlayer('${player.id}')">Modifica dati e certificato</button><button class="btn primary tiny" onclick="location.href='digital-card.html?player=${player.id}'">Tessera virtuale QR</button>${player.status!=='approved'?`<button class="btn success tiny" onclick="setPlayerStatus('${player.id}','approved')">Approva</button>`:''}${player.status!=='rejected'?`<button class="btn secondary tiny" onclick="setPlayerStatus('${player.id}','rejected')">Rifiuta</button>`:''}</div>
+    </div>`).join('')||'<div class="notice">Nessun giocatore presente.</div>';
 }
 
 async function editCaptainPlayer(playerId){

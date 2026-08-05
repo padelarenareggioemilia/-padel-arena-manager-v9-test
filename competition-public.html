@@ -37,7 +37,13 @@ const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supa
 const $=id=>document.getElementById(id);
 const code=new URLSearchParams(location.search).get('code')||'SERIE_A';
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
-const logos={SERIE_A:'assets/aics-serie-a-2027.png',SERIE_B:'assets/aics-serie-b-2027.png',SERIE_C:'assets/aics-serie-c-2027.png',COPPA_ITALIA:'assets/aics-coppa-italia-2027.png',SUPERCOPPA:'assets/aics-supercoppa-2027.png'};
+const logos={
+  SERIE_A:'assets/serie-a.png?v=987',
+  SERIE_B:'assets/serie-b.png?v=987',
+  SERIE_C:'assets/serie-c.png?v=987',
+  COPPA_ITALIA:'assets/coppa-italia.png?v=987',
+  SUPERCOPPA:'assets/supercoppa.png?v=987'
+};
 let teams=[],groups=[],members=[],fixtures=[],statuses=[],view='current';
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 function teamName(id,p){return teams.find(t=>t.id===id)?.name||p||'Da definire'}
