@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AICS Padel Championship · Area Capitano</title>
+<meta name="theme-color" content="#164a95">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%);z-index:99}
+.shell{width:min(1100px,calc(100% - 24px));margin:auto;padding:22px 0 70px}
+.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0;box-shadow:0 13px 30px rgba(8,47,104,.11)}
+.hero{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}
+.aics{width:105px;height:68px;object-fit:contain;background:#fff;padding:7px;border-radius:14px}
+.identity{display:grid;grid-template-columns:90px 1fr auto;gap:15px;align-items:center}
+.team-logo{width:90px;height:90px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:15px;padding:5px}
+.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:10px 0;line-height:1.45}
+.ok{background:#eaf8f0;border-color:#77bd90}.err{background:#fdecef;border-color:#dd7a85}.muted{color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.kpi{padding:14px;border:1px solid var(--line);border-radius:15px;text-align:center;background:#fff}
+.kpi strong{display:block;font-size:25px;color:var(--b)}
+.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn,.tab{border:0;border-radius:11px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}
+.primary,.tab.active{background:var(--b);color:#fff}
+.secondary,.tab{background:#fff;color:var(--b);border:1px solid var(--b)}
+.success{background:var(--g);color:#fff}.danger{background:var(--r);color:#fff}.tiny{padding:7px 9px;font-size:12px}
+.hidden{display:none!important}
+.player{display:grid;grid-template-columns:65px 1fr auto;gap:12px;align-items:start;border:1px solid var(--line);border-radius:14px;padding:13px;margin:8px 0}
+.photo{width:62px;height:80px;object-fit:cover;border-radius:10px;border:1px solid var(--line);background:#fff}
+.fixture{display:grid;grid-template-columns:130px 1fr auto;gap:12px;padding:13px;border:1px solid var(--line);border-radius:14px;margin:8px 0}
+.field{margin:9px 0}label{display:block;font-weight:900;margin-bottom:5px}textarea{width:100%;min-height:100px;padding:11px;border:1px solid var(--line);border-radius:10px}
+@media(max-width:750px){.identity{grid-template-columns:75px 1fr}.kpis{grid-template-columns:1fr 1fr}.tabs,.actions{display:grid}.btn,.tab{width:100%}.player,.fixture{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="shell">
+<section class="hero">
+  <img class="aics" src="assets/aics-logo.png" alt="AICS">
+  <div><h1 style="margin:0">Area Capitano</h1><div id="heroSub">AICS Padel Championship</div></div>
+</section>
+
+<section class="card">
+  <div id="status" class="notice">Avvio Area Capitano…</div>
+</section>
+
+<section id="app" class="hidden">
+  <section class="card">
+    <div class="identity">
+      <img id="teamLogo" class="team-logo" alt="Logo squadra">
+      <div>
+        <h2 id="teamName" style="margin:0">Squadra</h2>
+        <div id="teamMeta" class="muted"></div>
+      </div>
+      <button class="btn secondary" type="button" onclick="loadData()">Aggiorna</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="kpis">
+      <div class="kpi"><strong id="playersN">0</strong>Giocatori</div>
+      <div class="kpi"><strong id="pendingN">0</strong>Da approvare</div>
+      <div class="kpi"><strong id="playedN">0</strong>Giocate</div>
+      <div class="kpi"><strong id="futureN">0</strong>Da giocare</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="tabs">
+      <button class="tab active" data-view="players" type="button" onclick="setView('players')">Rosa e richieste</button>
+      <button class="tab" data-view="calendar" type="button" onclick="setView('calendar')">Calendario</button>
+      <button class="tab" data-view="management" type="button" onclick="setView('management')">Gestione squadra</button>
+    </div>
+  </section>
+
+  <section class="card"><div id="content"></div></section>
+
+  <section class="card">
+    <div class="actions">
+      <button class="btn primary" type="button" onclick="copyPlayers()">Copia link giocatori</button>
+      <button class="btn secondary" type="button" onclick="openTeamMatches()">Partite squadra</button>
+      <button class="btn danger" type="button" onclick="logout()">Logout</button>
+    </div>
+  </section>
+</section>
+</main>
+
+<div style="position:fixed;right:8px;bottom:8px;z-index:999;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.8">
+V9.8.7.2 EMERGENCY RESTORE
+</div>
+
+<script>
+(function(){
+  const statusEl = document.getElementById('status');
+
+  window.addEventListener('error', function(event){
+    statusEl.textContent = 'Errore JavaScript: ' + (event.message || 'errore sconosciuto');
+    statusEl.className = 'notice err';
+  });
+
+  window.addEventListener('unhandledrejection', function(event){
+    const reason = event.reason?.message || String(event.reason || 'errore sconosciuto');
+    statusEl.textContent = 'Errore applicazione: ' + reason;
+    statusEl.className = 'notice err';
+  });
+})();
+</script>
+
+<script>
+const cfg = window.PAM_V9_CONFIG;
+const $ = id => document.getElementById(id);
+
+let sb = null;
+let data = null;
+let currentView = 'players';
+
+function arrays(value){
+  return Array.isArray(value) ? value : [];
+}
+
+function safe(value){
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[char]));
+}
+
+function teamLabel(id){
+  const team = arrays(data?.teams).find(item => item.id === id);
+  return team?.name || team?.team_name || 'Squadra';
+}
+
+function resultScore(fixture){
+  const status = arrays(data?.statuses).find(item => item.fixture_id === fixture.id);
+  const workflow = status?.workflow_data || {};
+  const result = workflow.result_data || workflow.result || null;
+
+  if (!result) return null;
+
+  const home = Number(result.home_score ?? result.home_matches ?? result.home);
+  const away = Number(result.away_score ?? result.away_matches ?? result.away);
+
+  return Number.isFinite(home) && Number.isFinite(away)
+    ? {home, away}
+    : null;
+}
+
+function formatDate(value){
+  if (!value) return 'Da definire';
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleString('it-IT');
+}
+
+function renderPlayers(){
+  const players = arrays(data.players);
+
+  $('content').innerHTML = players.length
+    ? players.map(player => `
+      <div class="player">
+        ${
+          player.photo_url
+            ? `<img class="photo" src="${safe(player.photo_url)}" alt="Foto giocatore">`
+            : `<div class="photo"></div>`
+        }
+
+        <div>
+          <b>${safe(player.first_name || '')} ${safe(player.last_name || '')}</b>
+          <div class="muted">
+            ${safe(player.email || '')} · ${safe(player.fitp_ranking || 'FITP non indicata')}
+          </div>
+          <div class="muted">Stato: ${safe(player.status || '')}</div>
+        </div>
+
+        <div class="actions">
+          ${
+            player.status === 'pending'
+              ? `
+                <button class="btn success tiny" type="button"
+                  onclick="setPlayerStatus('${player.id}','approved')">
+                  Approva
+                </button>
+                <button class="btn danger tiny" type="button"
+                  onclick="setPlayerStatus('${player.id}','rejected')">
+                  Rifiuta
+                </button>
+              `
+              : ''
+          }
+        </div>
+      </div>
+    `).join('')
+    : '<div class="notice">Nessun giocatore presente.</div>';
+}
+
+function renderCalendar(){
+  const fixtures = arrays(data.fixtures);
+
+  $('content').innerHTML = fixtures.length
+    ? fixtures.map(fixture => {
+      const score = resultScore(fixture);
+
+      return `
+        <div class="fixture">
+          <div><b>${safe(formatDate(fixture.scheduled_at))}</b></div>
+
+          <div>
+            <b>${safe(teamLabel(fixture.home_team_id))}</b><br>
+            <b>${safe(teamLabel(fixture.away_team_id))}</b>
+          </div>
+
+          <div>
+            ${score ? `${score.home} – ${score.away}` : 'Da giocare'}
+          </div>
+        </div>
+      `;
+    }).join('')
+    : '<div class="notice">Nessuna partita disponibile.</div>';
+}
+
+function renderManagement(){
+  $('content').innerHTML = `
+    <h3>Note squadra</h3>
+
+    <div class="field">
+      <label for="teamNotes">Note operative</label>
+      <textarea id="teamNotes">${safe(data.team?.notes || '')}</textarea>
+    </div>
+
+    <button class="btn primary" type="button" onclick="saveNotes()">
+      Salva note
+    </button>
+
+    <div class="notice">
+      Nome squadra, campo, giorno e orario restano modificabili soltanto
+      dall’amministratore.
+    </div>
+  `;
+}
+
+function render(){
+  document.querySelectorAll('.tab').forEach(button => {
+    button.classList.toggle(
+      'active',
+      button.dataset.view === currentView
+    );
+  });
+
+  if (currentView === 'calendar') {
+    renderCalendar();
+  } else if (currentView === 'management') {
+    renderManagement();
+  } else {
+    renderPlayers();
+  }
+}
+
+function setView(view){
+  currentView = view;
+  render();
+}
+
+async function setPlayerStatus(playerId, status){
+  const result = await sb.rpc('captain_set_player_status', {
+    p_team_id:data.team_id,
+    p_player_id:playerId,
+    p_status:status
+  });
+
+  if (result.error) {
+    alert(result.error.message);
+    return;
+  }
+
+  await loadData();
+}
+
+async function saveNotes(){
+  const notes = $('teamNotes')?.value || '';
+
+  const result = await sb.rpc('captain_update_team_notes', {
+    p_team_id:data.team_id,
+    p_notes:notes
+  });
+
+  if (result.error) {
+    alert(result.error.message);
+    return;
+  }
+
+  alert('Note aggiornate.');
+  await loadData();
+}
+
+async function copyPlayers(){
+  const token = data.team?.player_invite_token;
+
+  if (!token) {
+    alert('Token giocatori non disponibile.');
+    return;
+  }
+
+  const url = new URL(
+    `player.html?invite=${encodeURIComponent(token)}`,
+    location.href
+  ).href;
+
+  try {
+    await navigator.clipboard.writeText(url);
+    alert('Link copiato.');
+  } catch (_) {
+    prompt('Copia il link:', url);
+  }
+}
+
+function openTeamMatches(){
+  if (!data?.team_id) return;
+
+  location.href =
+    `matches-view.html?team=${encodeURIComponent(data.team_id)}`;
+}
+
+async function loadData(){
+  $('status').textContent = 'Caricamento squadra e rosa…';
+  $('status').className = 'notice';
+
+  try {
+    if (!cfg?.supabaseUrl || !cfg?.supabasePublishableKey) {
+      throw new Error('Configurazione Supabase non disponibile.');
+    }
+
+    if (!sb) {
+      sb = supabase.createClient(
+        cfg.supabaseUrl,
+        cfg.supabasePublishableKey
+      );
+    }
+
+    const sessionResult = await sb.auth.getSession();
+
+    if (sessionResult.error) {
+      throw sessionResult.error;
+    }
+
+    if (!sessionResult.data.session) {
+      location.replace('login.html?change=1&v=990');
+      return;
+    }
+
+    const profileResult = await sb
+      .from('profiles')
+      .select('role')
+      .eq('id', sessionResult.data.session.user.id)
+      .maybeSingle();
+
+    if (profileResult.error) {
+      throw profileResult.error;
+    }
+
+    const role = String(profileResult.data?.role || '').toLowerCase();
+
+    if (role === 'admin') {
+      location.replace('index.html?v=990');
+      return;
+    }
+
+    const portalResult = await sb.rpc('get_my_captain_portal');
+
+    if (portalResult.error) {
+      throw portalResult.error;
+    }
+
+    data = Array.isArray(portalResult.data)
+      ? portalResult.data[0]
+      : portalResult.data;
+
+    if (!data?.ok) {
+      throw new Error(
+        data?.message || 'Nessuna squadra capitano collegata.'
+      );
+    }
+
+    const team = data.team || {};
+    const players = arrays(data.players);
+    const fixtures = arrays(data.fixtures);
+
+    $('teamName').textContent = team.name || 'Squadra';
+    $('teamMeta').textContent = [
+      team.series,
+      team.club_name,
+      team.club_city
+    ].filter(Boolean).join(' · ');
+
+    $('heroSub').textContent =
+      team.name || 'AICS Padel Championship';
+
+    if (team.logo_url) {
+      $('teamLogo').src = team.logo_url;
+      $('teamLogo').style.display = '';
+    } else {
+      $('teamLogo').style.display = 'none';
+    }
+
+    $('playersN').textContent =
+      players.filter(player => player.status === 'approved').length;
+
+    $('pendingN').textContent =
+      players.filter(player => player.status === 'pending').length;
+
+    $('playedN').textContent =
+      fixtures.filter(fixture => resultScore(fixture)).length;
+
+    $('futureN').textContent =
+      fixtures.filter(fixture => !resultScore(fixture)).length;
+
+    $('status').textContent =
+      'Accesso capitano attivo. Squadra caricata correttamente.';
+
+    $('status').className = 'notice ok';
+    $('app').classList.remove('hidden');
+
+    render();
+
+  } catch (error) {
+    $('app').classList.add('hidden');
+    $('status').textContent =
+      'Errore Area Capitano: ' +
+      (error?.message || String(error));
+
+    $('status').className = 'notice err';
+  }
+}
+
+async function logout(){
+  try {
+    if (sb) {
+      await sb.auth.signOut({scope:'local'});
+    }
+  } catch (_) {}
+
+  location.replace('login.html?change=1&v=990');
+}
+
+window.setView = setView;
+window.setPlayerStatus = setPlayerStatus;
+window.saveNotes = saveNotes;
+window.copyPlayers = copyPlayers;
+window.openTeamMatches = openTeamMatches;
+window.loadData = loadData;
+window.logout = logout;
+
+loadData();
+</script>
+</body>
+</html>
