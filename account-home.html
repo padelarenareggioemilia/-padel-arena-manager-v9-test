@@ -1,34 +1,39 @@
 <!doctype html>
-<html lang="it">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AICS PADEL CHAMPIONSHIP · Accesso</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<style>
-body{margin:0;background:#f4f8fc;font-family:system-ui;color:#0a2e5e;display:grid;place-items:center;min-height:100vh}
-.card{width:min(520px,calc(100% - 28px));background:#fff;border:1px solid #b9cde3;border-radius:20px;padding:22px;box-shadow:0 16px 36px rgba(8,47,104,.12);text-align:center}
-.btn{border:0;border-radius:10px;padding:11px 13px;font-weight:900;cursor:pointer;background:#164a95;color:#fff}
-.notice{padding:12px;border:1px solid #b9cde3;border-radius:12px;background:#edf4fb;margin:12px 0}
-</style></head>
-<body><div class="card"><img src="assets/aics-logo.png" style="width:110px;height:75px;object-fit:contain"><h1>AICS PADEL CHAMPIONSHIP</h1><div id="msg" class="notice">Controllo account in corso…</div><button class="btn" onclick="changeAccount()">Cambia account</button></div>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS Padel Championship · Area account</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f3f7fb;font-family:system-ui;color:#092d5d}.card{width:min(560px,calc(100% - 28px));background:#fff;border:1px solid #bfd0e2;border-radius:20px;padding:20px;text-align:center}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer;margin:4px}.primary{background:#164a95;color:#fff}.secondary{background:#fff;color:#164a95;border:1px solid #164a95}.danger{background:#ce2b37;color:#fff}.notice{padding:11px;border:1px solid #bfd0e2;border-radius:11px;background:#eaf2fb;margin:12px 0}</style>
+</head><body><main class="card"><h1>AICS PADEL CHAMPIONSHIP</h1><div id="msg" class="notice">Riconoscimento account in corso…</div><button class="btn secondary" onclick="location.href='public.html?v=recovery10'">Naviga come Free</button><button class="btn danger" onclick="changeAccount()">Logout / Cambia account</button></main>
 <script>
-const cfg=window.PAM_V9_CONFIG,s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),msg=document.getElementById('msg');
-async function route(){
- const q=await s.auth.getSession();
- if(!q.data.session){location.replace('login.html');return}
- const uid=q.data.session.user.id;
- const p=await s.from('profiles').select('role').eq('id',uid).maybeSingle();
- if(p.error){msg.textContent='Errore account: '+p.error.message;return}
- if(p.data?.role==='admin'){location.replace('index.html');return}
- const roles=await s.from('team_user_roles').select('team_id,role,active').eq('user_id',uid).eq('active',true);
- if(roles.error){msg.textContent='Errore permessi: '+roles.error.message;return}
- const staff=(roles.data||[]).find(x=>['captain','secretary'].includes(x.role));
- if(staff){location.replace(`captain.html?team=${encodeURIComponent(staff.team_id)}`);return}
- const roster=await s.from('roster_requests').select('team_id,status').eq('user_id',uid).eq('status','approved').limit(1);
- if(!roster.error&&roster.data?.[0]?.team_id){location.replace(`player.html?team=${encodeURIComponent(roster.data[0].team_id)}`);return}
- location.replace('public.html');
+const cfg=window.PAM_V9_CONFIG;
+const msg=document.getElementById('msg');
+if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey){msg.textContent='Configurazione Supabase non disponibile.';throw new Error('PAM_V9_CONFIG mancante');}
+const client=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+async function destinationForUser(user){
+  const uid=user.id,email=(user.email||'').trim().toLowerCase();
+  const profile=await client.from('profiles').select('role').eq('id',uid).maybeSingle();
+  if(!profile.error&&profile.data?.role==='admin')return 'index.html';
+  const roles=await client.from('team_user_roles').select('role,team_id,active').eq('user_id',uid).eq('active',true);
+  if(!roles.error){
+    const staff=(roles.data||[]).find(x=>['captain','secretary'].includes(x.role));
+    if(staff)return `captain.html?team=${encodeURIComponent(staff.team_id)}`;
+    const player=(roles.data||[]).find(x=>x.role==='player');
+    if(player)return `player.html?team=${encodeURIComponent(player.team_id)}`;
+  }
+  if(email){
+    const captain=await client.from('teams').select('id').ilike('captain_email',email).limit(1).maybeSingle();
+    if(!captain.error&&captain.data?.id)return `captain.html?team=${encodeURIComponent(captain.data.id)}`;
+    const roster=await client.from('roster_requests').select('team_id,status').ilike('email',email).eq('status','approved').limit(1).maybeSingle();
+    if(!roster.error&&roster.data?.team_id)return `player.html?team=${encodeURIComponent(roster.data.team_id)}`;
+  }
+  return 'public.html?v=recovery10';
 }
-async function changeAccount(){await s.auth.signOut();location.replace('login.html?change=1')}
-window.changeAccount=changeAccount;route();
+async function init(){
+  const current=await client.auth.getSession();
+  if(!current.data.session){location.replace('login.html?v=recovery10');return;}
+  try{location.replace(await destinationForUser(current.data.session.user));}
+  catch(error){msg.textContent='Errore nel riconoscimento account: '+(error.message||String(error));}
+}
+async function changeAccount(){await client.auth.signOut({scope:'local'});location.replace('login.html?change=1&v=recovery10');}
+window.changeAccount=changeAccount;init();
 </script></body></html>

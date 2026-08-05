@@ -1,0 +1,21 @@
+V9 RECOVERY BUILD 1.0
+
+Base: Build 1.1 già collaudata positivamente.
+Correzioni:
+- login senza errore `sb before initialization`;
+- Naviga Free sempre disponibile;
+- nessun redirect automatico che impedisce il cambio account;
+- routing separato Admin, Capitano, Segretario e Giocatore;
+- recupero giocatore mantenuto;
+- nessuna modifica al V8;
+- nessun SQL richiesto.
+
+Carica SOLO nel repository V9:
+login.html
+public.html
+account-home.html
+player-account.html
+
+Apri:
+login.html?v=recovery10
+public.html?v=recovery10
