@@ -1,40 +1,7 @@
-<!doctype html>
-<html lang="it">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>AICS Padel Championship · Area account</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
-<style>
-:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:var(--bg);font-family:system-ui;color:var(--text)}
-body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%)}
-.card{width:min(620px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;text-align:center;box-shadow:0 18px 46px rgba(8,47,104,.14)}
-.logo{width:120px;height:72px;object-fit:contain;padding:7px;border:1px solid #dce6f2;border-radius:15px}
-.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:14px 0;text-align:left}.err{background:#fdecef;border-color:#dd7a85}.ok{background:#ebf8f0;border-color:#79bf90}
-.btn{border:0;border-radius:11px;padding:11px 13px;font-weight:900;cursor:pointer}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.danger{background:var(--r);color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-</style>
-</head>
-<body><main class="card">
-<img class="logo" src="assets/aics-logo.png" alt="AICS"><h1>AICS PADEL CHAMPIONSHIP</h1>
-<div id="msg" class="notice">Riconoscimento account in corso…</div>
-<div class="actions"><button class="btn secondary" onclick="location.href='public.html?v=986'">Portale pubblico</button><button class="btn danger" onclick="changeAccount()">Logout / Cambia account</button></div>
-</main>
-<div style="position:fixed;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.75">V9.8.5 IDENTITY FIX</div>
-<script>
-const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id),sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
-async function init(){
- try{
-  const q=await sb.auth.getSession();if(q.error)throw q.error;if(!q.data.session){location.replace('login.html?v=986');return}
-  const uid=q.data.session.user.id;
-  const p=await sb.from('profiles').select('role').eq('id',uid).maybeSingle();
-  if(p.error)throw p.error;
-  const role=String(p.data?.role||'').trim().toLowerCase();
-  if(role==='admin'){msg.textContent='Account amministratore riconosciuto. Apertura gestionale…';msg.className='notice ok';return setTimeout(()=>location.replace('index.html?v=986'),250)}
-  if(role==='captain'||role==='capitano'){msg.textContent='Account capitano riconosciuto. Apertura area capitano…';msg.className='notice ok';return setTimeout(()=>location.replace('public.html?v=986&captain=1'),250)}
-  if(role==='player'||role==='giocatore'){msg.textContent='Account giocatore riconosciuto. Apertura area giocatore…';msg.className='notice ok';return setTimeout(()=>location.replace('player-home.html?v=986'),250)}
-  msg.textContent='Account senza ruolo collegato. Apertura recupero iscrizione…';return setTimeout(()=>location.replace('player-account.html?v=986'),350);
- }catch(e){msg.textContent='Errore: '+(e.message||String(e));msg.className='notice err'}
-}
-async function changeAccount(){try{await sb.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=986')}
-window.changeAccount=changeAccount;init();
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>AICS Padel · Area account</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
+:root{--b:#164a95;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:var(--bg);font-family:system-ui;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.3%,#fff 33.3% 66.6%,var(--r) 66.6%)}.card{width:min(620px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;text-align:center}.logo{width:120px}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:14px 0}.ok{background:#ebf8f0}.err{background:#fdecef}.btn{border:0;border-radius:11px;padding:11px 13px;font-weight:900;cursor:pointer}.danger{background:var(--r);color:#fff}
+</style></head><body><main class="card"><img class="logo" src="assets/aics-logo.png"><h1>AICS PADEL CHAMPIONSHIP</h1><div id="msg" class="notice">Riconoscimento account…</div><button class="btn danger" onclick="changeAccount()">Logout / Cambia account</button></main><div style="position:fixed;right:8px;bottom:8px;background:#082f68;color:#fff;padding:4px 7px;border-radius:999px;font:700 10px system-ui">V9.8.6 CAPTAIN FIX</div><script>
+const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),m=document.getElementById('msg');
+async function init(){try{const q=await s.auth.getSession();if(!q.data.session){location.replace('login.html?v=987');return}const p=await s.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();if(p.error)throw p.error;const r=String(p.data?.role||'').toLowerCase();if(r==='admin')return location.replace('index.html?v=987');if(['captain','capitano','secretary','segretario'].includes(r))return location.replace('captain-home.html?v=987');if(['player','giocatore'].includes(r))return location.replace('player-home.html?v=987');const x=await s.rpc('get_my_captain_portal'),d=Array.isArray(x.data)?x.data[0]:x.data;if(!x.error&&d?.ok)return location.replace('captain-home.html?v=987');location.replace('public.html?v=987')}catch(e){m.textContent='Errore: '+(e.message||e);m.className='notice err'}}
+async function changeAccount(){try{await s.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=987')}window.changeAccount=changeAccount;init();
 </script></body></html>
