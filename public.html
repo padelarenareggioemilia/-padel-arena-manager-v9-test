@@ -11,6 +11,17 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:20}
 .shell{max-width:1180px;margin:auto;padding:18px 12px 70px}.hero,.card{border:1px solid var(--line);border-radius:20px;box-shadow:0 13px 28px rgba(8,47,104,.1)}.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center;gap:15px}.brand{display:flex;gap:13px;align-items:center}.logo{width:100px;height:78px;object-fit:contain;background:#fff;border-radius:13px;padding:5px}.hero h1{margin:0}.card{background:#fff;padding:15px;margin:12px 0}.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.comp{border:1px solid var(--line);background:#fff;border-radius:17px;padding:14px;cursor:pointer;text-align:center;min-height:165px}.comp:hover{transform:translateY(-2px);box-shadow:0 12px 25px rgba(8,47,104,.13)}.comp img{width:92px;height:92px;object-fit:contain}.comp strong{display:block;font-size:19px;margin-top:4px}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.tab{border:1px solid var(--blue);background:#fff;color:var(--blue);border-radius:12px;padding:12px;font-weight:900;cursor:pointer}.tab.active{background:var(--blue);color:#fff}.fixture{display:grid;grid-template-columns:115px 1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid #dce6f0}.score{font-size:20px;font-weight:1000}.muted{color:var(--muted)}.small{font-size:12px}.notice{padding:12px;border-radius:12px;background:var(--soft);border:1px solid var(--line)}.hidden{display:none!important}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;min-width:700px}th,td{padding:10px;border-bottom:1px solid #dce6f0;text-align:center}th{background:var(--blue);color:#fff}td:nth-child(2),th:nth-child(2){text-align:left}.group-title{padding:9px 12px;border-left:5px solid var(--green);background:var(--soft);border-radius:0 10px 10px 0}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}
 @media(max-width:800px){.grid5{grid-template-columns:1fr 1fr}.tabs{grid-template-columns:1fr 1fr}.fixture{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:82px;height:64px}}
+
+.player-account-card{padding:20px}
+.player-account-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:16px}
+.player-account-panel{border:1px solid var(--line);border-radius:16px;padding:16px;background:#fff}
+.field{margin:10px 0}.field label{display:block;font-weight:900;margin-bottom:5px}
+.field input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font:inherit}
+.primary{background:var(--blue);color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}
+.account-message{margin-top:14px}.account-message.ok{background:#ebf8f0;border-color:#79bf90}
+.account-message.err{background:#fdecef;border-color:#dd7a85}
+@media(max-width:800px){.player-account-grid{grid-template-columns:1fr}}
+
 </style>
 <link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
@@ -21,7 +32,7 @@
     <img id="headerLogo" class="logo" src="assets/aics-logo.png" alt="AICS">
     <div>
       <h1 id="headerTitle">AICS PADEL CHAMPIONSHIP</h1>
-      <div id="headerSubtitle">Navigazione Free: calendari, risultati e classifiche</div>
+      <div id="headerSubtitle">Navigazione Free: calendari, risultati e classifiche</div><div class="small" style="opacity:.85;margin-top:4px">V9.10.1</div>
     </div>
   </div>
   <button id="headerButton" class="btn secondary" onclick="location.href='login.html?v=recovery95'">Accedi / Cambia account</button>
@@ -33,6 +44,30 @@
 <section id="landingView" class="card">
   <div class="notice">Clicca sullo stemma per aprire calendario, risultati e classifica della singola competizione.</div>
   <div class="grid5" id="competitionCards"></div>
+</section>
+
+
+<section id="playerAccountSection" class="card player-account-card">
+  <h2>Sei un giocatore del campionato?</h2>
+  <div class="notice">Recupera la tua anagrafica oppure crea il tuo account utilizzando la stessa email comunicata al capitano della squadra. Dopo la verifica dell’email, il sistema collegherà automaticamente l’account alla tua iscrizione già approvata.</div>
+  <div class="player-account-grid">
+    <div class="player-account-panel">
+      <h3>Non hai ancora un account?</h3>
+      <div class="field"><label for="playerSignupEmail">Email</label><input id="playerSignupEmail" type="email" autocomplete="email"></div>
+      <div class="field"><label for="playerSignupPassword">Crea password</label><input id="playerSignupPassword" type="password" minlength="8" autocomplete="new-password"></div>
+      <button id="playerSignupButton" class="btn primary" onclick="signupPlayerFromFree()">Crea account</button>
+    </div>
+    <div class="player-account-panel">
+      <h3>Hai già effettuato l’accesso?</h3>
+      <p class="muted">Collega questo account alla tua iscrizione già approvata dal capitano e dall’amministratore.</p>
+      <button id="playerClaimButton" class="btn primary" onclick="claimPlayerFromFree()">Collega la mia iscrizione approvata</button>
+    </div>
+  </div>
+  <div id="playerAccountMessage" class="notice account-message">Pronto.</div>
+  <div class="actions" style="margin-top:12px">
+    <button class="btn secondary" onclick="location.href='login.html?v=9101'">Vai al login</button>
+    <button class="btn secondary" onclick="openMyAccountFromFree()">Home del mio account</button>
+  </div>
 </section>
 
 <section id="competitionView" class="hidden">
@@ -54,6 +89,44 @@
 const cfg=window.PAM_V9_CONFIG;
 const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 const $=id=>document.getElementById(id);
+
+function playerAccountMessage(text,error=false){
+  const box=$('playerAccountMessage'); if(!box)return;
+  box.textContent=text; box.className='notice account-message '+(error?'err':'ok');
+}
+async function signupPlayerFromFree(){
+  const email=($('playerSignupEmail')?.value||'').trim().toLowerCase();
+  const password=$('playerSignupPassword')?.value||'';
+  if(!email||password.length<8)return playerAccountMessage('Inserisci un indirizzo email valido e una password di almeno 8 caratteri.',true);
+  const button=$('playerSignupButton'); if(button){button.disabled=true;button.textContent='Creazione account…'}
+  try{
+    const redirectUrl=new URL('public.html?claim=1&v=9101',location.href).href;
+    const result=await sb.auth.signUp({email,password,options:{emailRedirectTo:redirectUrl}});
+    if(result.error)throw result.error;
+    if(result.data.session){playerAccountMessage('Account creato. Collegamento dell’iscrizione in corso…');await claimPlayerFromFree();}
+    else playerAccountMessage('Account creato. Controlla la tua email, conferma l’account e poi torna su questa pagina.');
+  }catch(error){playerAccountMessage(error.message||String(error),true)}
+  finally{if(button){button.disabled=false;button.textContent='Crea account'}}
+}
+async function claimPlayerFromFree(){
+  const button=$('playerClaimButton'); if(button){button.disabled=true;button.textContent='Collegamento in corso…'}
+  try{
+    const session=await sb.auth.getSession();
+    if(!session.data.session)return playerAccountMessage('Prima effettua l’accesso oppure conferma l’email del nuovo account.',true);
+    const result=await sb.rpc('claim_approved_player_profile');
+    if(result.error)throw result.error;
+    playerAccountMessage(result.data?.message||'Iscrizione collegata correttamente. Ora puoi aprire la tua area giocatore.');
+  }catch(error){playerAccountMessage(error.message||String(error),true)}
+  finally{if(button){button.disabled=false;button.textContent='Collega la mia iscrizione approvata'}}
+}
+async function openMyAccountFromFree(){
+  const session=await sb.auth.getSession();
+  location.href=session.data.session?'account-home.html?v=9101':'login.html?v=9101';
+}
+window.signupPlayerFromFree=signupPlayerFromFree;
+window.claimPlayerFromFree=claimPlayerFromFree;
+window.openMyAccountFromFree=openMyAccountFromFree;
+
 
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
 const logos={
@@ -137,6 +210,7 @@ async function loadLanding(){
 }
 async function loadCompetition(){
   $('landingView').classList.add('hidden');
+  $('playerAccountSection')?.classList.add('hidden');
   $('competitionView').classList.remove('hidden');
   $('headerTitle').textContent=labels[code]||code;
   $('headerSubtitle').textContent='Calendario, risultati e classifiche';
@@ -157,6 +231,8 @@ async function loadCompetition(){
   render();
 }
 window.setView=setView;
+const pageParams=new URLSearchParams(location.search);
+if(pageParams.get('claim')==='1')setTimeout(()=>claimPlayerFromFree(),250);
 if(code)loadCompetition();else loadLanding();
 </script>
 <script src="app-ui.js?v=980stable"></script>

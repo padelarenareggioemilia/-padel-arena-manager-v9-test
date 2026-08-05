@@ -1,23 +1,7 @@
-V9 BUILD 1.3.2 — FIX RECUPERO ACCOUNT GIOCATORE
+V9.10.1 — HOME FREE + AREA GIOCATORI
 
-ERRORE RISOLTO
-Cannot access 'sb' before initialization
+Sostituisci soltanto public.html nel repository V9.
+Non serve SQL.
 
-CAUSA
-Una funzione legata al recupero account veniva eseguita o dichiarata
-nel punto sbagliato, prima della creazione del client Supabase.
-
-CORREZIONE
-- tutte le funzioni account vengono eseguite solo dopo l'inizializzazione di Supabase;
-- il recupero parte esclusivamente quando si preme il pulsante;
-- aggiunto timeout con messaggio chiaro;
-- eliminata ogni chiamata automatica accidentale.
-
-INSTALLAZIONE
-1. Sostituisci soltanto public.html nella root del repository.
-2. Fai Commit changes.
-3. Apri:
-   https://padelarenareggioemilia.github.io/padel-arena-manager/public.html?v=132
-
-CONTROLLO
-Sotto il titolo deve comparire BUILD 1.3.2.
+Apri:
+https://padelarenareggioemilia.github.io/-padel-arena-manager-v9-test/public.html?v=9101
