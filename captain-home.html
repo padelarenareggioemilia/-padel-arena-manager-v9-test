@@ -6,8 +6,18 @@
 <title>AICS Padel Championship · Area Capitano</title>
 <meta name="theme-color" content="#164a95">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="config.js"></script><script>
+window.addEventListener('error',function(ev){
+  const box=document.getElementById('status');
+  if(box){box.textContent='Errore pagina Capitano: '+(ev.message||'errore JavaScript');box.className='notice err';}
+});
+window.addEventListener('unhandledrejection',function(ev){
+  const box=document.getElementById('status');
+  const reason=ev.reason?.message||String(ev.reason||'errore imprevisto');
+  if(box){box.textContent='Errore pagina Capitano: '+reason;box.className='notice err';}
+});
+</script>
+
 <style>
 :root{--b:#164a95;--bd:#082f68;--bs:#2e6fba;--g:#009246;--r:#ce2b37;--y:#d79b00;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97;--soft:#edf4fb;--shadow:0 14px 34px rgba(8,47,104,.12)}
 *{box-sizing:border-box}body{margin:0;background:linear-gradient(90deg,rgba(0,146,70,.05),transparent 24%,transparent 76%,rgba(206,43,55,.05)),var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
@@ -63,14 +73,14 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;z-index:99;backg
 <section class="card"><div class="actions">
 <button class="btn primary" onclick="copyPlayerLink()">Copia link giocatori</button>
 <button class="btn secondary" onclick="location.href='matches-view.html?team='+encodeURIComponent(data.team_id)">Vista completa partite</button>
-<button class="btn secondary" onclick="location.href='public.html?v=988'">Portale pubblico</button>
+<button class="btn secondary" onclick="location.href='public.html?v=989'">Portale pubblico</button>
 <button class="btn danger" onclick="logout()">Logout / Cambia account</button>
 </div></section>
 </section>
 </main>
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="actions" style="justify-content:space-between"><h2 id="modalTitle" style="margin:0"></h2><button class="btn secondary" onclick="closeModal()">Chiudi</button></div><div id="modalBody"></div></div></div>
-<div style="position:fixed;right:8px;bottom:8px;z-index:999;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.8">V9.8.7 CAPTAIN COMPLETE</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:999;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.8">V9.8.7.1 SAFE RESTORE</div>
 
 <script>
 const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id),sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
@@ -121,7 +131,7 @@ function addPlayerModal(){openModal('Inserisci giocatore',`<div class="grid2"><d
 async function addPlayer(){const p={first_name:$('pf').value.trim(),last_name:$('pl').value.trim(),email:$('pe').value.trim().toLowerCase(),phone:$('pp').value.trim(),birth_date:$('pbd').value,birth_place:$('pbp').value.trim(),fitp_ranking:$('pfitp').value.trim().toUpperCase(),medical_certificate_expiry:$('pmed').value};if(Object.values(p).some(x=>!x))return alert('Compila tutti i campi.');const r=await sb.rpc('captain_add_player_basic',{p_team_id:data.team_id,p_player:p});if(r.error)return alert(r.error.message);closeModal();await loadAll()}
 function editPlayer(id){const p=arr(data.players).find(x=>x.id===id);openModal('Modifica giocatore',`<div class="grid2"><div class="field"><label>Nome</label><input id="ef" value="${esc(p.first_name||'')}"></div><div class="field"><label>Cognome</label><input id="el" value="${esc(p.last_name||'')}"></div><div class="field"><label>Email</label><input id="ee" value="${esc(p.email||'')}"></div><div class="field"><label>Telefono</label><input id="ep" value="${esc(p.phone||'')}"></div><div class="field"><label>Classifica FITP</label><input id="efitp" value="${esc(p.fitp_ranking||'')}"></div><div class="field"><label>Scadenza certificato</label><input id="emed" type="date" value="${esc(p.medical_certificate_expiry||'')}"></div></div><button class="btn primary" onclick="savePlayer('${id}')">Salva modifiche</button>`)}
 async function savePlayer(id){const payload={first_name:$('ef').value.trim(),last_name:$('el').value.trim(),email:$('ee').value.trim().toLowerCase(),phone:$('ep').value.trim(),fitp_ranking:$('efitp').value.trim().toUpperCase(),medical_certificate_expiry:$('emed').value};const r=await sb.rpc('captain_update_player_complete',{p_team_id:data.team_id,p_player_id:id,p_player:payload});if(r.error)return alert(r.error.message);closeModal();await loadAll()}
-function generateCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=988`}
+function generateCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=989`}
 async function setPlayerStatus(id,status){const r=await sb.rpc('captain_set_player_status',{p_team_id:data.team_id,p_player_id:id,p_status:status});if(r.error)return alert(r.error.message);await loadAll()}
 async function saveNotes(){const r=await sb.rpc('captain_update_team_notes',{p_team_id:data.team_id,p_notes:$('teamNotes').value.trim()});if(r.error)return alert(r.error.message);alert('Note aggiornate.');await loadAll()}
 async function appointSecretary(){const email=$('secretaryEmail').value.trim().toLowerCase();if(!email)return;const r=await sb.rpc('captain_appoint_secretary',{p_team_id:data.team_id,p_email:email});if(r.error)return alert(r.error.message);await loadAll()}
@@ -131,12 +141,23 @@ async function copyPlayerLink(){const t=data.team?.player_invite_token;if(!t)ret
 function openLineup(fixtureId){const f=arr(data.fixtures).find(x=>x.id===fixtureId),lineup=arr(data.lineups).find(x=>x.fixture_id===fixtureId&&x.team_id===data.team_id),selected=arr(data.lineup_players).filter(x=>x.lineup_id===lineup?.id);openModal('Distinta squadra',`<div class="notice"><b>${esc(tn(f.home_team_id))} - ${esc(tn(f.away_team_id))}</b><br>${esc(fmtDate(f.scheduled_at))} · ${esc(stage(f))}</div><div id="lineupRows">${arr(data.players).filter(p=>p.status==='approved').map(p=>{const x=selected.find(s=>s.player_id===p.id);return `<div class="lineup-player"><input type="checkbox" class="lp-check" data-player="${p.id}" ${x?'checked':''}><div><b>${esc(p.first_name)} ${esc(p.last_name)}</b><div class="muted">${esc(p.fitp_ranking||'')}</div></div><select class="lp-position" data-player="${p.id}"><option value="">Ruolo / posizione</option>${['M1','M2','Misto','Femminile','Riserva'].map(v=>`<option ${x?.position===v?'selected':''}>${v}</option>`).join('')}</select></div>`}).join('')}</div><div class="field"><label>Note distinta</label><textarea id="lineupNotes">${esc(lineup?.notes||'')}</textarea></div><div class="actions"><button class="btn primary" onclick="saveLineup('${fixtureId}',false)">Salva bozza</button><button class="btn success" onclick="saveLineup('${fixtureId}',true)">Conferma distinta</button></div>`)}
 async function saveLineup(fixtureId,confirmLineup){const players=[...document.querySelectorAll('.lp-check:checked')].map(c=>{const id=c.dataset.player;return{player_id:id,position:document.querySelector(`.lp-position[data-player="${id}"]`).value}});const r=await sb.rpc('captain_save_lineup',{p_fixture_id:fixtureId,p_team_id:data.team_id,p_players:players,p_notes:$('lineupNotes').value.trim(),p_confirm:confirmLineup});if(r.error)return alert(r.error.message);closeModal();await loadAll()}
 
-function openOpponentScanner(fixtureId){const f=arr(data.fixtures).find(x=>x.id===fixtureId),opponent=f.home_team_id===data.team_id?f.away_team_id:f.home_team_id;openModal('Verifica QR squadra avversaria',`<div class="notice"><b>Squadra avversaria:</b> ${esc(tn(opponent))}<br>Scansiona i QR dei giocatori presenti e confermali alla distinta avversaria.</div><div id="reader" class="scanner"></div><div class="field"><label>Oppure inserisci codice / URL QR</label><input id="manualQr"></div><button class="btn secondary" onclick="processQr('${fixtureId}','${opponent}',$('manualQr').value)">Conferma codice manuale</button><div id="scanResults"></div>`);scanner=new Html5QrcodeScanner('reader',{fps:10,qrbox:{width:250,height:250}},false);scanner.render(txt=>processQr(fixtureId,opponent,txt),()=>{})}
+
+async function ensureQrScanner(){
+ if(window.Html5QrcodeScanner)return;
+ await new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://unpkg.com/html5-qrcode';
+   script.onload=resolve;
+   script.onerror=()=>reject(new Error('Scanner QR non disponibile. Usa per ora il campo codice manuale.'));
+   document.head.appendChild(script);
+ });
+}
+async function openOpponentScanner(fixtureId){const f=arr(data.fixtures).find(x=>x.id===fixtureId),opponent=f.home_team_id===data.team_id?f.away_team_id:f.home_team_id;openModal('Verifica QR squadra avversaria',`<div class="notice"><b>Squadra avversaria:</b> ${esc(tn(opponent))}<br>Scansiona i QR dei giocatori presenti e confermali alla distinta avversaria.</div><div id="reader" class="scanner"></div><div class="field"><label>Oppure inserisci codice / URL QR</label><input id="manualQr"></div><button class="btn secondary" onclick="processQr('${fixtureId}','${opponent}',$('manualQr').value)">Conferma codice manuale</button><div id="scanResults"></div>`);try{await ensureQrScanner();scanner=new Html5QrcodeScanner('reader',{fps:10,qrbox:{width:250,height:250}},false);scanner.render(txt=>processQr(fixtureId,opponent,txt),()=>{})}catch(e){$('scanResults').innerHTML='<div class="notice warn">'+esc(e.message||String(e))+'</div>'}}
 function parsePlayerId(raw){try{const u=new URL(raw,location.href);return u.searchParams.get('player')||u.searchParams.get('id')}catch(e){}const m=String(raw).match(/AICSPLAYER:([0-9a-f-]{36})/i);return m?m[1]:String(raw).trim()}
 async function processQr(fixtureId,opponentTeamId,raw){const playerId=parsePlayerId(raw);if(!playerId)return alert('QR non riconosciuto.');const r=await sb.rpc('captain_verify_opponent_player',{p_fixture_id:fixtureId,p_verifying_team_id:data.team_id,p_opponent_team_id:opponentTeamId,p_player_id:playerId,p_qr_value:String(raw)});if(r.error)return alert(r.error.message);$('scanResults').insertAdjacentHTML('afterbegin',`<div class="notice ok">Giocatore confermato: ${esc(r.data?.player_name||playerId)}</div>`);await loadAll()}
 
-async function loadAll(){try{const q=await sb.auth.getSession();if(!q.data.session){location.replace('login.html?v=988');return}const p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();if(String(p.data?.role||'').toLowerCase()==='admin'){location.replace('index.html?v=988');return}const r=await sb.rpc('get_my_captain_portal');if(r.error)throw r.error;data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.ok)throw new Error(data?.message||'Squadra non collegata.');const t=data.team||{};teamName.textContent=t.name||'Squadra';teamMeta.textContent=[t.series,t.club_name,t.club_city].filter(Boolean).join(' · ');captainMeta.textContent=`Capitano: ${t.captain_name||''}`;heroSub.textContent=t.name||'AICS Padel Championship';teamLogo.src=t.logo_url||'';if(!t.logo_url)teamLogo.style.visibility='hidden';playersKpi.textContent=arr(data.players).filter(x=>x.status==='approved').length;pendingKpi.textContent=arr(data.players).filter(x=>x.status==='pending').length;lineupsKpi.textContent=arr(data.lineups).length;futureKpi.textContent=arr(data.fixtures).filter(x=>!done(x)).length;const firstGroup=arr(data.groups)[0],rows=firstGroup?standings(firstGroup):[],pos=rows.findIndex(x=>x.id===data.team_id);positionKpi.textContent=pos>=0?`${pos+1}°`:'–';pointsKpi.textContent=pos>=0?rows[pos].pt:0;status.textContent='Accesso capitano attivo. Dashboard aggiornata.';status.className='notice ok';app.classList.remove('hidden');render()}catch(e){status.textContent='Errore: '+(e.message||String(e));status.className='notice err'}}
-async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=988')}
+async function loadAll(){try{const q=await sb.auth.getSession();if(!q.data.session){location.replace('login.html?v=989');return}const p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();if(String(p.data?.role||'').toLowerCase()==='admin'){location.replace('index.html?v=989');return}const r=await sb.rpc('get_my_captain_portal');if(r.error)throw r.error;data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.ok)throw new Error(data?.message||'Squadra non collegata.');const t=data.team||{};teamName.textContent=t.name||'Squadra';teamMeta.textContent=[t.series,t.club_name,t.club_city].filter(Boolean).join(' · ');captainMeta.textContent=`Capitano: ${t.captain_name||''}`;heroSub.textContent=t.name||'AICS Padel Championship';teamLogo.src=t.logo_url||'';if(!t.logo_url)teamLogo.style.visibility='hidden';playersKpi.textContent=arr(data.players).filter(x=>x.status==='approved').length;pendingKpi.textContent=arr(data.players).filter(x=>x.status==='pending').length;lineupsKpi.textContent=arr(data.lineups).length;futureKpi.textContent=arr(data.fixtures).filter(x=>!done(x)).length;const firstGroup=arr(data.groups)[0],rows=firstGroup?standings(firstGroup):[],pos=rows.findIndex(x=>x.id===data.team_id);positionKpi.textContent=pos>=0?`${pos+1}°`:'–';pointsKpi.textContent=pos>=0?rows[pos].pt:0;status.textContent='Accesso capitano attivo. Dashboard aggiornata.';status.className='notice ok';app.classList.remove('hidden');render()}catch(e){status.textContent='Errore: '+(e.message||String(e));status.className='notice err'}}
+async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=989')}
 window.setView=setView;window.closeModal=closeModal;window.addPlayerModal=addPlayerModal;window.addPlayer=addPlayer;window.editPlayer=editPlayer;window.savePlayer=savePlayer;window.generateCard=generateCard;window.setPlayerStatus=setPlayerStatus;window.saveNotes=saveNotes;window.appointSecretary=appointSecretary;window.revokeSecretary=revokeSecretary;window.copyPlayerLink=copyPlayerLink;window.openLineup=openLineup;window.saveLineup=saveLineup;window.openOpponentScanner=openOpponentScanner;window.processQr=processQr;window.loadAll=loadAll;window.logout=logout;
 loadAll();
 </script>
