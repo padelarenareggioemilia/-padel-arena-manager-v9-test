@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>AICS Padel Championship · Area giocatore</title>
+  <meta name="theme-color" content="#164a95">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <style>
+    :root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(90deg,rgba(0,146,70,.05),transparent 24%,transparent 76%,rgba(206,43,55,.05)),var(--bg);font-family:system-ui;color:var(--text)}
+    body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%)}
+    .shell{width:min(900px,calc(100% - 28px));margin:auto;padding:28px 0 70px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:20px;margin:12px 0;box-shadow:0 14px 34px rgba(8,47,104,.12)}
+    .hero{text-align:center;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.logo{width:110px;height:68px;object-fit:contain;padding:7px;background:#fff;border-radius:14px}
+    h1{margin:12px 0 4px}.muted{color:var(--muted)}.hero .muted{color:#dbe8f6}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tile{padding:18px;border:1px solid var(--line);border-radius:16px;background:#fff;cursor:pointer}.tile b{display:block;font-size:18px;color:var(--bd);margin-bottom:5px}
+    .notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:10px 0}.err{background:#fdecef;border-color:#dd7a85}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:11px;padding:11px 13px;font-weight:900;cursor:pointer}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.danger{background:var(--r);color:#fff}
+    @media(max-width:650px){.grid{grid-template-columns:1fr}.actions{display:grid}.btn{width:100%}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <section class="hero">
+    <img class="logo" src="assets/aics-logo.png" alt="AICS">
+    <h1>Area Giocatore</h1>
+    <div class="muted">AICS Padel Championship</div>
+  </section>
+
+  <section class="card">
+    <h2>Il mio account</h2>
+    <div id="status" class="notice">Verifica account in corso…</div>
+  </section>
+
+  <section class="card">
+    <div class="grid">
+      <div class="tile" onclick="location.href='digital-card.html?v=984'">
+        <b>🪪 Tessera digitale</b>
+        <span class="muted">Apri i tuoi dati e la tessera personale.</span>
+      </div>
+      <div class="tile" onclick="location.href='public.html?v=984&player=1'">
+        <b>🏆 Campionato</b>
+        <span class="muted">Consulta competizioni, partite, risultati e classifiche pubblicate.</span>
+      </div>
+      <div class="tile" onclick="location.href='player-account.html?v=984'">
+        <b>🔗 Collegamento iscrizione</b>
+        <span class="muted">Recupera o ricollega la tua iscrizione approvata.</span>
+      </div>
+      <div class="tile" onclick="location.href='account-home.html?v=984'">
+        <b>↻ Verifica ruolo</b>
+        <span class="muted">Ripeti il riconoscimento automatico dell’account.</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="actions">
+      <button class="btn secondary" onclick="location.href='public.html?v=984'">Portale pubblico</button>
+      <button class="btn danger" onclick="logout()">Logout / Cambia account</button>
+    </div>
+  </section>
+</main>
+
+<div style="position:fixed;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.75">V9.8.2 PLAYER ROLE FIX</div>
+
+<script>
+const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);
+if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey){$('status').textContent='Configurazione Supabase non disponibile.';throw new Error('PAM_V9_CONFIG mancante')}
+const s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+
+async function init(){
+ try{
+   const q=await s.auth.getSession();
+   if(q.error)throw q.error;
+   if(!q.data.session){location.replace('login.html?v=984');return}
+   const email=q.data.session.user?.email||'Account autenticato';
+   const p=await s.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();
+   if(p.error)throw p.error;
+   const role=String(p.data?.role||'').toLowerCase();
+   if(role==='admin'){location.replace('index.html?v=984');return}
+   if(role!=='player'&&role!=='giocatore'){
+     $('status').textContent=`${email} · iscrizione non ancora riconosciuta come Giocatore. Usa “Collegamento iscrizione”.`;
+     $('status').className='notice err';
+     return;
+   }
+   $('status').textContent=`${email} · ruolo Giocatore riconosciuto correttamente.`;
+ }catch(err){
+   $('status').textContent='Errore: '+(err.message||String(err));
+   $('status').className='notice err';
+ }
+}
+
+async function logout(){
+ try{await s.auth.signOut({scope:'local'})}catch(e){}
+ location.replace('login.html?change=1&v=984');
+}
+window.logout=logout;init();
+</script>
+</body>
+</html>

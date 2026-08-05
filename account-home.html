@@ -3,562 +3,79 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-
   <title>AICS Padel Championship · Area account</title>
-
   <meta name="theme-color" content="#164a95">
-  <meta name="application-name" content="AICS Padel Championship Manager">
-  <meta name="apple-mobile-web-app-title" content="AICS Padel">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-
   <style>
-    :root{
-      --aics-blue:#164a95;
-      --aics-blue-dark:#082f68;
-      --aics-blue-soft:#2e6fba;
-      --italy-green:#009246;
-      --italy-red:#ce2b37;
-      --bg:#f3f7fb;
-      --panel:#ffffff;
-      --panel-soft:#eaf2fb;
-      --text:#092d5d;
-      --muted:#627b97;
-      --line:#bfd0e2;
-      --shadow:0 18px 46px rgba(8,47,104,.16);
-    }
-
-    *{box-sizing:border-box}
-
-    html{
-      min-height:100%;
-      background:var(--bg);
-    }
-
-    body{
-      margin:0;
-      min-height:100vh;
-      padding:24px 14px;
-      display:grid;
-      place-items:center;
-      color:var(--text);
-      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      background:
-        linear-gradient(
-          90deg,
-          rgba(0,146,70,.06),
-          transparent 24%,
-          transparent 76%,
-          rgba(206,43,55,.06)
-        ),
-        radial-gradient(
-          circle at 50% 0%,
-          rgba(22,74,149,.15),
-          transparent 38%
-        ),
-        var(--bg);
-    }
-
-    body::before{
-      content:"";
-      position:fixed;
-      inset:0 0 auto 0;
-      height:6px;
-      z-index:9999;
-      background:linear-gradient(
-        90deg,
-        var(--italy-green) 0 33.333%,
-        #fff 33.333% 66.666%,
-        var(--italy-red) 66.666%
-      );
-    }
-
-    .card{
-      width:min(620px,100%);
-      background:rgba(255,255,255,.98);
-      border:1px solid var(--line);
-      border-radius:24px;
-      padding:22px;
-      text-align:center;
-      box-shadow:var(--shadow);
-    }
-
-    .brand-logo{
-      width:126px;
-      height:76px;
-      object-fit:contain;
-      padding:8px;
-      background:#fff;
-      border:1px solid #dce6f2;
-      border-radius:16px;
-      box-shadow:0 10px 24px rgba(8,47,104,.12);
-    }
-
-    h1{
-      margin:14px 0 4px;
-      font-size:clamp(26px,6vw,38px);
-      line-height:1.05;
-      color:var(--aics-blue-dark);
-    }
-
-    .subtitle{
-      margin:0 0 16px;
-      color:var(--muted);
-      font-weight:700;
-    }
-
-    .notice{
-      padding:13px;
-      border:1px solid var(--line);
-      border-radius:13px;
-      background:var(--panel-soft);
-      margin:14px 0;
-      line-height:1.5;
-      text-align:left;
-    }
-
-    .notice.ok{
-      background:#eaf8f0;
-      border-color:var(--italy-green);
-    }
-
-    .notice.err{
-      background:#fdecef;
-      border-color:var(--italy-red);
-    }
-
-    .actions{
-      display:flex;
-      gap:9px;
-      flex-wrap:wrap;
-      justify-content:center;
-      margin-top:14px;
-    }
-
-    .btn{
-      appearance:none;
-      border:0;
-      border-radius:12px;
-      padding:12px 14px;
-      font:inherit;
-      font-weight:900;
-      cursor:pointer;
-      min-height:46px;
-    }
-
-    .btn:disabled{
-      opacity:.55;
-      cursor:not-allowed;
-    }
-
-    .primary{
-      background:linear-gradient(
-        135deg,
-        var(--aics-blue-soft),
-        var(--aics-blue)
-      );
-      color:#fff;
-    }
-
-    .secondary{
-      background:#fff;
-      color:var(--aics-blue);
-      border:1px solid var(--aics-blue);
-    }
-
-    .danger{
-      background:var(--italy-red);
-      color:#fff;
-    }
-
-    .loader{
-      width:34px;
-      height:34px;
-      margin:18px auto 4px;
-      border:4px solid #dce7f2;
-      border-top-color:var(--aics-blue);
-      border-radius:50%;
-      animation:spin .8s linear infinite;
-    }
-
-    .hidden{display:none!important}
-
-    .account-info{
-      margin-top:10px;
-      font-size:13px;
-      color:var(--muted);
-      word-break:break-word;
-    }
-
-    @keyframes spin{
-      to{transform:rotate(360deg)}
-    }
-
-    @media(max-width:600px){
-      body{padding:18px 12px}
-      .card{padding:18px}
-      .brand-logo{width:106px;height:66px}
-      .actions{display:grid;grid-template-columns:1fr}
-      .btn{width:100%}
-    }
+    :root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:linear-gradient(90deg,rgba(0,146,70,.05),transparent 24%,transparent 76%,rgba(206,43,55,.05)),var(--bg);font-family:system-ui;color:var(--text)}
+    body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%)}
+    .card{width:min(620px,100%);background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;text-align:center;box-shadow:0 18px 46px rgba(8,47,104,.14)}
+    .logo{width:120px;height:72px;object-fit:contain;padding:7px;border:1px solid #dce6f2;border-radius:15px;background:#fff}
+    h1{margin:14px 0 5px;color:var(--bd);font-size:clamp(25px,6vw,37px)}.muted{color:var(--muted)}
+    .notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:14px 0;text-align:left;line-height:1.5}.ok{background:#ebf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}
+    .loader{width:34px;height:34px;margin:16px auto;border:4px solid #dce7f2;border-top-color:var(--b);border-radius:50%;animation:spin .8s linear infinite}.hidden{display:none!important}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.btn{border:0;border-radius:11px;padding:11px 13px;font-weight:900;cursor:pointer}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.danger{background:var(--r);color:#fff}
+    @keyframes spin{to{transform:rotate(360deg)}}@media(max-width:600px){.actions{display:grid}.btn{width:100%}}
   </style>
-
-  <link rel="icon" type="image/png" sizes="32x32" href="assets/aics-icon-32.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="assets/aics-icon-192.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="assets/aics-icon-180.png">
-  <link rel="manifest" href="manifest.webmanifest">
-
-  <link rel="stylesheet" href="app-theme.css?v=982playerfix">
 </head>
-
 <body>
-  <main class="card">
-    <img
-      class="brand-logo"
-      src="assets/aics-logo.png"
-      alt="AICS"
-    >
-
-    <h1>AICS PADEL CHAMPIONSHIP</h1>
-    <p class="subtitle">Riconoscimento e accesso all’area personale</p>
-
-    <div id="loader" class="loader" aria-hidden="true"></div>
-
-    <div
-      id="msg"
-      class="notice"
-      role="status"
-      aria-live="polite"
-    >
-      Riconoscimento account in corso…
-    </div>
-
-    <div id="accountInfo" class="account-info hidden"></div>
-
-    <div class="actions">
-      <button
-        id="retryBtn"
-        type="button"
-        class="btn primary hidden"
-        onclick="init()"
-      >
-        Riprova riconoscimento
-      </button>
-
-      <button
-        type="button"
-        class="btn secondary"
-        onclick="openFreeArea()"
-      >
-        Naviga come Free
-      </button>
-
-      <button
-        id="changeBtn"
-        type="button"
-        class="btn danger"
-        onclick="changeAccount()"
-      >
-        Logout / Cambia account
-      </button>
-    </div>
-  </main>
-
-  <div
-    style="
-      position:fixed;
-      right:8px;
-      bottom:8px;
-      z-index:9999;
-      padding:4px 7px;
-      border-radius:999px;
-      background:#082f68;
-      color:white;
-      font:700 10px system-ui;
-      opacity:.75
-    "
-  >
-    V9.8 PLAYER FIX
+<main class="card">
+  <img class="logo" src="assets/aics-logo.png" alt="AICS">
+  <h1>AICS PADEL CHAMPIONSHIP</h1>
+  <div class="muted">Accesso automatico all’area corretta</div>
+  <div id="loader" class="loader"></div>
+  <div id="msg" class="notice">Riconoscimento account in corso…</div>
+  <div class="actions">
+    <button id="retry" class="btn primary hidden" onclick="init()">Riprova</button>
+    <button class="btn secondary" onclick="location.href='public.html?v=984'">Portale pubblico</button>
+    <button class="btn danger" onclick="changeAccount()">Logout / Cambia account</button>
   </div>
-
-  <script>
-    const cfg = window.PAM_V9_CONFIG;
-    const msg = document.getElementById('msg');
-    const loader = document.getElementById('loader');
-    const retryBtn = document.getElementById('retryBtn');
-    const changeBtn = document.getElementById('changeBtn');
-    const accountInfo = document.getElementById('accountInfo');
-
-    let client = null;
-    let redirecting = false;
-
-    function setMessage(text, type = '') {
-      msg.textContent = text;
-      msg.className = `notice${type ? ` ${type}` : ''}`;
-    }
-
-    function setLoading(active) {
-      loader.classList.toggle('hidden', !active);
-      retryBtn.disabled = active;
-      changeBtn.disabled = active || redirecting;
-    }
-
-    function showRetry() {
-      retryBtn.classList.remove('hidden');
-    }
-
-    function hideRetry() {
-      retryBtn.classList.add('hidden');
-    }
-
-    function normalizeDestination(destination) {
-      const raw = String(destination || '').trim();
-
-      if (!raw) return '';
-
-      const blockedProtocols = [
-        'javascript:',
-        'data:',
-        'vbscript:'
-      ];
-
-      const lower = raw.toLowerCase();
-
-      if (blockedProtocols.some(protocol => lower.startsWith(protocol))) {
-        return '';
-      }
-
-      try {
-        const resolved = new URL(raw, location.href);
-
-        if (resolved.origin !== location.origin) {
-          return '';
-        }
-
-        return `${resolved.pathname.split('/').pop()}${resolved.search}${resolved.hash}`;
-      } catch (_) {
-        return '';
-      }
-    }
-
-    async function destinationForUser(user) {
-      const uid = user.id;
-
-      const profileResult = await client
-        .from('profiles')
-        .select('role')
-        .eq('id', uid)
-        .maybeSingle();
-
-      if (profileResult.error) {
-        throw new Error(
-          `Impossibile leggere il profilo account: ${
-            profileResult.error.message || 'errore database'
-          }`
-        );
-      }
-
-      const role = String(profileResult.data?.role || '')
-        .trim()
-        .toLowerCase();
-
-      if (role === 'admin') {
-        return {
-          destination:'index.html?v=982',
-          role:'admin'
-        };
-      }
-
-      const portalResult = await client.rpc('resolve_my_portal');
-
-      if (portalResult.error) {
-        throw new Error(
-          `Impossibile determinare l’area personale: ${
-            portalResult.error.message || 'errore funzione Supabase'
-          }`
-        );
-      }
-
-      const rpcData = Array.isArray(portalResult.data)
-        ? portalResult.data[0]
-        : portalResult.data;
-
-      const destination = normalizeDestination(
-        typeof rpcData === 'string'
-          ? rpcData
-          : rpcData?.destination
-      );
-
-      if (destination) {
-        return {
-          destination,
-          role:
-            String(rpcData?.role || role || 'utente')
-              .trim()
-              .toLowerCase()
-        };
-      }
-
-      if (role === 'captain' || role === 'capitano') {
-        return {
-          destination:'captain-dashboard.html?v=982',
-          role:'captain'
-        };
-      }
-
-      if (role === 'player' || role === 'giocatore') {
-        return {
-          destination:'player-dashboard.html?v=982',
-          role:'player'
-        };
-      }
-
-      return {
-        destination:'public.html?v=982',
-        role:role || 'free'
-      };
-    }
-
-    async function init() {
-      if (redirecting) return;
-
-      hideRetry();
-      setLoading(true);
-      setMessage('Riconoscimento account in corso…');
-      accountInfo.classList.add('hidden');
-
-      if (!cfg?.supabaseUrl || !cfg?.supabasePublishableKey) {
-        setLoading(false);
-        showRetry();
-        setMessage(
-          'Configurazione Supabase non disponibile. Controlla il file config.js.',
-          'err'
-        );
-        return;
-      }
-
-      if (!client) {
-        client = supabase.createClient(
-          cfg.supabaseUrl,
-          cfg.supabasePublishableKey
-        );
-      }
-
-      try {
-        const sessionResult = await client.auth.getSession();
-
-        if (sessionResult.error) {
-          throw sessionResult.error;
-        }
-
-        const session = sessionResult.data.session;
-
-        if (!session) {
-          location.replace('login.html?v=982');
-          return;
-        }
-
-        const email = session.user?.email || '';
-
-        if (email) {
-          accountInfo.textContent = `Account riconosciuto: ${email}`;
-          accountInfo.classList.remove('hidden');
-        }
-
-        const resolved = await destinationForUser(session.user);
-
-        if (!resolved?.destination) {
-          throw new Error(
-            'Nessuna destinazione valida è stata associata a questo account.'
-          );
-        }
-
-        const roleLabels = {
-          admin:'Amministratore',
-          captain:'Capitano',
-          capitano:'Capitano',
-          player:'Giocatore',
-          giocatore:'Giocatore',
-          free:'Utente Free'
-        };
-
-        const label =
-          roleLabels[resolved.role] ||
-          'Utente registrato';
-
-        setMessage(
-          `Account riconosciuto come ${label}. Apertura area personale…`,
-          'ok'
-        );
-
-        redirecting = true;
-        changeBtn.disabled = true;
-
-        window.setTimeout(() => {
-          location.replace(resolved.destination);
-        }, 250);
-
-      } catch (error) {
-        redirecting = false;
-        setLoading(false);
-        showRetry();
-
-        setMessage(
-          `Errore nel riconoscimento account: ${
-            error?.message || String(error)
-          }`,
-          'err'
-        );
-      }
-    }
-
-    function openFreeArea() {
-      location.href = 'public.html?v=982';
-    }
-
-    async function changeAccount() {
-      if (redirecting) return;
-
-      redirecting = true;
-      changeBtn.disabled = true;
-      retryBtn.disabled = true;
-
-      setMessage('Disconnessione account in corso…');
-
-      try {
-        if (client) {
-          await client.auth.signOut({
-            scope:'local'
-          });
-        }
-      } catch (_) {
-        // Il cambio account deve proseguire anche se la sessione locale
-        // risulta già scaduta o non disponibile.
-      }
-
-      location.replace('login.html?change=1&v=982');
-    }
-
-    window.init = init;
-    window.changeAccount = changeAccount;
-    window.openFreeArea = openFreeArea;
-
-    init();
-  </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker
-          .register('./service-worker.js')
-          .catch(() => {});
-      });
-    }
-  </script>
-
-  <script src="app-ui.js?v=982playerfix"></script>
+</main>
+<div style="position:fixed;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.75">V9.8.2 PLAYER ROLE FIX</div>
+<script>
+const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);
+let s=null,moving=false;
+function message(t,e=false){$('msg').textContent=t;$('msg').className='notice '+(e?'err':'ok')}
+async function init(){
+ if(moving)return;
+ $('retry').classList.add('hidden');$('loader').classList.remove('hidden');message('Riconoscimento account in corso…');
+ if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey){$('loader').classList.add('hidden');$('retry').classList.remove('hidden');return message('Configurazione Supabase non disponibile.',true)}
+ if(!s)s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+ try{
+   const q=await s.auth.getSession();
+   if(q.error)throw q.error;
+   const session=q.data.session;
+   if(!session){location.replace('login.html?v=984');return}
+   const p=await s.from('profiles').select('role').eq('id',session.user.id).maybeSingle();
+   if(p.error)throw p.error;
+   const role=String(p.data?.role||'').trim().toLowerCase();
+   moving=true;
+   if(role==='admin'){
+     message('Account amministratore riconosciuto. Apertura gestionale…');
+     return setTimeout(()=>location.replace('index.html?v=984'),250);
+   }
+   if(role==='player'||role==='giocatore'){
+     message('Account giocatore riconosciuto. Apertura area giocatore…');
+     return setTimeout(()=>location.replace('player-home.html?v=984'),250);
+   }
+   if(role==='captain'||role==='capitano'){
+     message('Account capitano riconosciuto. Apertura portale…');
+     return setTimeout(()=>location.replace('public.html?v=984&captain=1'),250);
+   }
+   message('Account non ancora collegato a un ruolo. Apertura recupero iscrizione…');
+   return setTimeout(()=>location.replace('player-account.html?v=984'),350);
+ }catch(err){
+   moving=false;$('loader').classList.add('hidden');$('retry').classList.remove('hidden');
+   message('Errore nel riconoscimento account: '+(err.message||String(err)),true);
+ }
+}
+async function changeAccount(){
+ try{if(s)await s.auth.signOut({scope:'local'})}catch(e){}
+ location.replace('login.html?change=1&v=984');
+}
+window.init=init;window.changeAccount=changeAccount;init();
+</script>
 </body>
 </html>
