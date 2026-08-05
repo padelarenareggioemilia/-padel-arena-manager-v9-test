@@ -1,47 +1,146 @@
 <!doctype html>
-<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AICS Padel Championship · Area giocatore</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <style>
 :root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--bg:#f3f7fb;--line:#bfd0e2;--text:#092d5d;--muted:#647c98}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui;color:var(--text)}main{max-width:1180px;margin:auto;padding:18px 12px 70px}
-.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0}.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;display:flex;justify-content:space-between;gap:12px;align-items:center}
-.logo{width:80px;height:80px;object-fit:contain;background:#fff;border-radius:14px;padding:5px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.danger{background:var(--red);color:#fff}
-.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#eaf2fb}.err{background:#fdecef;border-color:#dd7a85}.muted{color:var(--muted)}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.kpi{padding:14px;border:1px solid var(--line);border-radius:14px}.kpi strong{display:block;font-size:23px}.matchday{border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}.matchday h3{margin:0;padding:10px 12px;background:#eaf2fb}.fixture{padding:11px;border-top:1px solid #dce6f0;display:grid;grid-template-columns:125px 1fr auto;gap:10px;align-items:center}
-.player-card{display:grid;grid-template-columns:70px 1fr;gap:12px;align-items:center}.photo{width:70px;height:85px;object-fit:cover;border-radius:10px;background:#eef3f8}
-@media(max-width:760px){.grid3{grid-template-columns:1fr}.fixture{grid-template-columns:1fr}}
-</style></head><body><main>
-<div class="actions"><button class="btn secondary" onclick="location.href='public.html'">Naviga Free</button><button class="btn danger" onclick="logout()">Cambia account</button></div>
-<header class="hero"><div><h1>Area giocatore</h1><div>Squadra, partite, certificato e tessera digitale</div></div><img src="assets/aics-logo.png" class="logo"></header>
-<section id="msg" class="card notice">Caricamento area personale…</section>
-<section id="profile" class="card" style="display:none"></section>
-<section id="matches" class="card" style="display:none"><h2>Partite della mia squadra</h2><div id="matchesBody"></div></section>
-</main><script>
-const cfg=window.PAM_V9_CONFIG,client=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui;color:var(--text)}
+main{max-width:1180px;margin:auto;padding:18px 12px 70px}
+.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 10px 24px rgba(8,47,104,.08)}
+.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.brand{display:flex;gap:12px;align-items:center}.brand img{width:82px;height:70px;object-fit:contain;background:#fff;border-radius:12px;padding:5px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}
+.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.danger{background:var(--red);color:#fff}
+.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#eaf2fb}.err{background:#fdecef;border-color:#dd7a85}.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi{padding:14px;border:1px solid var(--line);border-radius:14px}.kpi strong{display:block;font-size:21px}
+.profile{display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:center}.photo{width:90px;height:110px;object-fit:cover;border-radius:12px;background:#eef3f8}
+.team-head{display:flex;align-items:center;gap:12px}.team-logo{width:70px;height:70px;object-fit:contain}
+.player-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.mate{border:1px solid var(--line);border-radius:12px;padding:10px}.mate img{width:44px;height:52px;object-fit:cover;border-radius:8px;vertical-align:middle;margin-right:8px}
+.matchday{border:1px solid var(--line);border-radius:14px;margin:10px 0;overflow:hidden}.matchday h3{margin:0;padding:10px 12px;background:#eaf2fb}
+.fixture{padding:11px;border-top:1px solid #dce6f0;display:grid;grid-template-columns:135px 1fr auto;gap:10px;align-items:center}
+@media(max-width:760px){.grid,.player-list{grid-template-columns:1fr}.profile{grid-template-columns:70px 1fr}.profile .actions{grid-column:1/-1}.fixture{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<div class="actions">
+  <button class="btn secondary" onclick="location.href='public.html?v=player10'">Naviga Free</button>
+  <button class="btn danger" onclick="logout()">Logout / Cambia account</button>
+</div>
+
+<header class="hero">
+  <div class="brand"><img src="assets/aics-logo.png"><div><h1 style="margin:0">Area giocatore</h1><div>Squadra, partite, rosa e tessera digitale</div></div></div>
+</header>
+
+<section id="message" class="card notice">Caricamento area giocatore…</section>
+
+<section id="profileCard" class="card" hidden></section>
+<section id="teamCard" class="card" hidden></section>
+<section id="matchesCard" class="card" hidden><h2>Partite della mia squadra</h2><div id="matchesBody"></div></section>
+<section id="rosterCard" class="card" hidden><h2>Rosa della mia squadra</h2><div id="rosterBody" class="player-list"></div></section>
+</main>
+
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const client=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
-let me=null,team=null;
-function roundLabel(v){return v&&v!=='0'?`Giornata ${v}`:'Senza giornata'}
-function certStatus(expiry){if(!expiry)return 'NON INDICATO';return new Date(expiry+'T23:59:59')<new Date()?'SCADUTO':'VALIDO'}
+
+function certStatus(expiry){
+  if(!expiry)return {label:'NON INDICATO',cls:'muted'};
+  const d=new Date(expiry+'T23:59:59');
+  const days=Math.ceil((d-Date.now())/86400000);
+  if(days<0)return {label:'SCADUTO',cls:'danger'};
+  if(days<=30)return {label:`IN SCADENZA (${days} gg)`,cls:'warn'};
+  return {label:'VALIDO',cls:'ok'};
+}
+
 async function init(){
- const session=await client.auth.getSession();if(!session.data.session)return location.replace('login.html');
- const r=await client.rpc('get_my_player_dashboard');
- if(r.error){$('msg').textContent=r.error.message;$('msg').className='card notice err';return}
- if(!r.data?.player){$('msg').textContent='Nessuna anagrafica giocatore approvata è collegata a questo account.';return}
- me=r.data.player;team=r.data.team;
- $('msg').style.display='none';$('profile').style.display='block';$('matches').style.display='block';
- $('profile').innerHTML=`<div class="player-card">${me.photo_url?`<img class="photo" src="${esc(me.photo_url)}">`:''}<div><h2>${esc(me.first_name)} ${esc(me.last_name)}</h2><div class="muted">${esc(team.name)} · ${esc(team.series||'')}</div></div></div>
- <div class="grid3" style="margin-top:12px"><div class="kpi"><span>Classifica FITP</span><strong>${esc(me.fitp_ranking||'—')}</strong></div><div class="kpi"><span>Certificato medico</span><strong>${certStatus(me.medical_certificate_expiry)}</strong><small>${esc(me.medical_certificate_expiry||'')}</small></div><div class="kpi"><span>Stato iscrizione</span><strong>${esc(me.status||'—')}</strong></div></div>
- <div class="actions" style="margin-top:12px"><button class="btn primary" onclick="location.href='digital-card.html?player=${me.id}'">Apri tessera virtuale con QR</button><button class="btn secondary" onclick="location.href='matches-view.html?team=${team.id}'">Vista completa partite</button></div>`;
- renderMatches(r.data.fixtures||[],r.data.teams||[]);
+  const session=await client.auth.getSession();
+  if(!session.data.session){location.replace('login.html?v=player10');return;}
+
+  const claim=await client.rpc('claim_my_approved_player');
+  if(claim.error){
+    $('message').textContent=claim.error.message;
+    $('message').className='card notice err';
+    return;
+  }
+
+  const result=await client.rpc('get_my_player_portal');
+  if(result.error){
+    $('message').textContent=result.error.message;
+    $('message').className='card notice err';
+    return;
+  }
+  if(!result.data?.player){
+    $('message').textContent='Non è stata trovata un’iscrizione giocatore approvata collegata a questa email.';
+    $('message').className='card notice err';
+    return;
+  }
+
+  const p=result.data.player,t=result.data.team;
+  $('message').hidden=true;
+  ['profileCard','teamCard','matchesCard','rosterCard'].forEach(id=>$(id).hidden=false);
+
+  const cs=certStatus(p.medical_certificate_expiry);
+  $('profileCard').innerHTML=`
+    <div class="profile">
+      ${p.photo_url?`<img class="photo" src="${esc(p.photo_url)}">`:`<div class="photo"></div>`}
+      <div>
+        <h2 style="margin:0">${esc(p.first_name)} ${esc(p.last_name)}</h2>
+        <div class="muted">${esc(p.email||'')}</div>
+        <div class="muted">Classifica FITP: ${esc(p.fitp_ranking||'—')}</div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" onclick="location.href='digital-card.html?player=${p.id}&v=player10'">Tessera dematerializzata</button>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:14px">
+      <div class="kpi"><span>Squadra</span><strong>${esc(t.name)}</strong></div>
+      <div class="kpi"><span>Competizione</span><strong>${esc(t.series||'—')}</strong></div>
+      <div class="kpi"><span>Certificato medico</span><strong>${esc(cs.label)}</strong><small>${esc(p.medical_certificate_expiry||'')}</small></div>
+    </div>`;
+
+  $('teamCard').innerHTML=`
+    <div class="team-head">
+      ${t.logo_url?`<img class="team-logo" src="${esc(t.logo_url)}">`:''}
+      <div><h2 style="margin:0">${esc(t.name)}</h2><div class="muted">${esc(t.club_name||'')} · ${esc(t.series||'')}</div></div>
+    </div>`;
+
+  renderMatches(result.data.fixtures||[],result.data.teams||[]);
+  $('rosterBody').innerHTML=(result.data.roster||[]).map(m=>`
+    <div class="mate">${m.photo_url?`<img src="${esc(m.photo_url)}">`:''}<b>${esc(m.first_name)} ${esc(m.last_name)}</b><div class="muted">${esc(m.fitp_ranking||'')}</div></div>
+  `).join('')||'<div class="notice">Nessun compagno disponibile.</div>';
 }
+
 function renderMatches(fixtures,teams){
- const names=Object.fromEntries((teams||[]).map(x=>[x.id,x.name]));
- const groups={};
- fixtures.forEach(f=>{const key=`${f.competition_code||'ALTRO'}|${f.round_number||'0'}`;(groups[key]??=[]).push(f)});
- const html=Object.entries(groups).sort().map(([key,list])=>{const [comp,round]=key.split('|');return `<div class="matchday"><h3>${esc(comp.replaceAll('_',' '))} · ${roundLabel(round)}</h3>${list.map(f=>`<div class="fixture"><div>${f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT'):'Da definire'}</div><div><b>${esc(names[f.home_team_id]||f.home_placeholder||'Da definire')}</b> – <b>${esc(names[f.away_team_id]||f.away_placeholder||'Da definire')}</b><div class="muted">${esc(f.venue||'')}</div></div><div>${esc(f.status||'Da giocare')}</div></div>`).join('')}</div>`}).join('');
- $('matchesBody').innerHTML=html||'<div class="notice">Nessuna partita disponibile.</div>';
+  const names=Object.fromEntries(teams.map(x=>[x.id,x.name]));
+  const groups={};
+  fixtures.forEach(f=>{
+    const key=`${f.competition_code||'ALTRO'}|${f.round_number||'0'}`;
+    (groups[key]??=[]).push(f);
+  });
+  $('matchesBody').innerHTML=Object.entries(groups).sort().map(([key,list])=>{
+    const [comp,round]=key.split('|');
+    return `<div class="matchday"><h3>${esc(comp.replaceAll('_',' '))} · ${round==='0'?'Senza giornata':'Giornata '+round}</h3>${list.map(f=>`
+      <div class="fixture">
+        <div>${f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT'):'Da definire'}</div>
+        <div><b>${esc(names[f.home_team_id]||f.home_placeholder||'Da definire')}</b> – <b>${esc(names[f.away_team_id]||f.away_placeholder||'Da definire')}</b><div class="muted">${esc(f.venue||'')}</div></div>
+        <div>${esc(f.status||'Da giocare')}</div>
+      </div>`).join('')}</div>`;
+  }).join('')||'<div class="notice">Nessuna partita disponibile.</div>';
 }
-async function logout(){await client.auth.signOut({scope:'local'});location.replace('login.html?change=1')}
-window.logout=logout;init();
-</script></body></html>
+
+async function logout(){
+  await client.auth.signOut({scope:'local'});
+  location.replace('login.html?change=1&v=player10');
+}
+window.logout=logout;
+init();
+</script>
+</body>
+</html>

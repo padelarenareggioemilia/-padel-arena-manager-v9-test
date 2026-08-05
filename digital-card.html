@@ -34,7 +34,12 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
     <div id="digitalCard" class="digital-card">
       <div class="tricolor"></div>
       <div class="card-top">
-        <img class="card-logo" src="assets/aics-logo.png">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+          <img class="card-logo" src="assets/aics-logo.png">
+          <img class="card-logo" src="assets/padel-arena-manager.png" onerror="this.src='assets/aics-logo.png'">
+          <img id="competitionLogo" class="card-logo">
+        </div>
+        <img id="teamLogo" class="card-logo" style="display:block;margin:12px auto 0">
         <img id="photo" class="photo">
         <div id="playerName" class="player-name"></div>
         <div id="teamName" class="team-name"></div>
@@ -66,6 +71,10 @@ async function init(){
   $('photo').src=cardData.photo_url;
   $('playerName').textContent=`${cardData.first_name} ${cardData.last_name}`;
   $('teamName').textContent=cardData.team_name;
+  $('teamLogo').src=cardData.team_logo_url||'assets/aics-logo.png';
+  const comp=String(cardData.series||'').toUpperCase().replaceAll(' ','_');
+  const compMap={SERIE_A:'assets/serie-a.png',SERIE_B:'assets/serie-b.png',SERIE_C:'assets/serie-c.png',COPPA_ITALIA:'assets/coppa-italia.png',SUPERCOPPA:'assets/supercoppa.png'};
+  $('competitionLogo').src=compMap[comp]||'assets/aics-logo.png';
   $('cardNumber').textContent=cardData.card_number;
   $('series').textContent=cardData.series||'—';
   $('fitp').textContent=cardData.fitp_ranking||'—';

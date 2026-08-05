@@ -1,7 +1,31 @@
-V9.10.1 — HOME FREE + AREA GIOCATORI
+RAMO CONSIGLIATO
+rifinitura-v9
 
-Sostituisci soltanto public.html nel repository V9.
-Non serve SQL.
+PATCH
+RIFINITURA V9 - PLAYER ENGINE 1.0
 
-Apri:
-https://padelarenareggioemilia.github.io/-padel-arena-manager-v9-test/public.html?v=9101
+COSA SISTEMA
+- accesso rapido tramite la sola email usata per l'iscrizione;
+- link sicuro via email, senza dover creare password;
+- collegamento automatico tra account e anagrafica approvata;
+- riconoscimento permanente del ruolo player;
+- login giocatore diretto all'area giocatore;
+- dati personali, squadra, rosa e partite della squadra;
+- tessera dematerializzata con QR;
+- loghi AICS, Padel Arena Manager, squadra e competizione;
+- pagina pubblica di verifica QR.
+
+INSTALLAZIONE
+1. Crea il ramo GitHub: rifinitura-v9.
+2. Esegui SUPABASE_RIFINITURA_V9_PLAYER_1_0.sql.
+3. Nel ramo rifinitura-v9 sostituisci/carica:
+   - public.html
+   - account-home.html
+   - player-dashboard.html
+   - digital-card.html
+   - verify-player.html
+4. Fai Commit changes.
+5. Apri public.html?v=player10.
+
+IMPORTANTE
+Questa patch non modifica il V8.

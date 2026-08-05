@@ -32,7 +32,7 @@
     <img id="headerLogo" class="logo" src="assets/aics-logo.png" alt="AICS">
     <div>
       <h1 id="headerTitle">AICS PADEL CHAMPIONSHIP</h1>
-      <div id="headerSubtitle">Navigazione Free: calendari, risultati e classifiche</div><div class="small" style="opacity:.85;margin-top:4px">V9.10.1</div>
+      <div id="headerSubtitle">Navigazione Free: calendari, risultati e classifiche</div><div class="small" style="opacity:.85;margin-top:4px">RIFINITURA V9 · PLAYER 1.0</div>
     </div>
   </div>
   <button id="headerButton" class="btn secondary" onclick="location.href='login.html?v=recovery95'">Accedi / Cambia account</button>
@@ -47,27 +47,27 @@
 </section>
 
 
+
 <section id="playerAccountSection" class="card player-account-card">
-  <h2>Sei un giocatore del campionato?</h2>
-  <div class="notice">Recupera la tua anagrafica oppure crea il tuo account utilizzando la stessa email comunicata al capitano della squadra. Dopo la verifica dell’email, il sistema collegherà automaticamente l’account alla tua iscrizione già approvata.</div>
-  <div class="player-account-grid">
-    <div class="player-account-panel">
-      <h3>Non hai ancora un account?</h3>
-      <div class="field"><label for="playerSignupEmail">Email</label><input id="playerSignupEmail" type="email" autocomplete="email"></div>
-      <div class="field"><label for="playerSignupPassword">Crea password</label><input id="playerSignupPassword" type="password" minlength="8" autocomplete="new-password"></div>
-      <button id="playerSignupButton" class="btn primary" onclick="signupPlayerFromFree()">Crea account</button>
+  <h2>Area giocatore</h2>
+  <div class="notice">
+    Inserisci la stessa email utilizzata per l’iscrizione alla squadra.
+    Riceverai un link sicuro per entrare senza password e senza compilare una nuova registrazione.
+  </div>
+
+  <div class="player-account-panel">
+    <div class="field">
+      <label for="quickPlayerEmail">Email usata per l’iscrizione</label>
+      <input id="quickPlayerEmail" type="email" autocomplete="email" placeholder="nome@email.it">
     </div>
-    <div class="player-account-panel">
-      <h3>Hai già effettuato l’accesso?</h3>
-      <p class="muted">Collega questo account alla tua iscrizione già approvata dal capitano e dall’amministratore.</p>
-      <button id="playerClaimButton" class="btn primary" onclick="claimPlayerFromFree()">Collega la mia iscrizione approvata</button>
+    <div class="actions">
+      <button id="quickPlayerButton" class="btn primary" onclick="sendPlayerMagicLink()">Entra con la mia email</button>
+      <button class="btn secondary" onclick="openMyAccountFromFree()">Home del mio account</button>
+      <button class="btn secondary" onclick="location.href='login.html?v=player10'">Accedi con password</button>
     </div>
   </div>
+
   <div id="playerAccountMessage" class="notice account-message">Pronto.</div>
-  <div class="actions" style="margin-top:12px">
-    <button class="btn secondary" onclick="location.href='login.html?v=9101'">Vai al login</button>
-    <button class="btn secondary" onclick="openMyAccountFromFree()">Home del mio account</button>
-  </div>
 </section>
 
 <section id="competitionView" class="hidden">
@@ -90,44 +90,47 @@ const cfg=window.PAM_V9_CONFIG;
 const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 const $=id=>document.getElementById(id);
 
+
 function playerAccountMessage(text,error=false){
-  const box=$('playerAccountMessage'); if(!box)return;
-  box.textContent=text; box.className='notice account-message '+(error?'err':'ok');
+  const box=$('playerAccountMessage');
+  if(!box)return;
+  box.textContent=text;
+  box.className='notice account-message '+(error?'err':'ok');
 }
-async function signupPlayerFromFree(){
-  const email=($('playerSignupEmail')?.value||'').trim().toLowerCase();
-  const password=$('playerSignupPassword')?.value||'';
-  if(!email||password.length<8)return playerAccountMessage('Inserisci un indirizzo email valido e una password di almeno 8 caratteri.',true);
-  const button=$('playerSignupButton'); if(button){button.disabled=true;button.textContent='Creazione account…'}
+async function sendPlayerMagicLink(){
+  const email=($('quickPlayerEmail')?.value||'').trim().toLowerCase();
+  if(!email)return playerAccountMessage('Inserisci l’indirizzo email usato per l’iscrizione.',true);
+
+  const button=$('quickPlayerButton');
+  if(button){button.disabled=true;button.textContent='Invio link…'}
+
   try{
-    const redirectUrl=new URL('public.html?claim=1&v=9101',location.href).href;
-    const result=await sb.auth.signUp({email,password,options:{emailRedirectTo:redirectUrl}});
+    const exists=await sb.rpc('player_email_is_approved',{p_email:email});
+    if(exists.error)throw exists.error;
+    if(!exists.data){
+      return playerAccountMessage('Non risulta alcun giocatore approvato con questa email. Verifica l’indirizzo oppure contatta il capitano.',true);
+    }
+
+    const redirectTo=new URL('player-dashboard.html?magic=1&v=player10',location.href).href;
+    const result=await sb.auth.signInWithOtp({
+      email,
+      options:{shouldCreateUser:true,emailRedirectTo:redirectTo}
+    });
     if(result.error)throw result.error;
-    if(result.data.session){playerAccountMessage('Account creato. Collegamento dell’iscrizione in corso…');await claimPlayerFromFree();}
-    else playerAccountMessage('Account creato. Controlla la tua email, conferma l’account e poi torna su questa pagina.');
-  }catch(error){playerAccountMessage(error.message||String(error),true)}
-  finally{if(button){button.disabled=false;button.textContent='Crea account'}}
-}
-async function claimPlayerFromFree(){
-  const button=$('playerClaimButton'); if(button){button.disabled=true;button.textContent='Collegamento in corso…'}
-  try{
-    const session=await sb.auth.getSession();
-    if(!session.data.session)return playerAccountMessage('Prima effettua l’accesso oppure conferma l’email del nuovo account.',true);
-    const result=await sb.rpc('claim_approved_player_profile');
-    if(result.error)throw result.error;
-    playerAccountMessage(result.data?.message||'Iscrizione collegata correttamente. Ora puoi aprire la tua area giocatore.');
-  }catch(error){playerAccountMessage(error.message||String(error),true)}
-  finally{if(button){button.disabled=false;button.textContent='Collega la mia iscrizione approvata'}}
+
+    playerAccountMessage('Ti abbiamo inviato un link sicuro via email. Aprilo per entrare direttamente nella tua area giocatore.');
+  }catch(error){
+    playerAccountMessage(error.message||String(error),true);
+  }finally{
+    if(button){button.disabled=false;button.textContent='Entra con la mia email'}
+  }
 }
 async function openMyAccountFromFree(){
   const session=await sb.auth.getSession();
-  location.href=session.data.session?'account-home.html?v=9101':'login.html?v=9101';
+  location.href=session.data.session?'account-home.html?v=player10':'login.html?v=player10';
 }
-window.signupPlayerFromFree=signupPlayerFromFree;
-window.claimPlayerFromFree=claimPlayerFromFree;
+window.sendPlayerMagicLink=sendPlayerMagicLink;
 window.openMyAccountFromFree=openMyAccountFromFree;
-
-
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
 const logos={
   SERIE_A:'assets/serie-a.png?v=987',
