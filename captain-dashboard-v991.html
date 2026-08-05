@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AICS Padel Championship · Area Capitano</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%)}
+.shell{width:min(1100px,calc(100% - 24px));margin:auto;padding:22px 0 70px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0;box-shadow:0 13px 30px rgba(8,47,104,.11)}
+.hero{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.aics{width:105px;height:68px;object-fit:contain;background:#fff;padding:7px;border-radius:14px}
+.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb}.ok{background:#eaf8f0}.err{background:#fdecef}.hidden{display:none!important}
+.identity{display:grid;grid-template-columns:90px 1fr auto;gap:15px;align-items:center}.team-logo{width:90px;height:90px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:15px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.kpi{padding:14px;border:1px solid var(--line);border-radius:15px;text-align:center}.kpi strong{display:block;font-size:25px;color:var(--b)}
+.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}.btn,.tab{border:0;border-radius:11px;padding:11px 13px;font-weight:900;cursor:pointer}.primary,.tab.active{background:var(--b);color:#fff}.secondary,.tab{background:#fff;color:var(--b);border:1px solid var(--b)}.danger{background:var(--r);color:#fff}.success{background:var(--g);color:#fff}
+.player,.fixture{border:1px solid var(--line);border-radius:14px;padding:13px;margin:8px 0}.player{display:grid;grid-template-columns:65px 1fr auto;gap:12px}.photo{width:62px;height:80px;object-fit:cover;border-radius:10px}.fixture{display:grid;grid-template-columns:130px 1fr auto;gap:12px}.muted{color:var(--muted)}
+@media(max-width:750px){.identity{grid-template-columns:75px 1fr}.kpis{grid-template-columns:1fr 1fr}.tabs,.actions{display:grid}.player,.fixture{grid-template-columns:1fr}.btn,.tab{width:100%}}
+</style>
+</head>
+<body>
+<main class="shell">
+<section class="hero"><img class="aics" src="assets/aics-logo.png"><div><h1 style="margin:0">Area Capitano</h1><div id="heroSub">AICS Padel Championship</div></div></section>
+<section class="card"><div id="status" class="notice">Avvio nuova Area Capitano…</div></section>
+
+<section id="app" class="hidden">
+<section class="card"><div class="identity"><img id="teamLogo" class="team-logo"><div><h2 id="teamName" style="margin:0"></h2><div id="teamMeta" class="muted"></div></div><button class="btn secondary" onclick="loadData()">Aggiorna</button></div></section>
+<section class="card"><div class="kpis"><div class="kpi"><strong id="playersN">0</strong>Giocatori</div><div class="kpi"><strong id="pendingN">0</strong>Da approvare</div><div class="kpi"><strong id="playedN">0</strong>Giocate</div><div class="kpi"><strong id="futureN">0</strong>Da giocare</div></div></section>
+<section class="card"><div class="tabs"><button class="tab active" data-v="players" onclick="setView('players')">Rosa e richieste</button><button class="tab" data-v="calendar" onclick="setView('calendar')">Calendario</button><button class="tab" data-v="management" onclick="setView('management')">Gestione squadra</button></div></section>
+<section class="card"><div id="content"></div></section>
+<section class="card"><div class="actions"><button class="btn primary" onclick="copyPlayers()">Copia link giocatori</button><button class="btn secondary" onclick="openMatches()">Partite squadra</button><button class="btn danger" onclick="logout()">Logout</button></div></section>
+</section>
+</main>
+<div style="position:fixed;right:8px;bottom:8px;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui">V9.8.7.3 CACHE BYPASS</div>
+
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const el=id=>document.getElementById(id);
+let sb=null,data=null,view='players';
+const list=x=>Array.isArray(x)?x:[];
+const safe=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+
+window.onerror=function(message){el('status').textContent='Errore JavaScript: '+message;el('status').className='notice err';return false};
+window.onunhandledrejection=function(event){el('status').textContent='Errore applicazione: '+(event.reason?.message||String(event.reason));el('status').className='notice err'};
+
+function score(f){
+ const st=list(data.statuses).find(x=>x.fixture_id===f.id);
+ const w=st?.workflow_data||{};
+ const r=w.result_data||w.result;
+ if(!r)return null;
+ const h=Number(r.home_score??r.home_matches??r.home),a=Number(r.away_score??r.away_matches??r.away);
+ return Number.isFinite(h)&&Number.isFinite(a)?{h,a}:null;
+}
+function teamLabel(id){const t=list(data.teams).find(x=>x.id===id);return t?.name||t?.team_name||'Squadra'}
+function date(v){const d=new Date(v);return Number.isNaN(d.getTime())?'Da definire':d.toLocaleString('it-IT')}
+
+function render(){
+ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.v===view));
+ if(view==='players'){
+   el('content').innerHTML=list(data.players).map(p=>`<div class="player">${p.photo_url?`<img class="photo" src="${safe(p.photo_url)}">`:''}<div><b>${safe(p.first_name||'')} ${safe(p.last_name||'')}</b><div class="muted">${safe(p.email||'')} · ${safe(p.fitp_ranking||'')}</div><div class="muted">Stato: ${safe(p.status||'')}</div></div><div>${p.status==='pending'?`<button class="btn success" onclick="setStatus('${p.id}','approved')">Approva</button> <button class="btn danger" onclick="setStatus('${p.id}','rejected')">Rifiuta</button>`:''}</div></div>`).join('')||'<div class="notice">Nessun giocatore.</div>';
+   return;
+ }
+ if(view==='calendar'){
+   el('content').innerHTML=list(data.fixtures).map(f=>{const s=score(f);return `<div class="fixture"><div><b>${safe(date(f.scheduled_at))}</b></div><div><b>${safe(teamLabel(f.home_team_id))}</b><br><b>${safe(teamLabel(f.away_team_id))}</b></div><div>${s?`${s.h} – ${s.a}`:'Da giocare'}</div></div>`}).join('')||'<div class="notice">Nessuna partita.</div>';
+   return;
+ }
+ el('content').innerHTML=`<h3>Note squadra</h3><textarea id="notes" style="width:100%;min-height:100px">${safe(data.team?.notes||'')}</textarea><br><button class="btn primary" onclick="saveNotes()">Salva note</button>`;
+}
+function setView(v){view=v;render()}
+async function setStatus(id,status){const r=await sb.rpc('captain_set_player_status',{p_team_id:data.team_id,p_player_id:id,p_status:status});if(r.error)return alert(r.error.message);loadData()}
+async function saveNotes(){const r=await sb.rpc('captain_update_team_notes',{p_team_id:data.team_id,p_notes:el('notes').value});if(r.error)return alert(r.error.message);alert('Salvato');loadData()}
+async function copyPlayers(){const token=data.team?.player_invite_token;if(!token)return alert('Token non disponibile');const u=new URL(`player.html?invite=${encodeURIComponent(token)}`,location.href).href;try{await navigator.clipboard.writeText(u);alert('Link copiato')}catch(e){prompt('Copia:',u)}}
+function openMatches(){location.href=`matches-view.html?team=${encodeURIComponent(data.team_id)}`}
+async function loadData(){
+ try{
+  el('status').textContent='Caricamento squadra, rosa e competizioni…';
+  if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey)throw new Error('config.js non disponibile');
+  if(!sb)sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+  const q=await sb.auth.getSession();if(q.error)throw q.error;if(!q.data.session){location.replace('login.html?change=1&v=991');return}
+  const p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();if(p.error)throw p.error;if(String(p.data?.role||'').toLowerCase()==='admin'){location.replace('index.html?v=991');return}
+  const r=await sb.rpc('get_my_captain_portal');if(r.error)throw r.error;
+  data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.ok)throw new Error(data?.message||'Squadra non collegata');
+  const t=data.team||{},players=list(data.players),fixtures=list(data.fixtures);
+  el('teamName').textContent=t.name||'Squadra';el('teamMeta').textContent=[t.series,t.club_name,t.club_city].filter(Boolean).join(' · ');el('heroSub').textContent=t.name||'AICS Padel Championship';
+  if(t.logo_url){el('teamLogo').src=t.logo_url}else{el('teamLogo').style.display='none'}
+  el('playersN').textContent=players.filter(x=>x.status==='approved').length;el('pendingN').textContent=players.filter(x=>x.status==='pending').length;el('playedN').textContent=fixtures.filter(score).length;el('futureN').textContent=fixtures.filter(x=>!score(x)).length;
+  el('status').textContent='Accesso capitano attivo.';el('status').className='notice ok';el('app').classList.remove('hidden');render();
+ }catch(e){el('status').textContent='Errore Area Capitano: '+(e.message||String(e));el('status').className='notice err'}
+}
+async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=991')}
+window.setView=setView;window.setStatus=setStatus;window.saveNotes=saveNotes;window.copyPlayers=copyPlayers;window.openMatches=openMatches;window.loadData=loadData;window.logout=logout;
+loadData();
+</script>
+</body>
+</html>
