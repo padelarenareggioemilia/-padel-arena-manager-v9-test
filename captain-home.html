@@ -47,7 +47,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 </main>
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="actions"><h2 id="modalTitle"></h2><button class="btn secondary" onclick="closeModal()">Chiudi</button></div><div id="modalBody"></div></div></div>
-<div style="position:fixed;right:8px;bottom:8px;background:#082f68;color:#fff;padding:4px 7px;border-radius:999px;font:700 10px system-ui">V9.8.9 CAPTAIN COMMUNICATIONS</div>
+
 
 <script>
 const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);
@@ -68,7 +68,7 @@ function render(){
  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.v===view));
  if(view==='players')$('content').innerHTML=`<button class="btn primary" onclick="addPlayer()">Inserisci giocatore</button>${A(data.players).map(player).join('')||'<div class="notice">Nessun giocatore.</div>'}`;
  else if(view==='calendar')$('content').innerHTML=A(data.fixtures).map(fixture).join('')||'<div class="notice">Nessuna partita.</div>';
- else if(view==='lineups')$('content').innerHTML=A(data.fixtures).filter(f=>!sc(f)).map(f=>`<div class="card">${fixture(f)}<div class="actions"><button class="btn primary" onclick="openLineup('${f.id}')">Distinta / Formazione</button><button class="btn secondary" onclick="openScan('${f.id}')">Scanner QR avversari</button></div></div>`).join('')||'<div class="notice">Nessuna gara futura.</div>';
+ else if(view==='lineups')$('content').innerHTML=A(data.fixtures).map(f=>`<div class="card">${fixture(f)}<div class="actions">${!sc(f)?`<button class="btn primary" onclick="openLineup('${f.id}')">Crea / modifica formazione</button><button class="btn secondary" onclick="openScan('${f.id}')">Scanner QR avversari</button>`:''}<button class="btn success" onclick="location.href='match-center.html?id=${encodeURIComponent(f.id)}&v=9904'">${sc(f)?'Apri referto e risultato':'Centro gara / Referto finale'}</button></div></div>`).join('')||'<div class="notice">Nessuna partita disponibile.</div>';
  else if(view==='secretaries')renderSecretaries();
  else if(view==='communications')renderCommunications();
  else if(view==='callups')renderCallups();
@@ -78,8 +78,53 @@ function setView(v){view=v;render()}
 function openModal(t,h){$('modalTitle').textContent=t;$('modalBody').innerHTML=h;$('modal').classList.remove('hidden')}
 function closeModal(){stopScan();$('modal').classList.add('hidden')}
 
-function editPlayer(id){const p=A(data.players).find(x=>x.id===id);openModal('Modifica dati consentiti',`<div class="notice">Il capitano può modificare esclusivamente classifica FITP e scadenza del certificato medico.</div><div class="field"><label>Classifica FITP</label><input id="er" value="${E(p.fitp_ranking||'')}"></div><div class="field"><label>Scadenza certificato medico</label><input id="em" type="date" value="${E(p.medical_certificate_expiry||'')}"></div><button class="btn primary" onclick="savePlayer('${id}')">Salva modifiche</button>`)}
-async function savePlayer(id){const r=await sb.rpc('captain_update_player_sport_data',{p_team_id:data.team_id,p_player_id:id,p_fitp:$('er').value.trim(),p_medical_expiry:$('em').value||null});if(r.error)return alert(r.error.message);closeModal();loadAll()}
+function editPlayer(id){
+ const p=A(data.players).find(x=>x.id===id);
+ if(!p)return alert('Giocatore non trovato.');
+ if(p.status==='pending'){
+  openModal('Modifica richiesta giocatore',`
+   <div class="notice">Prima dell’approvazione puoi correggere i dati della richiesta. Dopo l’approvazione saranno modificabili soltanto classifica FITP e scadenza del certificato medico.</div>
+   <div class="grid2">
+    <div class="field"><label>Nome</label><input id="ef" value="${E(p.first_name||'')}"></div>
+    <div class="field"><label>Cognome</label><input id="el" value="${E(p.last_name||'')}"></div>
+    <div class="field"><label>Email</label><input id="ee" type="email" value="${E(p.email||'')}"></div>
+    <div class="field"><label>Telefono</label><input id="ep" value="${E(p.phone||'')}"></div>
+    <div class="field"><label>Classifica FITP</label><input id="er" value="${E(p.fitp_ranking||'')}"></div>
+    <div class="field"><label>Scadenza certificato medico</label><input id="em" type="date" value="${E(p.medical_certificate_expiry||'')}"></div>
+   </div>
+   <button class="btn primary" onclick="savePendingPlayer('${id}')">Salva richiesta</button>`);
+ }else{
+  openModal('Modifica dati sportivi consentiti',`
+   <div class="notice">Il giocatore è già approvato. Il capitano può modificare esclusivamente classifica FITP e scadenza del certificato medico.</div>
+   <div class="field"><label>Classifica FITP</label><input id="er" value="${E(p.fitp_ranking||'')}"></div>
+   <div class="field"><label>Scadenza certificato medico</label><input id="em" type="date" value="${E(p.medical_certificate_expiry||'')}"></div>
+   <button class="btn primary" onclick="savePlayer('${id}')">Salva modifiche</button>`);
+ }
+}
+async function savePendingPlayer(id){
+ const payload={
+  first_name:$('ef').value.trim(),
+  last_name:$('el').value.trim(),
+  email:$('ee').value.trim().toLowerCase(),
+  phone:$('ep').value.trim(),
+  fitp_ranking:$('er').value.trim(),
+  medical_certificate_expiry:$('em').value||null
+ };
+ if(!payload.first_name||!payload.last_name||!payload.email)return alert('Nome, cognome ed email sono obbligatori.');
+ const r=await sb.rpc('captain_update_player_complete',{p_team_id:data.team_id,p_player_id:id,p_player:payload});
+ if(r.error)return alert(r.error.message);
+ closeModal();loadAll();
+}
+async function savePlayer(id){
+ const r=await sb.rpc('captain_update_player_sport_data',{
+  p_team_id:data.team_id,
+  p_player_id:id,
+  p_fitp:$('er').value.trim(),
+  p_medical_expiry:$('em').value||null
+ });
+ if(r.error)return alert(r.error.message);
+ closeModal();loadAll();
+}
 async function statusPlayer(id,status){const r=await sb.rpc('captain_set_player_status',{p_team_id:data.team_id,p_player_id:id,p_status:status});if(r.error)return alert(r.error.message);loadAll()}
 function openCard(id){location.href=`captain-player-card-v993.html?player=${encodeURIComponent(id)}&v=998`}
 function addPlayer(){alert('Per inserire un nuovo giocatore usa il link giocatori oppure la funzione amministratore.')}
@@ -112,6 +157,6 @@ async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}loc
 Object.assign(window,{setView,closeModal,editPlayer,savePlayer,statusPlayer,openCard,addPlayer,openLineup,saveLineup,openScan,startScan,stopScan,verifyQr,appointSec,revokeSec,sendMessage,newCallup,saveCallup,saveNotes,copyPlayers,loadAll,logout});
 loadAll();
 </script>
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.82">V9.9 CAPTAIN COMPLETE</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.84">V9.9.4 CAPTAIN FULL</div>
 </body>
 </html>

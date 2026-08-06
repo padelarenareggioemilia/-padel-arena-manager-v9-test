@@ -1,19 +1,31 @@
-V9.9 STABLE CANDIDATE 1 — INSTALLAZIONE CONTROLLATA
+V9.9.4 CAPTAIN FULL — CORREZIONE REALE
 
-1. USA SOLTANTO IL REPOSITORY: -padel-arena-manager-v9-test
-2. Estrai questo ZIP.
-3. Apri Add file > Upload files nella ROOT del repository V9.
-4. Trascina TUTTI i file e la cartella assets estratti (non lo ZIP chiuso).
-5. Conferma Commit changes.
-6. Attendi 1-2 minuti.
-7. Apri:
-   https://padelarenareggioemilia.github.io/-padel-arena-manager-v9-test/start.html?v=9902
-8. Su iPhone/Safari, se resta una pagina vecchia: chiudi la scheda e riaprila dal link sopra.
+QUESTO PACCHETTO RIPRISTINA:
+- richieste giocatore: modifica, approvazione e rifiuto;
+- giocatore approvato: modifica solo FITP e certificato medico;
+- generazione tessera digitale QR;
+- formazione e distinta;
+- scanner QR giocatori avversari;
+- centro gara e referto finale;
+- inserimento risultato;
+- comunicazioni capitano/giocatori;
+- convocazioni;
+- risposta giocatore disponibile / non disponibile;
+- segretari.
 
-DATABASE
-- Prima prova accessi, dashboard, calendario, rose e tessere SENZA eseguire SQL.
-- Esegui database/SUPABASE_V9_8_9_COMMUNICATIONS.sql soltanto se chat/convocazioni non funzionano o mostrano tabelle/funzioni mancanti.
-- Non rieseguire gli SQL storici V9.1-V9.8.7.
+CARICAMENTO:
+1. Estrai lo ZIP.
+2. Carica TUTTI i file nella root del repository V9.
+3. Carica anche la cartella database, ma NON eseguire subito lo SQL.
+4. Conferma la sostituzione dei file esistenti.
+5. Fai Commit changes.
+6. Apri captain-home.html?v=9904.
 
-NOMI STABILI
-I file principali mantengono sempre lo stesso nome. Le versioni future dovranno sovrascriverli.
+CONTROLLO:
+In basso a destra deve comparire:
+V9.9.4 CAPTAIN FULL
+
+SQL:
+Esegui database/SUPABASE_V9_8_7_UPDATE.sql soltanto se una funzione mostra
+“function not found”, “table not found” oppure un errore relativo a
+messaggi, convocazioni, segretari, tessere o portale capitano.
