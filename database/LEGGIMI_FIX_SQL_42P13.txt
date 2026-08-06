@@ -1,0 +1,14 @@
+FIX SQL ERRORE 42P13
+
+Non eseguire nuovamente SUPABASE_V9_9_8_COMPLETO.sql.
+
+Esegui invece:
+SUPABASE_V9_9_8_FIX_ERRORE_42P13.sql
+
+Lo script:
+- elimina prima le vecchie funzioni incompatibili;
+- ricrea le funzioni aggiornate;
+- esegue tutto in una singola transazione.
+
+Se Supabase mostra un nuovo errore, copia esattamente l'intero messaggio
+senza eseguire altri script.
