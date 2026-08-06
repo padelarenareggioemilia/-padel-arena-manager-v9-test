@@ -1,15 +1,19 @@
-V9.9 TEST IMMEDIATO — SOLO REPOSITORY V9
+V9.9 STABLE CANDIDATE 1 — INSTALLAZIONE CONTROLLATA
 
-1. Estrai questo ZIP sul telefono o computer.
-2. Apri il repository GitHub: -padel-arena-manager-v9-test
-3. Usa Add file > Upload files.
-4. Trascina TUTTI i file estratti (sono meno di 100).
-5. Conferma la sostituzione dei file con lo stesso nome.
-6. Non eliminare altri file e non eseguire SQL.
-7. Fai Commit changes.
-8. Attendi 1-2 minuti.
-9. Apri:
-   https://padelarenareggioemilia.github.io/-padel-arena-manager-v9-test/start.html?v=9901
+1. USA SOLTANTO IL REPOSITORY: -padel-arena-manager-v9-test
+2. Estrai questo ZIP.
+3. Apri Add file > Upload files nella ROOT del repository V9.
+4. Trascina TUTTI i file e la cartella assets estratti (non lo ZIP chiuso).
+5. Conferma Commit changes.
+6. Attendi 1-2 minuti.
+7. Apri:
+   https://padelarenareggioemilia.github.io/-padel-arena-manager-v9-test/start.html?v=9902
+8. Su iPhone/Safari, se resta una pagina vecchia: chiudi la scheda e riaprila dal link sopra.
 
-Questo pacchetto non contiene assets: usa quelli già presenti nel repository.
-Non contiene SQL e non modifica il database.
+DATABASE
+- Prima prova accessi, dashboard, calendario, rose e tessere SENZA eseguire SQL.
+- Esegui database/SUPABASE_V9_8_9_COMMUNICATIONS.sql soltanto se chat/convocazioni non funzionano o mostrano tabelle/funzioni mancanti.
+- Non rieseguire gli SQL storici V9.1-V9.8.7.
+
+NOMI STABILI
+I file principali mantengono sempre lo stesso nome. Le versioni future dovranno sovrascriverli.
