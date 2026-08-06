@@ -1,13 +1,20 @@
-V9.9 CAPTAIN ROUTING FIX
+V9.9.6 — PATCH MINIMA ROSA
 
-Carica nella ROOT del repository V9 tutti i file contenuti in questa cartella.
-Conferma la sostituzione dei file con lo stesso nome.
-Non eseguire SQL.
+CARICA SOLTANTO:
+- captain-home.html
+- captain-player-card.html
+
+NON caricare altri file.
+NON eseguire SQL.
+NON sostituire dashboard, login, account-home, match-center o service-worker.
+
+Questa patch parte dalla V9.9.4 completa e modifica soltanto:
+1. pulsanti della rosa;
+2. finestra Modifica con soli FITP e certificato;
+3. collegamento alla tessera digitale.
 
 Dopo il commit apri:
-captain-home.html?v=9903
+captain-home.html?v=9906
 
-Risultato atteso:
-in basso a destra compare V9.9 CAPTAIN COMPLETE.
-I vecchi link captain-dashboard-v991, captain-dashboard-v993,
-captain-dashboard e captain-home-2 vengono reindirizzati automaticamente.
+Controllo:
+deve comparire V9.9.6 PATCH MINIMA.

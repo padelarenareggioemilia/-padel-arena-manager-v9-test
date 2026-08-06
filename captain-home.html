@@ -62,7 +62,26 @@ function team(id){return A(data.teams).find(x=>x.id===id)||{name:'Squadra'}}
 function code(f){return f.competition_code||f.competition||'COMPETIZIONE'}
 function date(v){if(!v)return'Da definire';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('it-IT')}
 function fixture(f){const h=team(f.home_team_id),a=team(f.away_team_id),r=sc(f);return `<div class="fixture"><img class="comp-logo" src="${logos[code(f)]||'assets/aics-logo.png'}" onerror="this.src='assets/aics-logo.png'"><div><b>${labels[code(f)]||code(f)}</b><div class="muted">${E(f.stage_name||f.round_name||'Fase')}<br>${E(date(f.scheduled_at))}</div></div><div><div class="team-mini">${h.logo_url?`<img src="${E(h.logo_url)}">`:''}<b>${E(h.name)}</b></div><div class="team-mini">${a.logo_url?`<img src="${E(a.logo_url)}">`:''}<b>${E(a.name)}</b></div></div><b>${r?r.h+' – '+r.a:'Da giocare'}</b></div>`}
-function player(p){return `<div class="player">${p.photo_url?`<img class="photo" src="${E(p.photo_url)}" alt="Foto giocatore">`:'<div class="photo"></div>'}<div><b>${E(p.first_name)} ${E(p.last_name)}</b><div class="muted">${E(p.email)} · ${E(p.fitp_ranking||'FITP non indicata')}</div><div class="muted">Certificato: ${E(p.medical_certificate_expiry||'non indicato')}</div><span class="badge">${E(p.status||'pending')}</span></div><div class="actions"><button class="btn secondary tiny" onclick="editPlayer('${p.id}')">Modifica FITP / certificato</button><button class="btn primary tiny" onclick="openCard('${p.id}')">Genera tessera digitale</button>${p.status==='pending'?`<button class="btn success tiny" onclick="statusPlayer('${p.id}','approved')">Approva</button><button class="btn danger tiny" onclick="statusPlayer('${p.id}','rejected')">Rifiuta</button>`:''}</div></div>`}
+function player(p){
+ return `<div class="player">
+  ${p.photo_url?`<img class="photo" src="${E(p.photo_url)}" alt="Foto giocatore">`:'<div class="photo"></div>'}
+  <div>
+   <b>${E(p.first_name)} ${E(p.last_name)}</b>
+   <div class="muted">${E(p.email||'')}</div>
+   <div class="muted">FITP: ${E(p.fitp_ranking||'Non indicata')}</div>
+   <div class="muted">Certificato: ${E(p.medical_certificate_expiry||'Non indicato')}</div>
+   <span class="badge">${E(p.status||'pending')}</span>
+  </div>
+  <div class="actions">
+   <button class="btn secondary tiny" onclick="editPlayer('${p.id}')">Modifica FITP / certificato</button>
+   <button class="btn primary tiny" onclick="openCard('${p.id}')">Genera tessera digitale</button>
+   ${p.status==='pending'?`
+    <button class="btn success tiny" onclick="statusPlayer('${p.id}','approved')">Approva</button>
+    <button class="btn danger tiny" onclick="statusPlayer('${p.id}','rejected')">Rifiuta</button>
+   `:''}
+  </div>
+ </div>`;
+}
 
 function render(){
  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.v===view));
@@ -81,11 +100,21 @@ function closeModal(){stopScan();$('modal').classList.add('hidden')}
 function editPlayer(id){
  const p=A(data.players).find(x=>x.id===id);
  if(!p)return alert('Giocatore non trovato.');
- openModal('Modifica dati consentiti',`
-  <div class="notice"><b>Dati anagrafici protetti.</b><br>Il capitano può modificare esclusivamente la classifica FITP e la data di scadenza del certificato medico.</div>
-  <div class="field"><label>Classifica FITP</label><input id="er" value="${E(p.fitp_ranking||'')}"></div>
-  <div class="field"><label>Scadenza certificato medico</label><input id="em" type="date" value="${E(p.medical_certificate_expiry||'')}"></div>
-  <button class="btn primary" onclick="savePlayer('${id}')">Salva FITP e certificato</button>`);
+ openModal('Modifica dati sportivi',`
+  <div class="notice">
+   I dati anagrafici non sono modificabili dal capitano.
+   Puoi aggiornare esclusivamente classifica FITP e scadenza del certificato medico.
+  </div>
+  <div class="field">
+   <label>Classifica FITP</label>
+   <input id="er" value="${E(p.fitp_ranking||'')}">
+  </div>
+  <div class="field">
+   <label>Scadenza certificato medico</label>
+   <input id="em" type="date" value="${E(p.medical_certificate_expiry||'')}">
+  </div>
+  <button class="btn primary" onclick="savePlayer('${id}')">Salva modifiche</button>
+ `);
 }
 async function savePlayer(id){
  const r=await sb.rpc('captain_update_player_sport_data',{
@@ -100,7 +129,7 @@ async function savePlayer(id){
 }
 
 async function statusPlayer(id,status){const r=await sb.rpc('captain_set_player_status',{p_team_id:data.team_id,p_player_id:id,p_status:status});if(r.error)return alert(r.error.message);loadAll()}
-function openCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=9905`}&v=998`}
+function openCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=9906`}&v=998`}
 function addPlayer(){alert('Per inserire un nuovo giocatore usa il link giocatori oppure la funzione amministratore.')}
 function openLineup(fid){const l=A(data.lineups).find(x=>x.fixture_id===fid),sel=A(data.lineup_players).filter(x=>x.lineup_id===l?.id);openModal('Distinta e formazione',A(data.players).filter(p=>p.status==='approved').map(p=>{const x=sel.find(y=>y.player_id===p.id);return `<div class="lineup"><input type="checkbox" class="chk" data-id="${p.id}" ${x?'checked':''}><b>${E(p.first_name)} ${E(p.last_name)}</b><select class="pos" data-id="${p.id}"><option></option>${['M1','M2','Misto','Femminile','Riserva'].map(v=>`<option ${x?.position===v?'selected':''}>${v}</option>`).join('')}</select></div>`}).join('')+`<textarea id="lnote" placeholder="Note"></textarea><div class="actions"><button class="btn primary" onclick="saveLineup('${fid}',false)">Salva bozza</button><button class="btn success" onclick="saveLineup('${fid}',true)">Conferma distinta</button></div>`)}
 async function saveLineup(fid,ok){const players=[...document.querySelectorAll('.chk:checked')].map(c=>({player_id:c.dataset.id,position:document.querySelector(`.pos[data-id="${c.dataset.id}"]`).value})),r=await sb.rpc('captain_save_lineup',{p_fixture_id:fid,p_team_id:data.team_id,p_players:players,p_notes:$('lnote').value,p_confirm:ok});if(r.error)return alert(r.error.message);closeModal();loadAll()}
@@ -132,6 +161,6 @@ Object.assign(window,{setView,closeModal,editPlayer,savePlayer,statusPlayer,open
 loadAll();
 </script>
 
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.84">V9.9.5 ROSA PROTETTA</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.84">V9.9.6 PATCH MINIMA</div>
 </body>
 </html>
