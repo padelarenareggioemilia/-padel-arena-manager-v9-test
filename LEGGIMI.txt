@@ -1,20 +1,23 @@
-V9.9.6 — PATCH MINIMA ROSA
+V9.9.11 — FORZA AREA CAPITANO
 
-CARICA SOLTANTO:
+Il bollino V9.8.7.1 indicava che il sito apriva ancora un vecchio alias.
+
+CARICA TUTTI QUESTI FILE NELLA ROOT V9:
 - captain-home.html
-- captain-player-card.html
+- captain-home-2.html
+- captain.html
+- captain-dashboard.html
+- captain-dashboard-v991.html
+- captain-dashboard-v993.html
+- service-worker.js
 
-NON caricare altri file.
 NON eseguire SQL.
-NON sostituire dashboard, login, account-home, match-center o service-worker.
 
-Questa patch parte dalla V9.9.4 completa e modifica soltanto:
-1. pulsanti della rosa;
-2. finestra Modifica con soli FITP e certificato;
-3. collegamento alla tessera digitale.
+Dopo il commit:
+1. chiudi tutte le schede del sito;
+2. apri una finestra privata;
+3. visita:
+   captain-home.html?v=9911
 
-Dopo il commit apri:
-captain-home.html?v=9906
-
-Controllo:
-deve comparire V9.9.6 PATCH MINIMA.
+Deve apparire:
+V9.9.11 FORZA AREA CAPITANO

@@ -80,7 +80,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;z-index:99;backg
 </main>
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="actions" style="justify-content:space-between"><h2 id="modalTitle" style="margin:0"></h2><button class="btn secondary" onclick="closeModal()">Chiudi</button></div><div id="modalBody"></div></div></div>
-<div style="position:fixed;right:8px;bottom:8px;z-index:999;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.8">V9.9.9 FIX MIRATO</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:999;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.8">V9.9.11 FORZA AREA CAPITANO</div>
 
 <script>
 const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id),sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
@@ -149,11 +149,98 @@ function render(){document.querySelectorAll('.tab').forEach(x=>x.classList.toggl
 function setView(v){view=v;render()}
 function openModal(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modal').classList.remove('hidden')}
 function closeModal(){if(scanner){try{scanner.clear()}catch(e){}scanner=null}$('modal').classList.add('hidden')}
-function addPlayerModal(){openModal('Inserisci giocatore',`<div class="grid2"><div class="field"><label>Nome</label><input id="pf"></div><div class="field"><label>Cognome</label><input id="pl"></div><div class="field"><label>Email</label><input id="pe" type="email"></div><div class="field"><label>Telefono</label><input id="pp"></div><div class="field"><label>Data di nascita</label><input id="pbd" type="date"></div><div class="field"><label>Luogo di nascita</label><input id="pbp"></div><div class="field"><label>Classifica FITP</label><input id="pfitp"></div><div class="field"><label>Scadenza certificato</label><input id="pmed" type="date"></div></div><button class="btn success" onclick="addPlayer()">Inserisci e approva</button>`)}
-async function addPlayer(){const p={first_name:$('pf').value.trim(),last_name:$('pl').value.trim(),email:$('pe').value.trim().toLowerCase(),phone:$('pp').value.trim(),birth_date:$('pbd').value,birth_place:$('pbp').value.trim(),fitp_ranking:$('pfitp').value.trim().toUpperCase(),medical_certificate_expiry:$('pmed').value};if(Object.values(p).some(x=>!x))return alert('Compila tutti i campi.');const r=await sb.rpc('captain_add_player_basic',{p_team_id:data.team_id,p_player:p});if(r.error)return alert(r.error.message);closeModal();await loadAll()}
-function editPlayer(id){const p=arr(data.players).find(x=>x.id===id);openModal('Modifica giocatore',`<div class="grid2"><div class="field"><label>Nome</label><input id="ef" value="${esc(p.first_name||'')}"></div><div class="field"><label>Cognome</label><input id="el" value="${esc(p.last_name||'')}"></div><div class="field"><label>Email</label><input id="ee" value="${esc(p.email||'')}"></div><div class="field"><label>Telefono</label><input id="ep" value="${esc(p.phone||'')}"></div><div class="field"><label>Classifica FITP</label><input id="efitp" value="${esc(p.fitp_ranking||'')}"></div><div class="field"><label>Scadenza certificato</label><input id="emed" type="date" value="${esc(p.medical_certificate_expiry||'')}"></div></div><button class="btn primary" onclick="savePlayer('${id}')">Salva modifiche</button>`)}
-async function savePlayer(id){const payload={first_name:$('ef').value.trim(),last_name:$('el').value.trim(),email:$('ee').value.trim().toLowerCase(),phone:$('ep').value.trim(),fitp_ranking:$('efitp').value.trim().toUpperCase(),medical_certificate_expiry:$('emed').value};const r=await sb.rpc('captain_update_player_complete',{p_team_id:data.team_id,p_player_id:id,p_player:payload});if(r.error)return alert(r.error.message);closeModal();await loadAll()}
-function generateCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=9909`}&v=989`}
+function addPlayerModal(){
+ openModal('Inserisci giocatore',`
+  <div class="notice"><b>Tutti i dati sono obbligatori.</b> Carica una foto tessera chiara.</div>
+  <div class="field"><label>Foto tessera</label><input id="pphoto" type="file" accept="image/jpeg,image/png,image/webp"></div>
+  <div class="grid2">
+   <div class="field"><label>Nome</label><input id="pf"></div>
+   <div class="field"><label>Cognome</label><input id="pl"></div>
+   <div class="field"><label>Email</label><input id="pe" type="email"></div>
+   <div class="field"><label>Telefono</label><input id="pp"></div>
+   <div class="field"><label>Data di nascita</label><input id="pbd" type="date"></div>
+   <div class="field"><label>Sesso</label><select id="pgender"><option value="">Seleziona</option><option value="M">Maschile</option><option value="F">Femminile</option></select></div>
+   <div class="field"><label>Luogo di nascita</label><input id="pbp"></div>
+   <div class="field"><label>Comune di residenza</label><input id="ptown"></div>
+   <div class="field"><label>CAP</label><input id="pcap" inputmode="numeric" maxlength="5"></div>
+   <div class="field"><label>Provincia</label><input id="pprov" maxlength="2"></div>
+   <div class="field"><label>Classifica FITP</label><input id="pfitp"></div>
+   <div class="field"><label>Scadenza certificato</label><input id="pmed" type="date"></div>
+  </div>
+  <button class="btn success" onclick="addPlayer()">Inserisci e approva</button>`);
+}
+async function uploadNewPlayerPhoto(){
+ const file=$('pphoto').files[0];
+ if(!file)throw new Error('Carica la foto tessera.');
+ if(file.size>5*1024*1024)throw new Error('La foto non può superare 5 MB.');
+ const ext=(file.name.split('.').pop()||'jpg').toLowerCase();
+ const safe=['jpg','jpeg','png','webp'].includes(ext)?ext:'jpg';
+ const path=`${data.team_id}/${crypto.randomUUID()}.${safe}`;
+ const up=await sb.storage.from('player-photos').upload(path,file,{contentType:file.type,upsert:false});
+ if(up.error)throw up.error;
+ return sb.storage.from('player-photos').getPublicUrl(path).data.publicUrl;
+}
+async function addPlayer(){
+ try{
+  const cap=$('pcap').value.trim();
+  if(!/^\d{5}$/.test(cap))throw new Error('Il CAP deve contenere 5 cifre.');
+  const photoUrl=await uploadNewPlayerPhoto();
+  const p={
+   photo_url:photoUrl,
+   first_name:$('pf').value.trim(),
+   last_name:$('pl').value.trim(),
+   email:$('pe').value.trim().toLowerCase(),
+   phone:$('pp').value.trim(),
+   birth_date:$('pbd').value,
+   gender:$('pgender').value,
+   birth_place:$('pbp').value.trim(),
+   residence_town:$('ptown').value.trim(),
+   residence_postal_code:cap,
+   residence_province:$('pprov').value.trim().toUpperCase(),
+   fitp_ranking:$('pfitp').value.trim().toUpperCase(),
+   medical_certificate_expiry:$('pmed').value
+  };
+  if(Object.values(p).some(v=>!v))throw new Error('Compila tutti i campi.');
+  const r=await sb.rpc('captain_add_player_complete',{p_team_id:data.team_id,p_player:p});
+  if(r.error)throw r.error;
+  closeModal();
+  await loadAll();
+ }catch(error){alert(error.message||String(error))}
+}
+function editPlayer(id){
+ const p=arr(data.players).find(x=>x.id===id);
+ if(!p)return alert('Giocatore non trovato.');
+ openModal('Scheda giocatore',`
+  <div class="notice"><b>Dati anagrafici visibili ma protetti.</b><br>Il capitano può modificare soltanto classifica FITP e scadenza del certificato medico.</div>
+  <div class="grid2">
+   <div class="field"><label>Nome</label><input value="${esc(p.first_name||'')}" readonly></div>
+   <div class="field"><label>Cognome</label><input value="${esc(p.last_name||'')}" readonly></div>
+   <div class="field"><label>Email</label><input value="${esc(p.email||'')}" readonly></div>
+   <div class="field"><label>Telefono</label><input value="${esc(p.phone||'')}" readonly></div>
+   <div class="field"><label>Data di nascita</label><input value="${esc(p.birth_date||'')}" readonly></div>
+   <div class="field"><label>Sesso</label><input value="${esc(p.gender||'')}" readonly></div>
+   <div class="field"><label>Luogo di nascita</label><input value="${esc(p.birth_place||'')}" readonly></div>
+   <div class="field"><label>Comune di residenza</label><input value="${esc(p.residence_town||'')}" readonly></div>
+   <div class="field"><label>CAP</label><input value="${esc(p.residence_postal_code||'')}" readonly></div>
+   <div class="field"><label>Provincia</label><input value="${esc(p.residence_province||'')}" readonly></div>
+   <div class="field"><label>Classifica FITP</label><input id="efitp" value="${esc(p.fitp_ranking||'')}"></div>
+   <div class="field"><label>Scadenza certificato medico</label><input id="emed" type="date" value="${esc(p.medical_certificate_expiry||'')}"></div>
+  </div>
+  <button class="btn primary" onclick="savePlayer('${id}')">Salva FITP e certificato</button>`);
+}
+async function savePlayer(id){
+ const r=await sb.rpc('captain_update_player_sport_data',{
+  p_team_id:data.team_id,
+  p_player_id:id,
+  p_fitp:$('efitp').value.trim(),
+  p_medical_expiry:$('emed').value||null
+ });
+ if(r.error)return alert(r.error.message);
+ alert('Dati sportivi aggiornati.');
+ closeModal();
+ await loadAll();
+}
+function generateCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=9910`}
 async function setPlayerStatus(id,status){const r=await sb.rpc('captain_set_player_status',{p_team_id:data.team_id,p_player_id:id,p_status:status});if(r.error)return alert(r.error.message);await loadAll()}
 async function saveNotes(){const r=await sb.rpc('captain_update_team_notes',{p_team_id:data.team_id,p_notes:$('teamNotes').value.trim()});if(r.error)return alert(r.error.message);alert('Note aggiornate.');await loadAll()}
 async function appointSecretary(){const email=$('secretaryEmail').value.trim().toLowerCase();if(!email)return;const r=await sb.rpc('captain_appoint_secretary_v2',{p_team_id:data.team_id,p_email:email});if(r.error)return alert(r.error.message);await loadAll()}
