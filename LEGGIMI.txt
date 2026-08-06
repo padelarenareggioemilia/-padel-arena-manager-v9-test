@@ -1,21 +1,11 @@
-ROUTING DEFINITIVO AREA CAPITANO
+V9 FINALE — SOLO 3 CORREZIONI
 
-CARICA SOLTANTO:
-- captain-area.html
-- account-home.html
+Carica nella ROOT del repository V9 tutti i file estratti.
+Conferma la sostituzione dei file con lo stesso nome.
+Esegui poi database/SUPABASE_V9_FINAL_3_CORREZIONI.sql.
 
-Non sostituire altri file.
-Non eseguire SQL.
-Non caricare cartelle.
+Apri: captain-home.html?v=final3real
 
-Dopo il commit apri direttamente:
-captain-area.html?v=final
+In basso deve comparire: V9 FINALE 3 CORREZIONI
 
-Poi prova il normale login:
-login.html?change=1
-
-Il router account-home.html porterà capitani e segretari a captain-area.html.
-
-CONTROLLO:
-in basso a destra deve comparire:
-V9 AREA CAPITANO DEFINITIVA
+Non sono state modificate distinte, calendario, classifiche, statistiche o risultati.
