@@ -10,3 +10,4 @@ INSTALLAZIONE
 1. Esegui SUPABASE_V9_7_UPDATE.sql.
 2. Carica cup-italia.html e sostituisci index.html e competitions.html.
 3. Apri cup-italia.html?v=970.
+    Forza nuovo deploy Pages
