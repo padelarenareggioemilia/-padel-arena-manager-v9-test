@@ -63,7 +63,7 @@ async function start(){
     }
 
     if(['captain','capitano','secretary','segretario'].includes(role)){
-      location.replace('captain-home.html?v=997');
+      location.replace('captain-area.html?v=final');
       return;
     }
 
@@ -78,7 +78,7 @@ async function start(){
       : captainResult.data;
 
     if(!captainResult.error&&captainData?.ok){
-      location.replace('captain-home.html?v=997');
+      location.replace('captain-area.html?v=final');
       return;
     }
 
