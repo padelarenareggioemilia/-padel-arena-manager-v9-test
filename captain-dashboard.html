@@ -80,7 +80,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;z-index:99;backg
 </main>
 
 <div id="modal" class="modal hidden"><div class="modal-card"><div class="actions" style="justify-content:space-between"><h2 id="modalTitle" style="margin:0"></h2><button class="btn secondary" onclick="closeModal()">Chiudi</button></div><div id="modalBody"></div></div></div>
-<div style="position:fixed;right:8px;bottom:8px;z-index:999;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.8">V9.9.11 FORZA AREA CAPITANO</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:999;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.8">V9 FINALE · 3 FUNZIONI</div>
 
 <script>
 const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id),sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
@@ -121,6 +121,7 @@ function lineupsView(){const fs=arr(data.fixtures).filter(f=>!done(f)||arr(data.
 function secretariesView(){content.innerHTML=`<div class="notice">Il capitano può nominare fino a 3 segretari. I segretari possono gestire rosa, calendario, distinte e risultati, ma non nominare o revocare altri segretari.</div><div class="field"><label>Email dell’account</label><input id="secretaryEmail" type="email"></div><button class="btn primary" onclick="appointSecretary()">Nomina segretario</button><h3>Segretari attivi</h3>${arr(data.secretaries).map((s,i)=>`<div class="tile"><b>Segretario ${i+1}</b><div class="muted">${esc(s.email||s.user_id||'')}</div><button class="btn danger tiny" onclick="revokeSecretary('${s.id}')">Revoca</button></div>`).join('')||'<div class="notice">Nessun segretario nominato.</div>'}`}
 function communicationsView(){
  content.innerHTML=`
+ ${hub.error?`<div class="notice err"><b>Comunicazioni non disponibili:</b><br>${esc(hub.error)}</div>`:''}
  <div class="dashboard">
   <div class="tile">
    <h3>Messaggi squadra</h3>
@@ -243,8 +244,23 @@ async function savePlayer(id){
 function generateCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=9910`}
 async function setPlayerStatus(id,status){const r=await sb.rpc('captain_set_player_status',{p_team_id:data.team_id,p_player_id:id,p_status:status});if(r.error)return alert(r.error.message);await loadAll()}
 async function saveNotes(){const r=await sb.rpc('captain_update_team_notes',{p_team_id:data.team_id,p_notes:$('teamNotes').value.trim()});if(r.error)return alert(r.error.message);alert('Note aggiornate.');await loadAll()}
-async function appointSecretary(){const email=$('secretaryEmail').value.trim().toLowerCase();if(!email)return;const r=await sb.rpc('captain_appoint_secretary_v2',{p_team_id:data.team_id,p_email:email});if(r.error)return alert(r.error.message);await loadAll()}
-async function revokeSecretary(id){if(!confirm('Revocare questo segretario?'))return;const r=await sb.rpc('captain_revoke_secretary',{p_team_id:data.team_id,p_role_id:id});if(r.error)return alert(r.error.message);await loadAll()}
+async function appointSecretary(){
+ const email=$('secretaryEmail').value.trim().toLowerCase();
+ if(!email)return alert('Inserisci l’email del segretario.');
+ const r=await sb.rpc('captain_appoint_secretary_v2',{p_team_id:data.team_id,p_email:email});
+ if(r.error)return alert('Nomina non riuscita: '+r.error.message);
+ alert('Segretario nominato correttamente.');
+ await loadAll();
+ setView('secretaries');
+}
+async function revokeSecretary(id){
+ if(!confirm('Revocare questo segretario?'))return;
+ const r=await sb.rpc('captain_revoke_secretary',{p_team_id:data.team_id,p_role_id:id});
+ if(r.error)return alert('Revoca non riuscita: '+r.error.message);
+ alert('Segretario revocato.');
+ await loadAll();
+ setView('secretaries');
+}
 async function copyPlayerLink(){const t=data.team?.player_invite_token;if(!t)return alert('Token giocatori non disponibile.');const u=new URL(`player.html?invite=${encodeURIComponent(t)}`,location.href).href;try{await navigator.clipboard.writeText(u);alert('Link copiato.')}catch(e){prompt('Copia il link:',u)}}
 
 function openLineup(fixtureId){const f=arr(data.fixtures).find(x=>x.id===fixtureId),lineup=arr(data.lineups).find(x=>x.fixture_id===fixtureId&&x.team_id===data.team_id),selected=arr(data.lineup_players).filter(x=>x.lineup_id===lineup?.id);openModal('Distinta squadra',`<div class="notice"><b>${esc(tn(f.home_team_id))} - ${esc(tn(f.away_team_id))}</b><br>${esc(fmtDate(f.scheduled_at))} · ${esc(stage(f))}</div><div id="lineupRows">${arr(data.players).filter(p=>p.status==='approved').map(p=>{const x=selected.find(s=>s.player_id===p.id);return `<div class="lineup-player"><input type="checkbox" class="lp-check" data-player="${p.id}" ${x?'checked':''}><div><b>${esc(p.first_name)} ${esc(p.last_name)}</b><div class="muted">${esc(p.fitp_ranking||'')}</div></div><select class="lp-position" data-player="${p.id}"><option value="">Ruolo / posizione</option>${['M1','M2','Misto','Femminile','Riserva'].map(v=>`<option ${x?.position===v?'selected':''}>${v}</option>`).join('')}</select></div>`}).join('')}</div><div class="field"><label>Note distinta</label><textarea id="lineupNotes">${esc(lineup?.notes||'')}</textarea></div><div class="actions"><button class="btn primary" onclick="saveLineup('${fixtureId}',false)">Salva bozza</button><button class="btn success" onclick="saveLineup('${fixtureId}',true)">Conferma distinta</button></div>`)}
@@ -268,8 +284,12 @@ async function processQr(fixtureId,opponentTeamId,raw){const playerId=parsePlaye
 
 async function loadTeamHub(){
  const r=await sb.rpc('captain_get_team_hub',{p_team_id:data.team_id});
- if(r.error){hub={messages:[],callups:[],current_user_id:null};return}
+ if(r.error){
+  hub={messages:[],callups:[],current_user_id:null,error:r.error.message||String(r.error)};
+  return;
+ }
  hub=Array.isArray(r.data)?(r.data[0]||{}):(r.data||{});
+ hub.error='';
 }
 async function sendTeamMessage(){
  const body=$('teamMessage').value.trim();

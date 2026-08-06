@@ -1,28 +1,31 @@
-V9.9.9 — FIX MIRATO
+V9 — CHIUSURA DELLE 3 FUNZIONI
+
+QUESTO PACCHETTO INTERVIENE SOLO SU:
+1. Rosa giocatori
+2. Segretari
+3. Comunicazioni e convocazioni
 
 NON TOCCA:
-- Distinte
+- Distinte e formazioni
+- Scanner QR
 - Calendario
 - Classifiche
 - Statistiche
-- Documenti
-- Gestione squadra
-
-CORREGGE SOLO:
-- Tessera digitale
-- Nomina segretari
-- Comunicazioni
-- Convocazioni
+- Risultati
+- V8
 
 INSTALLAZIONE:
 1. Estrai lo ZIP.
 2. Carica tutti i file nella root del repository V9.
 3. Conferma la sostituzione.
 4. Fai Commit changes.
-5. Esegui:
-   database/SUPABASE_V9_9_9_FIX_MIRATO.sql
+5. In Supabase esegui SOLO:
+   database/SUPABASE_V9_CHIUSURA_3_FUNZIONI.sql
 6. Apri:
-   captain-home.html?v=9909
+   captain-home.html?v=final3
 
-DEVE COMPARIRE:
-V9.9.9 FIX MIRATO
+CONTROLLO:
+- Rosa: dati completi visibili; FITP e certificato modificabili.
+- Segretari: nomina e revoca.
+- Comunicazioni: messaggi e convocazioni.
+- Giocatore: risposta disponibile / non disponibile.
