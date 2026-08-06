@@ -1,1 +1,96 @@
-<!doctype html><html><head><meta charset="utf-8"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script></head><body><div id="m">Riconoscimento account…</div><script>const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);(async()=>{const q=await s.auth.getSession();if(!q.data.session)return location.replace('login.html?v=993');const p=await s.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle(),r=String(p.data?.role||'').toLowerCase();if(r==='admin')return location.replace('index.html?v=993');if(['captain','capitano','secretary','segretario'].includes(r))return location.replace('captain-dashboard-v993.html');if(['player','giocatore'].includes(r))return location.replace('player-home.html?v=993');location.replace('public.html?v=993')})();</script></body></html>
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AICS Padel Championship · Area account</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f8fc;font-family:system-ui;color:#0a2e5e}
+.card{width:min(580px,calc(100% - 28px));background:#fff;border:1px solid #b9cde3;border-radius:20px;padding:20px;text-align:center}
+.notice{padding:12px;background:#edf4fb;border:1px solid #b9cde3;border-radius:12px}
+.err{background:#fdecef}
+</style>
+</head>
+<body>
+<main class="card">
+<img src="assets/aics-logo.png" alt="AICS" style="width:110px">
+<h1>AICS PADEL CHAMPIONSHIP</h1>
+<div id="msg" class="notice">Riconoscimento account in corso…</div>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const msg=document.getElementById('msg');
+
+async function start(){
+  try{
+    if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey){
+      throw new Error('Configurazione Supabase non disponibile.');
+    }
+
+    const client=supabase.createClient(
+      cfg.supabaseUrl,
+      cfg.supabasePublishableKey
+    );
+
+    const sessionResult=await client.auth.getSession();
+
+    if(sessionResult.error)throw sessionResult.error;
+
+    if(!sessionResult.data.session){
+      location.replace('login.html?change=1&v=997');
+      return;
+    }
+
+    const userId=sessionResult.data.session.user.id;
+
+    const profileResult=await client
+      .from('profiles')
+      .select('role')
+      .eq('id',userId)
+      .maybeSingle();
+
+    if(profileResult.error)throw profileResult.error;
+
+    const role=String(profileResult.data?.role||'')
+      .trim()
+      .toLowerCase();
+
+    if(role==='admin'){
+      location.replace('index.html?v=997');
+      return;
+    }
+
+    if(['captain','capitano','secretary','segretario'].includes(role)){
+      location.replace('captain-home.html?v=997');
+      return;
+    }
+
+    if(['player','giocatore'].includes(role)){
+      location.replace('player-home.html?v=997');
+      return;
+    }
+
+    const captainResult=await client.rpc('get_my_captain_portal');
+    const captainData=Array.isArray(captainResult.data)
+      ? captainResult.data[0]
+      : captainResult.data;
+
+    if(!captainResult.error&&captainData?.ok){
+      location.replace('captain-home.html?v=997');
+      return;
+    }
+
+    location.replace('public.html?v=997');
+  }catch(error){
+    msg.textContent='Errore nel riconoscimento account: '+
+      (error?.message||String(error));
+    msg.className='notice err';
+  }
+}
+
+start();
+</script>
+</body>
+</html>
