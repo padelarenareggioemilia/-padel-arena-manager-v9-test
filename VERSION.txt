@@ -1,1 +1,3 @@
-AICS PADEL CHAMPIONSHIP V9.8.7
+AICS PADEL CHAMPIONSHIP V9.9 TEST IMMEDIATO
+Build: 2026-08-06
+Obiettivo: consolidamento nomi principali senza modifiche SQL.

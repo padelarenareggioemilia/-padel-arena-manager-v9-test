@@ -1,0 +1,15 @@
+V9.9 TEST IMMEDIATO — SOLO REPOSITORY V9
+
+1. Estrai questo ZIP sul telefono o computer.
+2. Apri il repository GitHub: -padel-arena-manager-v9-test
+3. Usa Add file > Upload files.
+4. Trascina TUTTI i file estratti (sono meno di 100).
+5. Conferma la sostituzione dei file con lo stesso nome.
+6. Non eliminare altri file e non eseguire SQL.
+7. Fai Commit changes.
+8. Attendi 1-2 minuti.
+9. Apri:
+   https://padelarenareggioemilia.github.io/-padel-arena-manager-v9-test/start.html?v=9901
+
+Questo pacchetto non contiene assets: usa quelli già presenti nel repository.
+Non contiene SQL e non modifica il database.
