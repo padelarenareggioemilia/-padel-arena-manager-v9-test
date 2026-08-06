@@ -1,4 +1,4 @@
-const CACHE='pam-v9-9-8-safe-restore-corretta';
+const CACHE='pam-v9-9-9-fix-mirato';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',event=>{
  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))));

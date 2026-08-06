@@ -1,25 +1,28 @@
-V9.9.8 SAFE RESTORE CORRETTA
+V9.9.9 — FIX MIRATO
 
-CORREGGE SULLA PAGINA REALMENTE IN USO:
-- scheda giocatore con tutti i dati visibili;
-- solo FITP e certificato modificabili;
-- inserimento giocatore con foto, sesso, residenza, CAP e provincia;
-- salvataggio modifica;
-- segretari;
-- comunicazioni;
-- convocazioni e disponibilità;
-- tessera digitale;
-- vecchie cache.
+NON TOCCA:
+- Distinte
+- Calendario
+- Classifiche
+- Statistiche
+- Documenti
+- Gestione squadra
+
+CORREGGE SOLO:
+- Tessera digitale
+- Nomina segretari
+- Comunicazioni
+- Convocazioni
 
 INSTALLAZIONE:
 1. Estrai lo ZIP.
-2. Carica tutti i file nella ROOT del repository V9.
+2. Carica tutti i file nella root del repository V9.
 3. Conferma la sostituzione.
 4. Fai Commit changes.
-5. Esegui in Supabase:
-   database/SUPABASE_V9_9_8_COMPLETO.sql
+5. Esegui:
+   database/SUPABASE_V9_9_9_FIX_MIRATO.sql
 6. Apri:
-   captain-home.html?v=9908
+   captain-home.html?v=9909
 
 DEVE COMPARIRE:
-V9.9.8 SAFE RESTORE CORRETTA
+V9.9.9 FIX MIRATO
