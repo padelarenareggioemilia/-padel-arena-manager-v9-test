@@ -1,25 +1,33 @@
-V9.9.5 — ROSA PROTETTA E TESSERA DIGITALE
+V9.9.7 — FIX SULLA SAFE RESTORE REALMENTE IN USO
 
-CORREZIONI:
-- Il capitano non vede più campi anagrafici modificabili.
-- Il pulsante Modifica consente soltanto:
-  1. Classifica FITP
-  2. Scadenza certificato medico
-- Approva e Rifiuta restano separati.
-- Genera tessera digitale apre captain-player-card.html.
-- Anche i vecchi nomi della pagina capitano ricevono la stessa correzione.
-- Incluso SQL per bloccare anche dal database le modifiche anagrafiche.
+QUESTA PATCH PARTE DAL FILE IDENTIFICATO DAL BOLLINO:
+V9.8.7.1 SAFE RESTORE
+
+Non sostituisce la struttura della dashboard.
+
+CORREGGE:
+- modifica giocatore: soltanto FITP e scadenza certificato;
+- tessera digitale che restava su Caricamento;
+- nomina segretario riconoscendo il capitano anche tramite email della squadra;
+- messaggi tra capitano, segretari e giocatori;
+- convocazioni;
+- disponibilità / non disponibilità giocatore;
+- mantiene formazione, distinta, scanner QR e centro gara.
 
 INSTALLAZIONE:
 1. Estrai lo ZIP.
-2. Carica tutti i file nella ROOT del repository V9.
-3. Conferma la sostituzione.
-4. Fai Commit changes.
-5. Esegui in Supabase:
-   database/SUPABASE_V9_9_5_ROSA_PROTETTA.sql
-6. Apri:
-   captain-home.html?v=9905
+2. Carica nella root V9:
+   captain-home.html
+   captain-player-card.html
+   player-home.html
+   match-center.html
+   lineups.html
+   verify-player.html
+3. Fai Commit changes.
+4. Esegui in Supabase:
+   database/SUPABASE_V9_9_7_CAPITANO_COMPLETO.sql
+5. Apri:
+   captain-home.html?v=9907
 
 CONTROLLO:
-In basso a destra deve comparire:
-V9.9.5 ROSA PROTETTA
+In basso deve apparire V9.9.7 SAFE RESTORE FIXED.

@@ -4,163 +4,243 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>AICS Padel Championship · Area Capitano</title>
+<meta name="theme-color" content="#164a95">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
+<script src="config.js"></script><script>
+window.addEventListener('error',function(ev){
+  const box=document.getElementById('status');
+  if(box){box.textContent='Errore pagina Capitano: '+(ev.message||'errore JavaScript');box.className='notice err';}
+});
+window.addEventListener('unhandledrejection',function(ev){
+  const box=document.getElementById('status');
+  const reason=ev.reason?.message||String(ev.reason||'errore imprevisto');
+  if(box){box.textContent='Errore pagina Capitano: '+reason;box.className='notice err';}
+});
+</script>
+
 <style>
-:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--y:#d69a00;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
-body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%);z-index:99}
-.shell{width:min(1160px,calc(100% - 24px));margin:auto;padding:22px 0 75px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0;box-shadow:0 13px 30px rgba(8,47,104,.1)}
-.hero{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.aics{width:105px;height:68px;object-fit:contain;background:#fff;padding:7px;border-radius:14px}
-.identity{display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:center}.team-logo{width:90px;height:90px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:15px}
-.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:10px 0}.ok{background:#eaf8f0}.err{background:#fdecef}.muted{color:var(--muted)}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}.kpi{padding:14px;border:1px solid var(--line);border-radius:15px;text-align:center}.kpi strong{display:block;font-size:24px;color:var(--b)}
-.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}.btn,.tab{border:0;border-radius:11px;padding:10px 12px;font:inherit;font-weight:900;cursor:pointer}.tab{background:#fff;color:var(--b);border:1px solid var(--b)}.tab.active,.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}.danger{background:var(--r);color:#fff}.warning{background:var(--y);color:#fff}.tiny{padding:7px 8px;font-size:12px}.hidden{display:none!important}
-.player{display:grid;grid-template-columns:70px 1fr auto;gap:12px;align-items:start;border:1px solid var(--line);border-radius:15px;padding:13px;margin:8px 0}.photo{width:66px;height:85px;object-fit:cover;border-radius:11px;border:1px solid var(--line)}
-.fixture{display:grid;grid-template-columns:90px 135px 1fr auto;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:14px;margin:8px 0}.comp-logo{width:84px;height:66px;object-fit:contain;border:1px solid var(--line);border-radius:10px}.team-mini{display:flex;align-items:center;gap:8px;margin:4px}.team-mini img{width:38px;height:38px;object-fit:contain;border:1px solid var(--line);border-radius:8px}
-.field{margin:9px 0}label{display:block;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font:inherit}textarea{min-height:90px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.modal{position:fixed;inset:0;background:#0009;display:grid;place-items:center;padding:14px;z-index:100}.modal-card{width:min(680px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:18px}.lineup{display:grid;grid-template-columns:auto 1fr 150px;gap:10px;padding:9px;border-bottom:1px solid var(--line)}video{width:100%;background:#000;border-radius:12px}
-.message{border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0}.message.mine{background:#eaf2fb}.callup{border:1px solid var(--line);border-radius:15px;padding:14px;margin:10px 0}.badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#e8f1fb;font-size:11px;font-weight:900;margin:2px}
-@media(max-width:800px){.kpis{grid-template-columns:repeat(2,1fr)}.player,.fixture{grid-template-columns:1fr}.tabs,.actions{display:grid}.btn,.tab{width:100%}.grid2{grid-template-columns:1fr}}
+:root{--b:#164a95;--bd:#082f68;--bs:#2e6fba;--g:#009246;--r:#ce2b37;--y:#d79b00;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97;--soft:#edf4fb;--shadow:0 14px 34px rgba(8,47,104,.12)}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(90deg,rgba(0,146,70,.05),transparent 24%,transparent 76%,rgba(206,43,55,.05)),var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;z-index:99;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%)}
+.shell{width:min(1180px,calc(100% - 24px));margin:auto;padding:22px 0 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0;box-shadow:var(--shadow)}
+.hero{display:flex;align-items:center;gap:15px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.aics{width:105px;height:68px;object-fit:contain;background:#fff;padding:7px;border-radius:14px}.team-logo{width:96px;height:96px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:16px;padding:5px}
+.identity{display:grid;grid-template-columns:96px 1fr auto;gap:15px;align-items:center}.muted{color:var(--muted)}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:10px 0;line-height:1.45}.ok{background:#eaf8f0;border-color:#77bd90}.err{background:#fdecef;border-color:#dd7a85}.warn{background:#fff7dc;border-color:#dfbf68}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}.kpi{padding:14px;border:1px solid var(--line);border-radius:15px;text-align:center;background:#fff}.kpi strong{display:block;font-size:25px;color:var(--b)}
+.tabs,.actions{display:flex;gap:8px;flex-wrap:wrap}.tab,.btn{border:0;border-radius:11px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}.tab{background:#fff;color:var(--b);border:1px solid var(--b)}.tab.active,.primary{background:linear-gradient(135deg,var(--bs),var(--b));color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}.danger{background:var(--r);color:#fff}.warning{background:var(--y);color:#fff}.tiny{padding:7px 9px;font-size:12px}.hidden{display:none!important}
+.dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tile{border:1px solid var(--line);border-radius:16px;padding:15px;background:#fff}.tile h3{margin:0 0 8px}.alert{display:flex;gap:10px;align-items:flex-start;padding:11px;border-bottom:1px solid var(--line)}.alert:last-child{border:0}
+.player{display:grid;grid-template-columns:68px 1fr auto;gap:12px;align-items:start;border:1px solid var(--line);border-radius:15px;padding:13px;margin:8px 0}.photo{width:64px;height:82px;object-fit:cover;border-radius:11px;border:1px solid var(--line);background:#fff}.badge{display:inline-block;padding:5px 8px;border-radius:999px;background:#e8f1fb;font-size:11px;font-weight:900;margin:2px}.good{background:#eaf8f0}.bad{background:#fdecef}.yellow{background:#fff7dc}
+.fixture{display:grid;grid-template-columns:135px 1fr auto;gap:12px;align-items:center;padding:13px;border:1px solid var(--line);border-radius:14px;margin:8px 0}.score{font-size:20px;font-weight:1000}.future{border-left:6px solid var(--b)}.done{border-left:6px solid var(--g)}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:720px}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left}tr.me{background:#eaf2fb;font-weight:900}
+.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font:inherit}textarea{min-height:95px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.62);display:grid;place-items:center;padding:14px;z-index:200}.modal-card{width:min(650px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:18px;border:1px solid var(--line)}.scanner{max-width:480px;margin:auto}.lineup-player{display:grid;grid-template-columns:auto 1fr 150px;gap:10px;align-items:center;padding:10px;border-bottom:1px solid var(--line)}
+.stage{padding:12px;border-radius:13px;background:linear-gradient(90deg,rgba(0,146,70,.1),#fff,rgba(206,43,55,.1));border:1px solid var(--line);font-weight:900}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(3,1fr)}.dashboard{grid-template-columns:1fr}}
+@media(max-width:700px){.identity{grid-template-columns:78px 1fr}.team-logo{width:76px;height:76px}.kpis{grid-template-columns:repeat(2,1fr)}.tabs,.actions{display:grid}.tab,.btn{width:100%}.player{grid-template-columns:58px 1fr}.player>.actions{grid-column:1/-1}.fixture{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.lineup-player{grid-template-columns:auto 1fr}.lineup-player select{grid-column:1/-1}}
 </style>
 </head>
 <body>
 <main class="shell">
-<section class="hero"><img class="aics" src="assets/aics-logo.png"><div><h1 style="margin:0">Area Capitano</h1><div id="heroSub">AICS Padel Championship</div></div></section>
-<section class="card"><div id="status" class="notice">Caricamento…</div></section>
+<section class="hero"><img class="aics" src="assets/aics-logo.png" alt="AICS"><div><h1 style="margin:0">Area Capitano</h1><div id="heroSub">AICS Padel Championship</div></div></section>
+<section class="card"><div id="status" class="notice">Caricamento squadra, rosa e competizioni…</div></section>
 
 <section id="app" class="hidden">
-<section class="card"><div class="identity"><img id="teamLogo" class="team-logo"><div><h2 id="teamName" style="margin:0"></h2><div id="teamMeta" class="muted"></div></div><button class="btn secondary" onclick="loadAll()">Aggiorna</button></div></section>
-<section class="card"><div class="kpis"><div class="kpi"><strong id="playersN">0</strong>Giocatori</div><div class="kpi"><strong id="pendingN">0</strong>Da approvare</div><div class="kpi"><strong id="playedN">0</strong>Giocate</div><div class="kpi"><strong id="futureN">0</strong>Da giocare</div><div class="kpi"><strong id="lineupsN">0</strong>Distinte</div><div class="kpi"><strong id="secretariesN">0</strong>Segretari</div></div></section>
-<section class="card"><div class="tabs">
-<button class="tab active" data-v="players" onclick="setView('players')">Rosa</button>
-<button class="tab" data-v="calendar" onclick="setView('calendar')">Calendario</button>
-<button class="tab" data-v="lineups" onclick="setView('lineups')">Distinte e QR</button>
-<button class="tab" data-v="secretaries" onclick="setView('secretaries')">Segretari</button>
-<button class="tab" data-v="communications" onclick="setView('communications')">Comunicazioni</button>
-<button class="tab" data-v="callups" onclick="setView('callups')">Convocazioni</button>
-<button class="tab" data-v="management" onclick="setView('management')">Gestione</button>
+<section class="card"><div class="identity"><img id="teamLogo" class="team-logo" alt="Logo squadra"><div><h2 id="teamName" style="margin:0"></h2><div id="teamMeta" class="muted"></div><div id="captainMeta"></div></div><button class="btn secondary" onclick="loadAll()">Aggiorna</button></div></section>
+
+<section class="card"><div class="kpis">
+<div class="kpi"><strong id="positionKpi">–</strong>Posizione</div>
+<div class="kpi"><strong id="pointsKpi">0</strong>Punti</div>
+<div class="kpi"><strong id="playersKpi">0</strong>Giocatori</div>
+<div class="kpi"><strong id="pendingKpi">0</strong>Da approvare</div>
+<div class="kpi"><strong id="lineupsKpi">0</strong>Distinte</div>
+<div class="kpi"><strong id="futureKpi">0</strong>Da giocare</div>
 </div></section>
+
+<section class="card"><div class="tabs">
+<button class="tab active" data-view="dashboard" onclick="setView('dashboard')">Dashboard</button>
+<button class="tab" data-view="players" onclick="setView('players')">Rosa</button>
+<button class="tab" data-view="calendar" onclick="setView('calendar')">Calendario</button>
+<button class="tab" data-view="lineups" onclick="setView('lineups')">Distinte</button>
+<button class="tab" data-view="standings" onclick="setView('standings')">Classifiche</button>
+<button class="tab" data-view="stats" onclick="setView('stats')">Statistiche</button>
+<button class="tab" data-view="secretaries" onclick="setView('secretaries')">Segretari</button>
+<button class="tab" data-view="communications" onclick="setView('communications')">Comunicazioni</button>
+<button class="tab" data-view="documents" onclick="setView('documents')">Documenti</button>
+<button class="tab" data-view="management" onclick="setView('management')">Gestione</button>
+</div></section>
+
 <section class="card"><div id="content"></div></section>
-<section class="card"><div class="actions"><button class="btn primary" onclick="copyPlayers()">Copia link giocatori</button><button class="btn danger" onclick="logout()">Logout / Cambia account</button></div></section>
+
+<section class="card"><div class="actions">
+<button class="btn primary" onclick="copyPlayerLink()">Copia link giocatori</button>
+<button class="btn secondary" onclick="location.href='matches-view.html?team='+encodeURIComponent(data.team_id)">Vista completa partite</button>
+<button class="btn secondary" onclick="location.href='public.html?v=989'">Portale pubblico</button>
+<button class="btn danger" onclick="logout()">Logout / Cambia account</button>
+</div></section>
 </section>
 </main>
 
-<div id="modal" class="modal hidden"><div class="modal-card"><div class="actions"><h2 id="modalTitle"></h2><button class="btn secondary" onclick="closeModal()">Chiudi</button></div><div id="modalBody"></div></div></div>
-
+<div id="modal" class="modal hidden"><div class="modal-card"><div class="actions" style="justify-content:space-between"><h2 id="modalTitle" style="margin:0"></h2><button class="btn secondary" onclick="closeModal()">Chiudi</button></div><div id="modalBody"></div></div></div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:999;padding:4px 7px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.8">V9.9.7 SAFE RESTORE FIXED</div>
 
 <script>
-const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);
-let sb=null,data=null,hub=null,view='players',stream=null,timer=null;
-const A=x=>Array.isArray(x)?x:[],E=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id),sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+let data=null,view='dashboard',scanner=null,hub={messages:[],callups:[],current_user_id:null};
+const arr=x=>Array.isArray(x)?x:[],esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
-const logos={SERIE_A:'assets/serie-a.png',SERIE_B:'assets/serie-b.png',SERIE_C:'assets/serie-c.png',COPPA_ITALIA:'assets/coppa-italia.png',SUPERCOPPA:'assets/supercoppa.png'};
 
-function wf(id){return A(data.statuses).find(x=>x.fixture_id===id)?.workflow_data||{}}
-function sc(f){const r=wf(f.id).result_data||wf(f.id).result;if(!r)return null;const h=Number(r.home_score??r.home_matches??r.home),a=Number(r.away_score??r.away_matches??r.away);return Number.isFinite(h)&&Number.isFinite(a)?{h,a}:null}
-function team(id){return A(data.teams).find(x=>x.id===id)||{name:'Squadra'}}
-function code(f){return f.competition_code||f.competition||'COMPETIZIONE'}
-function date(v){if(!v)return'Da definire';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('it-IT')}
-function fixture(f){const h=team(f.home_team_id),a=team(f.away_team_id),r=sc(f);return `<div class="fixture"><img class="comp-logo" src="${logos[code(f)]||'assets/aics-logo.png'}" onerror="this.src='assets/aics-logo.png'"><div><b>${labels[code(f)]||code(f)}</b><div class="muted">${E(f.stage_name||f.round_name||'Fase')}<br>${E(date(f.scheduled_at))}</div></div><div><div class="team-mini">${h.logo_url?`<img src="${E(h.logo_url)}">`:''}<b>${E(h.name)}</b></div><div class="team-mini">${a.logo_url?`<img src="${E(a.logo_url)}">`:''}<b>${E(a.name)}</b></div></div><b>${r?r.h+' – '+r.a:'Da giocare'}</b></div>`}
-function player(p){
- return `<div class="player">
-  ${p.photo_url?`<img class="photo" src="${E(p.photo_url)}" alt="Foto giocatore">`:'<div class="photo"></div>'}
-  <div>
-   <b>${E(p.first_name)} ${E(p.last_name)}</b>
-   <div class="muted">${E(p.email||'')}</div>
-   <div class="muted">FITP: ${E(p.fitp_ranking||'Non indicata')}</div>
-   <div class="muted">Certificato: ${E(p.medical_certificate_expiry||'Non indicato')}</div>
-   <span class="badge">${E(p.status||'pending')}</span>
+function workflow(id){return arr(data.statuses).find(x=>x.fixture_id===id)?.workflow_data||{}}
+function score(f){const r=workflow(f.id).result_data||workflow(f.id).result||workflow(f.id).match_result;if(!r)return null;const h=Number(r.home_score??r.home_matches??r.home),a=Number(r.away_score??r.away_matches??r.away);return Number.isFinite(h)&&Number.isFinite(a)?{h,a}:null}
+function done(f){return !!score(f)}function fmtDate(v){if(!v)return'Da definire';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function tn(id){const t=arr(data.teams).find(x=>x.id===id);return t?.name||t?.team_name||'Squadra'}function comp(f){return f.competition_code||f.competition||'COMPETIZIONE'}function stage(f){return f.stage_name||f.phase_name||f.round_name||(f.round_number?`Turno ${f.round_number}`:'Fase da definire')}
+function medicalState(p){if(!p.medical_certificate_expiry)return['Certificato mancante','bad'];const d=new Date(p.medical_certificate_expiry),days=Math.ceil((d-new Date())/86400000);if(days<0)return['Certificato scaduto','bad'];if(days<=30)return[`Scade tra ${days} giorni`,'yellow'];return['Certificato valido','good']}
+function fixtureHtml(f){const s=score(f);return `<article class="fixture ${s?'done':'future'}"><div><b>${esc(fmtDate(f.scheduled_at))}</b><div class="muted">${esc(labels[comp(f)]||comp(f))} · ${esc(stage(f))}</div></div><div><b>${esc(tn(f.home_team_id))}</b><br><b>${esc(tn(f.away_team_id))}</b><div class="muted">${esc(f.venue||'Impianto da definire')}</div></div><div class="score">${s?`${s.h} – ${s.a}`:'Da giocare'}</div></article>`}
+function standings(group){const ids=arr(data.members).filter(m=>m.group_id===group.id).map(m=>m.team_id),rows={};ids.forEach(id=>rows[id]={id,g:0,v:0,n:0,p:0,f:0,s:0,pt:0});arr(data.fixtures).filter(f=>f.group_id===group.id&&done(f)).forEach(f=>{const sc=score(f),H=rows[f.home_team_id],A=rows[f.away_team_id];if(!sc||!H||!A)return;H.g++;A.g++;H.f+=sc.h;H.s+=sc.a;A.f+=sc.a;A.s+=sc.h;if(sc.h>sc.a){H.v++;A.p++;H.pt+=3}else if(sc.a>sc.h){A.v++;H.p++;A.pt+=3}else{H.n++;A.n++;H.pt++;A.pt++}});return Object.values(rows).sort((a,b)=>b.pt-a.pt||(b.f-b.s)-(a.f-a.s)||tn(a.id).localeCompare(tn(b.id)))}
+function nextFixture(){return arr(data.fixtures).filter(f=>!done(f)).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at))[0]}
+
+function dashboardView(){
+ const next=nextFixture(),pending=arr(data.players).filter(p=>p.status==='pending'),expiring=arr(data.players).filter(p=>medicalState(p)[1]!=='good');
+ const draftMissing=next&&!arr(data.lineups).some(l=>l.fixture_id===next.id&&l.team_id===data.team_id);
+ content.innerHTML=`<div class="dashboard">
+ <div class="tile"><h3>Prossima partita</h3>${next?fixtureHtml(next):'<div class="notice">Nessuna prossima partita programmata.</div>'}${next?`<button class="btn primary" onclick="openLineup('${next.id}')">Prepara distinta</button>`:''}</div>
+ <div class="tile"><h3>Avvisi operativi</h3>
+ ${draftMissing?'<div class="alert">🟠 <div><b>Distinta da preparare</b><br>La prossima gara non ha ancora una distinta.</div></div>':''}
+ ${pending.length?`<div class="alert">🔔 <div><b>${pending.length} richieste giocatore</b><br>Da verificare e approvare.</div></div>`:''}
+ ${expiring.length?`<div class="alert">🔴 <div><b>${expiring.length} certificati da controllare</b><br>Scaduti, mancanti o in scadenza.</div></div>`:''}
+ ${!draftMissing&&!pending.length&&!expiring.length?'<div class="notice ok">Nessuna anomalia urgente.</div>':''}</div>
+ <div class="tile"><h3>Situazione competizioni</h3>${competitionCards()}</div>
+ <div class="tile"><h3>Comunicazioni recenti</h3>${arr(data.announcements).slice(0,4).map(a=>`<div class="alert">📢 <div><b>${esc(a.title)}</b><br>${esc(a.body||'')}</div></div>`).join('')||'<div class="notice">Nessuna comunicazione pubblicata.</div>'}</div>
+ </div>`;
+}
+function competitionCards(){const codes=[...new Set(arr(data.fixtures).map(comp))];return codes.map(code=>{const fs=arr(data.fixtures).filter(f=>comp(f)===code),group=arr(data.groups).find(g=>g.competition_code===code),next=fs.filter(f=>!done(f))[0];let state='Fase da definire';if(group){const rows=standings(group),pos=rows.findIndex(r=>r.id===data.team_id);if(pos>=0)state=`${pos+1}ª posizione · ${rows[pos].pt} punti · ${esc(group.group_name||'Girone')}`}else{const last=fs.filter(done).slice(-1)[0];state=stage(last||next||{})}return `<div class="stage" style="margin:8px 0">${esc(labels[code]||code)} — ${state}</div>`}).join('')||'<div class="notice">Nessuna competizione.</div>'}
+function playerCard(p){const med=medicalState(p);return `<div class="player">${p.photo_url?`<img class="photo" src="${esc(p.photo_url)}">`:'<div class="photo"></div>'}<div><b>${esc(p.first_name||'')} ${esc(p.last_name||'')}</b><div class="muted">${esc(p.email||'')} · ${esc(p.fitp_ranking||'FITP non indicata')}</div><span class="badge ${p.status==='approved'?'good':p.status==='rejected'?'bad':'yellow'}">${esc(p.status||'pending')}</span><span class="badge ${med[1]}">${esc(med[0])}</span>${p.user_id?'<span class="badge good">Account collegato</span>':'<span class="badge">Account non collegato</span>'}</div><div class="actions"><button class="btn secondary tiny" onclick="editPlayer('${p.id}')">Modifica</button><button class="btn primary tiny" onclick="generateCard('${p.id}')">Genera tessera</button>${p.status==='pending'?`<button class="btn success tiny" onclick="setPlayerStatus('${p.id}','approved')">Approva</button><button class="btn danger tiny" onclick="setPlayerStatus('${p.id}','rejected')">Rifiuta</button>`:''}</div></div>`}
+function playersView(){content.innerHTML=`<div class="actions"><button class="btn primary" onclick="addPlayerModal()">Inserisci giocatore</button><button class="btn secondary" onclick="copyPlayerLink()">Copia link iscrizione</button></div><h3>Rosa completa</h3>${arr(data.players).map(playerCard).join('')||'<div class="notice">Nessun giocatore presente.</div>'}`}
+function calendarView(){const fs=arr(data.fixtures).slice().sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));content.innerHTML=fs.length?fs.map(fixtureHtml).join(''):'<div class="notice">Nessuna partita disponibile.</div>'}
+function standingsView(){content.innerHTML=arr(data.groups).map(g=>{const rows=standings(g);return `<h3>${esc(labels[g.competition_code]||g.competition_code||'Competizione')} · ${esc(g.group_name||'Girone')}</h3><div class="table-wrap"><table><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>Diff.</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.id===data.team_id?'me':''}"><td>${i+1}</td><td>${esc(tn(r.id))}</td><td>${r.g}</td><td>${r.v}</td><td>${r.n}</td><td>${r.p}</td><td>${r.f-r.s}</td><td>${r.pt}</td></tr>`).join('')}</tbody></table></div>`}).join('')||'<div class="notice">Nessuna classifica disponibile.</div>'}
+function statsView(){const fs=arr(data.fixtures).filter(done);let w=0,d=0,l=0;fs.forEach(f=>{const s=score(f),mine=f.home_team_id===data.team_id?s.h:s.a,other=f.home_team_id===data.team_id?s.a:s.h;if(mine>other)w++;else if(mine<other)l++;else d++});content.innerHTML=`<div class="kpis"><div class="kpi"><strong>${fs.length}</strong>Giocate</div><div class="kpi"><strong>${w}</strong>Vinte</div><div class="kpi"><strong>${d}</strong>Pareggiate</div><div class="kpi"><strong>${l}</strong>Perse</div><div class="kpi"><strong>${fs.length?Math.round(w/fs.length*100):0}%</strong>Vittorie</div><div class="kpi"><strong>${arr(data.lineup_players).length}</strong>Presenze registrate</div></div><h3>Statistiche giocatori</h3><div class="table-wrap"><table><thead><tr><th>Giocatore</th><th>Presenze</th><th>QR verificati</th><th>Convocazioni</th></tr></thead><tbody>${arr(data.players).filter(p=>p.status==='approved').map(p=>{const lp=arr(data.lineup_players).filter(x=>x.player_id===p.id);return `<tr><td>${esc(p.first_name)} ${esc(p.last_name)}</td><td>${lp.length}</td><td>${lp.filter(x=>x.qr_verified).length}</td><td>${lp.filter(x=>x.confirmed).length}</td></tr>`}).join('')}</tbody></table></div>`}
+function lineupsView(){const fs=arr(data.fixtures).filter(f=>!done(f)||arr(data.lineups).some(l=>l.fixture_id===f.id));content.innerHTML=fs.map(f=>{const l=arr(data.lineups).find(x=>x.fixture_id===f.id&&x.team_id===data.team_id);return `<div class="tile"><h3>${esc(fmtDate(f.scheduled_at))}</h3><div>${esc(tn(f.home_team_id))} - ${esc(tn(f.away_team_id))}</div><div class="muted">${esc(labels[comp(f)]||comp(f))} · ${esc(stage(f))}</div><div class="actions" style="margin-top:10px"><button class="btn primary" onclick="openLineup('${f.id}')">${l?'Apri distinta':'Crea distinta'}</button><button class="btn secondary" onclick="openOpponentScanner('${f.id}')">Verifica avversari QR</button></div></div>`}).join('')||'<div class="notice">Nessuna partita disponibile per le distinte.</div>'}
+function secretariesView(){content.innerHTML=`<div class="notice">Il capitano può nominare fino a 3 segretari. I segretari possono gestire rosa, calendario, distinte e risultati, ma non nominare o revocare altri segretari.</div><div class="field"><label>Email dell’account</label><input id="secretaryEmail" type="email"></div><button class="btn primary" onclick="appointSecretary()">Nomina segretario</button><h3>Segretari attivi</h3>${arr(data.secretaries).map((s,i)=>`<div class="tile"><b>Segretario ${i+1}</b><div class="muted">${esc(s.email||s.user_id||'')}</div><button class="btn danger tiny" onclick="revokeSecretary('${s.id}')">Revoca</button></div>`).join('')||'<div class="notice">Nessun segretario nominato.</div>'}`}
+function communicationsView(){
+ content.innerHTML=`
+ <div class="dashboard">
+  <div class="tile">
+   <h3>Messaggi squadra</h3>
+   <div class="field"><label>Nuovo messaggio</label><textarea id="teamMessage" placeholder="Scrivi a giocatori e segretari"></textarea></div>
+   <button class="btn primary" onclick="sendTeamMessage()">Invia messaggio</button>
+   <div style="margin-top:12px">
+    ${arr(hub.messages).map(m=>`<div class="notice ${m.sender_user_id===hub.current_user_id?'ok':''}"><b>${esc(m.sender_name||m.sender_role||'Utente')}</b><div class="muted">${esc(fmtDate(m.created_at))}</div><div>${esc(m.body||'')}</div></div>`).join('')||'<div class="notice">Nessun messaggio.</div>'}
+   </div>
   </div>
-  <div class="actions">
-   <button class="btn secondary tiny" onclick="editPlayer('${p.id}')">Modifica FITP / certificato</button>
-   <button class="btn primary tiny" onclick="openCard('${p.id}')">Genera tessera digitale</button>
-   ${p.status==='pending'?`
-    <button class="btn success tiny" onclick="statusPlayer('${p.id}','approved')">Approva</button>
-    <button class="btn danger tiny" onclick="statusPlayer('${p.id}','rejected')">Rifiuta</button>
-   `:''}
+  <div class="tile">
+   <h3>Convocazioni e disponibilità</h3>
+   <button class="btn success" onclick="openCallup()">Crea convocazione</button>
+   <div style="margin-top:12px">
+    ${arr(hub.callups).map(c=>`<div class="notice"><b>${esc(c.title||'Convocazione')}</b><div class="muted">${esc(fmtDate(c.created_at))}</div><p>${esc(c.message||'')}</p>${arr(c.players).map(p=>`<span class="badge">${esc(p.player_name||'Giocatore')}: ${esc(p.response==='confirmed'?'Disponibile':p.response==='unavailable'?'Non disponibile':'In attesa')}</span>`).join('')}</div>`).join('')||'<div class="notice">Nessuna convocazione.</div>'}
+   </div>
   </div>
  </div>`;
 }
+function documentsView(){content.innerHTML=arr(data.resources).map(r=>`<div class="tile"><h3>${esc(r.title)}</h3><div class="muted">${esc(r.category||'Documento')}</div><p>${esc(r.description||'')}</p>${r.url?`<button class="btn primary" onclick="window.open('${esc(r.url)}','_blank')">Apri documento</button>`:''}</div>`).join('')||'<div class="notice">Nessun documento pubblicato.</div>'}
+function managementView(){const t=data.team||{};content.innerHTML=`<h3>Profilo squadra</h3><div class="grid2"><div class="field"><label>Nome squadra</label><input value="${esc(t.name||'')}" readonly></div><div class="field"><label>Club</label><input value="${esc(t.club_name||'')}" readonly></div><div class="field"><label>Campo di casa</label><input value="${esc(t.home_court||'')}" readonly></div><div class="field"><label>Giorno e orario</label><input value="${esc((t.home_match_day||'')+' '+(t.home_match_time||''))}" readonly></div></div><div class="field"><label>Note operative</label><textarea id="teamNotes">${esc(t.notes||'')}</textarea></div><button class="btn primary" onclick="saveNotes()">Salva note</button><div class="notice">Nome squadra, club, campo, giorno e orario restano modificabili solo dall’amministratore.</div>`}
 
-function render(){
- document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.v===view));
- if(view==='players')$('content').innerHTML=`<button class="btn primary" onclick="addPlayer()">Inserisci giocatore</button>${A(data.players).map(player).join('')||'<div class="notice">Nessun giocatore.</div>'}`;
- else if(view==='calendar')$('content').innerHTML=A(data.fixtures).map(fixture).join('')||'<div class="notice">Nessuna partita.</div>';
- else if(view==='lineups')$('content').innerHTML=A(data.fixtures).map(f=>`<div class="card">${fixture(f)}<div class="actions">${!sc(f)?`<button class="btn primary" onclick="openLineup('${f.id}')">Crea / modifica formazione</button><button class="btn secondary" onclick="openScan('${f.id}')">Scanner QR avversari</button>`:''}<button class="btn success" onclick="location.href='match-center.html?id=${encodeURIComponent(f.id)}&v=9904'">${sc(f)?'Apri referto e risultato':'Centro gara / Referto finale'}</button></div></div>`).join('')||'<div class="notice">Nessuna partita disponibile.</div>';
- else if(view==='secretaries')renderSecretaries();
- else if(view==='communications')renderCommunications();
- else if(view==='callups')renderCallups();
- else $('content').innerHTML=`<div class="field"><label>Note squadra</label><textarea id="notes">${E(data.team?.notes||'')}</textarea></div><button class="btn primary" onclick="saveNotes()">Salva note</button>`;
-}
+function render(){document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.view===view));({dashboard:dashboardView,players:playersView,calendar:calendarView,lineups:lineupsView,standings:standingsView,stats:statsView,secretaries:secretariesView,communications:communicationsView,documents:documentsView,management:managementView}[view]||dashboardView)()}
 function setView(v){view=v;render()}
-function openModal(t,h){$('modalTitle').textContent=t;$('modalBody').innerHTML=h;$('modal').classList.remove('hidden')}
-function closeModal(){stopScan();$('modal').classList.add('hidden')}
-
+function openModal(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modal').classList.remove('hidden')}
+function closeModal(){if(scanner){try{scanner.clear()}catch(e){}scanner=null}$('modal').classList.add('hidden')}
+function addPlayerModal(){openModal('Inserisci giocatore',`<div class="grid2"><div class="field"><label>Nome</label><input id="pf"></div><div class="field"><label>Cognome</label><input id="pl"></div><div class="field"><label>Email</label><input id="pe" type="email"></div><div class="field"><label>Telefono</label><input id="pp"></div><div class="field"><label>Data di nascita</label><input id="pbd" type="date"></div><div class="field"><label>Luogo di nascita</label><input id="pbp"></div><div class="field"><label>Classifica FITP</label><input id="pfitp"></div><div class="field"><label>Scadenza certificato</label><input id="pmed" type="date"></div></div><button class="btn success" onclick="addPlayer()">Inserisci e approva</button>`)}
+async function addPlayer(){const p={first_name:$('pf').value.trim(),last_name:$('pl').value.trim(),email:$('pe').value.trim().toLowerCase(),phone:$('pp').value.trim(),birth_date:$('pbd').value,birth_place:$('pbp').value.trim(),fitp_ranking:$('pfitp').value.trim().toUpperCase(),medical_certificate_expiry:$('pmed').value};if(Object.values(p).some(x=>!x))return alert('Compila tutti i campi.');const r=await sb.rpc('captain_add_player_basic',{p_team_id:data.team_id,p_player:p});if(r.error)return alert(r.error.message);closeModal();await loadAll()}
 function editPlayer(id){
- const p=A(data.players).find(x=>x.id===id);
+ const p=arr(data.players).find(x=>x.id===id);
  if(!p)return alert('Giocatore non trovato.');
  openModal('Modifica dati sportivi',`
-  <div class="notice">
-   I dati anagrafici non sono modificabili dal capitano.
-   Puoi aggiornare esclusivamente classifica FITP e scadenza del certificato medico.
-  </div>
-  <div class="field">
-   <label>Classifica FITP</label>
-   <input id="er" value="${E(p.fitp_ranking||'')}">
-  </div>
-  <div class="field">
-   <label>Scadenza certificato medico</label>
-   <input id="em" type="date" value="${E(p.medical_certificate_expiry||'')}">
-  </div>
-  <button class="btn primary" onclick="savePlayer('${id}')">Salva modifiche</button>
- `);
+  <div class="notice"><b>Dati anagrafici protetti.</b><br>Il capitano può modificare esclusivamente la classifica FITP e la scadenza del certificato medico.</div>
+  <div class="field"><label>Classifica FITP</label><input id="efitp" value="${esc(p.fitp_ranking||'')}"></div>
+  <div class="field"><label>Scadenza certificato medico</label><input id="emed" type="date" value="${esc(p.medical_certificate_expiry||'')}"></div>
+  <button class="btn primary" onclick="savePlayer('${id}')">Salva FITP e certificato</button>`);
 }
 async function savePlayer(id){
  const r=await sb.rpc('captain_update_player_sport_data',{
   p_team_id:data.team_id,
   p_player_id:id,
-  p_fitp:$('er').value.trim(),
-  p_medical_expiry:$('em').value||null
+  p_fitp:$('efitp').value.trim(),
+  p_medical_expiry:$('emed').value||null
  });
  if(r.error)return alert(r.error.message);
  closeModal();
  await loadAll();
 }
+function generateCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=9907`}&v=989`}
+async function setPlayerStatus(id,status){const r=await sb.rpc('captain_set_player_status',{p_team_id:data.team_id,p_player_id:id,p_status:status});if(r.error)return alert(r.error.message);await loadAll()}
+async function saveNotes(){const r=await sb.rpc('captain_update_team_notes',{p_team_id:data.team_id,p_notes:$('teamNotes').value.trim()});if(r.error)return alert(r.error.message);alert('Note aggiornate.');await loadAll()}
+async function appointSecretary(){const email=$('secretaryEmail').value.trim().toLowerCase();if(!email)return;const r=await sb.rpc('captain_appoint_secretary_v2',{p_team_id:data.team_id,p_email:email});if(r.error)return alert(r.error.message);await loadAll()}
+async function revokeSecretary(id){if(!confirm('Revocare questo segretario?'))return;const r=await sb.rpc('captain_revoke_secretary',{p_team_id:data.team_id,p_role_id:id});if(r.error)return alert(r.error.message);await loadAll()}
+async function copyPlayerLink(){const t=data.team?.player_invite_token;if(!t)return alert('Token giocatori non disponibile.');const u=new URL(`player.html?invite=${encodeURIComponent(t)}`,location.href).href;try{await navigator.clipboard.writeText(u);alert('Link copiato.')}catch(e){prompt('Copia il link:',u)}}
 
-async function statusPlayer(id,status){const r=await sb.rpc('captain_set_player_status',{p_team_id:data.team_id,p_player_id:id,p_status:status});if(r.error)return alert(r.error.message);loadAll()}
-function openCard(id){location.href=`captain-player-card.html?player=${encodeURIComponent(id)}&v=9906`}&v=998`}
-function addPlayer(){alert('Per inserire un nuovo giocatore usa il link giocatori oppure la funzione amministratore.')}
-function openLineup(fid){const l=A(data.lineups).find(x=>x.fixture_id===fid),sel=A(data.lineup_players).filter(x=>x.lineup_id===l?.id);openModal('Distinta e formazione',A(data.players).filter(p=>p.status==='approved').map(p=>{const x=sel.find(y=>y.player_id===p.id);return `<div class="lineup"><input type="checkbox" class="chk" data-id="${p.id}" ${x?'checked':''}><b>${E(p.first_name)} ${E(p.last_name)}</b><select class="pos" data-id="${p.id}"><option></option>${['M1','M2','Misto','Femminile','Riserva'].map(v=>`<option ${x?.position===v?'selected':''}>${v}</option>`).join('')}</select></div>`}).join('')+`<textarea id="lnote" placeholder="Note"></textarea><div class="actions"><button class="btn primary" onclick="saveLineup('${fid}',false)">Salva bozza</button><button class="btn success" onclick="saveLineup('${fid}',true)">Conferma distinta</button></div>`)}
-async function saveLineup(fid,ok){const players=[...document.querySelectorAll('.chk:checked')].map(c=>({player_id:c.dataset.id,position:document.querySelector(`.pos[data-id="${c.dataset.id}"]`).value})),r=await sb.rpc('captain_save_lineup',{p_fixture_id:fid,p_team_id:data.team_id,p_players:players,p_notes:$('lnote').value,p_confirm:ok});if(r.error)return alert(r.error.message);closeModal();loadAll()}
+function openLineup(fixtureId){const f=arr(data.fixtures).find(x=>x.id===fixtureId),lineup=arr(data.lineups).find(x=>x.fixture_id===fixtureId&&x.team_id===data.team_id),selected=arr(data.lineup_players).filter(x=>x.lineup_id===lineup?.id);openModal('Distinta squadra',`<div class="notice"><b>${esc(tn(f.home_team_id))} - ${esc(tn(f.away_team_id))}</b><br>${esc(fmtDate(f.scheduled_at))} · ${esc(stage(f))}</div><div id="lineupRows">${arr(data.players).filter(p=>p.status==='approved').map(p=>{const x=selected.find(s=>s.player_id===p.id);return `<div class="lineup-player"><input type="checkbox" class="lp-check" data-player="${p.id}" ${x?'checked':''}><div><b>${esc(p.first_name)} ${esc(p.last_name)}</b><div class="muted">${esc(p.fitp_ranking||'')}</div></div><select class="lp-position" data-player="${p.id}"><option value="">Ruolo / posizione</option>${['M1','M2','Misto','Femminile','Riserva'].map(v=>`<option ${x?.position===v?'selected':''}>${v}</option>`).join('')}</select></div>`}).join('')}</div><div class="field"><label>Note distinta</label><textarea id="lineupNotes">${esc(lineup?.notes||'')}</textarea></div><div class="actions"><button class="btn primary" onclick="saveLineup('${fixtureId}',false)">Salva bozza</button><button class="btn success" onclick="saveLineup('${fixtureId}',true)">Conferma distinta</button></div>`)}
+async function saveLineup(fixtureId,confirmLineup){const players=[...document.querySelectorAll('.lp-check:checked')].map(c=>{const id=c.dataset.player;return{player_id:id,position:document.querySelector(`.lp-position[data-player="${id}"]`).value}});const r=await sb.rpc('captain_save_lineup',{p_fixture_id:fixtureId,p_team_id:data.team_id,p_players:players,p_notes:$('lineupNotes').value.trim(),p_confirm:confirmLineup});if(r.error)return alert(r.error.message);closeModal();await loadAll()}
 
-function openScan(fid){const f=A(data.fixtures).find(x=>x.id===fid),opp=f.home_team_id===data.team_id?f.away_team_id:f.home_team_id;openModal('Scanner QR avversari',`<div class="notice">Squadra avversaria: <b>${E(team(opp).name)}</b></div><video id="vid" playsinline></video><canvas id="can" class="hidden"></canvas><div class="actions"><button class="btn primary" onclick="startScan('${fid}','${opp}')">Avvia fotocamera</button><button class="btn danger" onclick="stopScan()">Ferma</button></div><input id="manual" placeholder="Codice QR manuale"><button class="btn secondary" onclick="verifyQr('${fid}','${opp}',$('manual').value)">Conferma codice</button><div id="scanOut"></div>`)}
-async function loadQr(){if(window.jsQR)return;await new Promise((res,rej)=>{const x=document.createElement('script');x.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';x.onload=res;x.onerror=()=>rej(new Error('Scanner non disponibile'));document.head.appendChild(x)})}
-async function startScan(fid,opp){try{await loadQr();stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});$('vid').srcObject=stream;await $('vid').play();const ctx=$('can').getContext('2d');timer=setInterval(()=>{if($('vid').readyState<2)return;$('can').width=$('vid').videoWidth;$('can').height=$('vid').videoHeight;ctx.drawImage($('vid'),0,0);const im=ctx.getImageData(0,0,$('can').width,$('can').height),q=jsQR(im.data,im.width,im.height);if(q){stopScan();verifyQr(fid,opp,q.data)}},500)}catch(e){alert(e.message)}}
-function stopScan(){if(timer)clearInterval(timer);timer=null;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null}
-function pid(raw){const m=String(raw).match(/AICSPLAYER:([0-9a-f-]{36})/i);return m?m[1]:String(raw).trim()}
-async function verifyQr(fid,opp,raw){const r=await sb.rpc('captain_verify_opponent_player',{p_fixture_id:fid,p_verifying_team_id:data.team_id,p_opponent_team_id:opp,p_player_id:pid(raw),p_qr_value:String(raw)});if(r.error)return alert(r.error.message);$('scanOut').innerHTML=`<div class="notice ok">Confermato: ${E(r.data?.player_name||'giocatore')}</div>`}
 
-function renderSecretaries(){$('content').innerHTML=`<div class="notice">Puoi nominare fino a 3 segretari usando l’email di un account già registrato.</div><div class="field"><label>Email account</label><input id="secEmail" type="email"></div><button class="btn primary" onclick="appointSec()">Nomina segretario</button>${A(data.secretaries).map(x=>`<div class="card"><b>${E(x.email||x.user_id)}</b><button class="btn danger tiny" onclick="revokeSec('${x.user_id||x.id}')">Revoca</button></div>`).join('')||'<div class="notice">Nessun segretario.</div>'}`}
-async function appointSec(){const r=await sb.rpc('captain_appoint_secretary_v2',{p_team_id:data.team_id,p_email:$('secEmail').value.trim().toLowerCase()});if(r.error)return alert(r.error.message);alert('Segretario nominato.');loadAll()}
-async function revokeSec(id){const r=await sb.rpc('captain_revoke_secretary',{p_team_id:data.team_id,p_role_id:id});if(r.error)return alert(r.error.message);loadAll()}
+async function ensureQrScanner(){
+ if(window.Html5QrcodeScanner)return;
+ await new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://unpkg.com/html5-qrcode';
+   script.onload=resolve;
+   script.onerror=()=>reject(new Error('Scanner QR non disponibile. Usa per ora il campo codice manuale.'));
+   document.head.appendChild(script);
+ });
+}
+async function openOpponentScanner(fixtureId){const f=arr(data.fixtures).find(x=>x.id===fixtureId),opponent=f.home_team_id===data.team_id?f.away_team_id:f.home_team_id;openModal('Verifica QR squadra avversaria',`<div class="notice"><b>Squadra avversaria:</b> ${esc(tn(opponent))}<br>Scansiona i QR dei giocatori presenti e confermali alla distinta avversaria.</div><div id="reader" class="scanner"></div><div class="field"><label>Oppure inserisci codice / URL QR</label><input id="manualQr"></div><button class="btn secondary" onclick="processQr('${fixtureId}','${opponent}',$('manualQr').value)">Conferma codice manuale</button><div id="scanResults"></div>`);try{await ensureQrScanner();scanner=new Html5QrcodeScanner('reader',{fps:10,qrbox:{width:250,height:250}},false);scanner.render(txt=>processQr(fixtureId,opponent,txt),()=>{})}catch(e){$('scanResults').innerHTML='<div class="notice warn">'+esc(e.message||String(e))+'</div>'}}
+function parsePlayerId(raw){try{const u=new URL(raw,location.href);return u.searchParams.get('player')||u.searchParams.get('id')}catch(e){}const m=String(raw).match(/AICSPLAYER:([0-9a-f-]{36})/i);return m?m[1]:String(raw).trim()}
+async function processQr(fixtureId,opponentTeamId,raw){const playerId=parsePlayerId(raw);if(!playerId)return alert('QR non riconosciuto.');const r=await sb.rpc('captain_verify_opponent_player',{p_fixture_id:fixtureId,p_verifying_team_id:data.team_id,p_opponent_team_id:opponentTeamId,p_player_id:playerId,p_qr_value:String(raw)});if(r.error)return alert(r.error.message);$('scanResults').insertAdjacentHTML('afterbegin',`<div class="notice ok">Giocatore confermato: ${esc(r.data?.player_name||playerId)}</div>`);await loadAll()}
 
-function renderCommunications(){$('content').innerHTML=`<div class="field"><label>Nuovo messaggio alla squadra</label><textarea id="newMessage" placeholder="Scrivi un messaggio a giocatori e segretari"></textarea></div><button class="btn primary" onclick="sendMessage()">Invia messaggio</button><h3>Conversazione squadra</h3>${A(hub?.messages).map(m=>`<div class="message ${m.sender_user_id===hub.current_user_id?'mine':''}"><b>${E(m.sender_name||m.sender_role||'Utente')}</b><div class="muted">${E(date(m.created_at))}</div><div>${E(m.body)}</div></div>`).join('')||'<div class="notice">Nessun messaggio.</div>'}`}
-async function sendMessage(){const body=$('newMessage').value.trim();if(!body)return;const r=await sb.rpc('captain_send_team_message',{p_team_id:data.team_id,p_body:body});if(r.error)return alert(r.error.message);await loadHub();renderCommunications()}
 
-function renderCallups(){const future=A(data.fixtures).filter(f=>!sc(f));$('content').innerHTML=`<button class="btn primary" onclick="newCallup()">Crea convocazione</button><h3>Convocazioni inviate</h3>${A(hub?.callups).map(c=>`<div class="callup"><b>${E(c.title||'Convocazione')}</b><div class="muted">${E(date(c.created_at))}</div><p>${E(c.message||'')}</p><div>${A(c.players).map(p=>`<span class="badge">${E(p.player_name)}: ${E(p.response||'pending')}</span>`).join('')}</div></div>`).join('')||'<div class="notice">Nessuna convocazione.</div>'}`}
-function newCallup(){const future=A(data.fixtures).filter(f=>!sc(f));openModal('Crea convocazione',`<div class="field"><label>Partita</label><select id="callFixture">${future.map(f=>`<option value="${f.id}">${E(date(f.scheduled_at))} · ${E(team(f.home_team_id).name)} - ${E(team(f.away_team_id).name)}</option>`).join('')}</select></div><div class="field"><label>Messaggio</label><textarea id="callMessage">Sei convocato per la prossima partita. Conferma la tua disponibilità.</textarea></div><div class="field"><label>Termine risposta</label><input id="callDeadline" type="datetime-local"></div><h3>Giocatori convocati</h3>${A(data.players).filter(p=>p.status==='approved').map(p=>`<label class="notice"><input type="checkbox" class="callPlayer" value="${p.id}" style="width:auto"> ${E(p.first_name)} ${E(p.last_name)}</label>`).join('')}<button class="btn success" onclick="saveCallup()">Invia convocazione</button>`)}
-async function saveCallup(){const ids=[...document.querySelectorAll('.callPlayer:checked')].map(x=>x.value);if(!ids.length)return alert('Seleziona almeno un giocatore.');const r=await sb.rpc('captain_create_callup',{p_team_id:data.team_id,p_fixture_id:$('callFixture').value,p_player_ids:ids,p_message:$('callMessage').value.trim(),p_deadline:$('callDeadline').value||null});if(r.error)return alert(r.error.message);closeModal();await loadHub();renderCallups()}
+async function loadTeamHub(){
+ try{
+  const r=await sb.rpc('captain_get_team_hub',{p_team_id:data.team_id});
+  if(r.error)throw r.error;
+  hub=Array.isArray(r.data)?(r.data[0]||{}):(r.data||{});
+ }catch(error){
+  hub={messages:[],callups:[],current_user_id:null,error:error.message||String(error)};
+ }
+}
+async function sendTeamMessage(){
+ const body=$('teamMessage')?.value.trim();
+ if(!body)return alert('Scrivi il messaggio.');
+ const r=await sb.rpc('captain_send_team_message',{p_team_id:data.team_id,p_body:body});
+ if(r.error)return alert(r.error.message);
+ await loadTeamHub();
+ communicationsView();
+}
+function openCallup(){
+ const future=arr(data.fixtures).filter(f=>!done(f));
+ openModal('Crea convocazione',`
+  <div class="field"><label>Partita</label><select id="callFixture">${future.map(f=>`<option value="${f.id}">${esc(fmtDate(f.scheduled_at))} · ${esc(tn(f.home_team_id))} - ${esc(tn(f.away_team_id))}</option>`).join('')}</select></div>
+  <div class="field"><label>Messaggio</label><textarea id="callMessage">Sei convocato per questa partita. Conferma la tua disponibilità.</textarea></div>
+  <div class="field"><label>Termine risposta</label><input id="callDeadline" type="datetime-local"></div>
+  <h3>Giocatori</h3>
+  ${arr(data.players).filter(p=>p.status==='approved').map(p=>`<label class="notice"><input class="callPlayer" type="checkbox" value="${p.id}" style="width:auto"> ${esc(p.first_name)} ${esc(p.last_name)}</label>`).join('')}
+  <button class="btn success" onclick="saveCallup()">Invia convocazione</button>`);
+}
+async function saveCallup(){
+ const ids=[...document.querySelectorAll('.callPlayer:checked')].map(x=>x.value);
+ if(!ids.length)return alert('Seleziona almeno un giocatore.');
+ const r=await sb.rpc('captain_create_callup',{
+  p_team_id:data.team_id,
+  p_fixture_id:$('callFixture').value,
+  p_player_ids:ids,
+  p_message:$('callMessage').value.trim(),
+  p_deadline:$('callDeadline').value||null
+ });
+ if(r.error)return alert(r.error.message);
+ closeModal();
+ await loadTeamHub();
+ communicationsView();
+}
 
-async function saveNotes(){const r=await sb.rpc('captain_update_team_notes',{p_team_id:data.team_id,p_notes:$('notes').value});if(r.error)return alert(r.error.message);loadAll()}
-async function copyPlayers(){const u=new URL(`player.html?invite=${encodeURIComponent(data.team.player_invite_token)}`,location.href).href;try{await navigator.clipboard.writeText(u);alert('Link copiato')}catch(e){prompt('Copia',u)}}
-async function loadHub(){const r=await sb.rpc('captain_get_team_hub',{p_team_id:data.team_id});if(r.error)throw r.error;hub=Array.isArray(r.data)?r.data[0]:r.data}
-async function loadAll(){try{if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey)throw new Error('Configurazione Supabase mancante.');if(!sb)sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);const session=await sb.auth.getSession();if(!session.data.session){location.replace('login.html?change=1&v=998');return}const r=await sb.rpc('get_my_captain_portal');if(r.error)throw r.error;data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.ok)throw new Error(data?.message||'Squadra non collegata.');await loadHub();$('teamName').textContent=data.team.name;$('teamMeta').textContent=[data.team.series,data.team.club_name].filter(Boolean).join(' · ');$('heroSub').textContent=data.team.name;if(data.team.logo_url)$('teamLogo').src=data.team.logo_url;else $('teamLogo').style.display='none';$('playersN').textContent=A(data.players).filter(x=>x.status==='approved').length;$('pendingN').textContent=A(data.players).filter(x=>x.status==='pending').length;$('playedN').textContent=A(data.fixtures).filter(sc).length;$('futureN').textContent=A(data.fixtures).filter(x=>!sc(x)).length;$('lineupsN').textContent=A(data.lineups).length;$('secretariesN').textContent=A(data.secretaries).length;$('status').textContent='Accesso capitano attivo.';$('status').className='notice ok';$('app').classList.remove('hidden');render()}catch(e){$('status').textContent='Errore Area Capitano: '+(e.message||e);$('status').className='notice err'}}
-async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=998')}
-Object.assign(window,{setView,closeModal,editPlayer,savePlayer,statusPlayer,openCard,addPlayer,openLineup,saveLineup,openScan,startScan,stopScan,verifyQr,appointSec,revokeSec,sendMessage,newCallup,saveCallup,saveNotes,copyPlayers,loadAll,logout});
+async function loadAll(){try{const q=await sb.auth.getSession();if(!q.data.session){location.replace('login.html?v=989');return}const p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();if(String(p.data?.role||'').toLowerCase()==='admin'){location.replace('index.html?v=989');return}const r=await sb.rpc('get_my_captain_portal');if(r.error)throw r.error;data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.ok)throw new Error(data?.message||'Squadra non collegata.');await loadTeamHub();const t=data.team||{};teamName.textContent=t.name||'Squadra';teamMeta.textContent=[t.series,t.club_name,t.club_city].filter(Boolean).join(' · ');captainMeta.textContent=`Capitano: ${t.captain_name||''}`;heroSub.textContent=t.name||'AICS Padel Championship';teamLogo.src=t.logo_url||'';if(!t.logo_url)teamLogo.style.visibility='hidden';playersKpi.textContent=arr(data.players).filter(x=>x.status==='approved').length;pendingKpi.textContent=arr(data.players).filter(x=>x.status==='pending').length;lineupsKpi.textContent=arr(data.lineups).length;futureKpi.textContent=arr(data.fixtures).filter(x=>!done(x)).length;const firstGroup=arr(data.groups)[0],rows=firstGroup?standings(firstGroup):[],pos=rows.findIndex(x=>x.id===data.team_id);positionKpi.textContent=pos>=0?`${pos+1}°`:'–';pointsKpi.textContent=pos>=0?rows[pos].pt:0;status.textContent='Accesso capitano attivo. Dashboard aggiornata.';status.className='notice ok';app.classList.remove('hidden');render()}catch(e){status.textContent='Errore: '+(e.message||String(e));status.className='notice err'}}
+async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=989')}
+window.setView=setView;window.closeModal=closeModal;window.addPlayerModal=addPlayerModal;window.addPlayer=addPlayer;window.editPlayer=editPlayer;window.savePlayer=savePlayer;window.generateCard=generateCard;window.setPlayerStatus=setPlayerStatus;window.saveNotes=saveNotes;window.appointSecretary=appointSecretary;window.revokeSecretary=revokeSecretary;window.copyPlayerLink=copyPlayerLink;window.openLineup=openLineup;window.saveLineup=saveLineup;window.openOpponentScanner=openOpponentScanner;window.processQr=processQr;window.sendTeamMessage=sendTeamMessage;window.openCallup=openCallup;window.saveCallup=saveCallup;window.loadAll=loadAll;window.logout=logout;
 loadAll();
 </script>
-
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.84">V9.9.6 PATCH MINIMA</div>
 </body>
 </html>
