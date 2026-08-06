@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>V9 · Controllo struttura</title>
+<style>
+:root{
+  --b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--y:#d69a00;
+  --bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.33%,#fff 33.33% 66.66%,var(--r) 66.66%);z-index:99}
+.shell{width:min(1050px,calc(100% - 24px));margin:auto;padding:22px 0 70px}
+.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:17px;margin:12px 0;box-shadow:0 12px 28px rgba(8,47,104,.09)}
+.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}
+.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}
+.grid{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
+.row{padding:11px;border-bottom:1px solid #dce6f0}.row:last-child{border-bottom:0}
+.badge{display:inline-block;padding:5px 8px;border-radius:999px;font-size:12px;font-weight:900}
+.ok{background:#eaf8f0;color:#17683c}.bad{background:#fdecef;color:#9d2430}.warn{background:#fff6dc;color:#8a6500}.wait{background:#edf4fb;color:#164a95}
+.muted{color:var(--muted)}code{font-size:12px;word-break:break-all}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.kpi{border:1px solid var(--line);border-radius:13px;padding:12px;text-align:center}.kpi strong{display:block;font-size:25px}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:1fr 1fr}.actions{display:grid}.btn{width:100%}}
+</style>
+</head>
+<body>
+<main class="shell">
+<section class="hero">
+  <h1 style="margin:0">Controllo struttura V9</h1>
+  <p style="margin-bottom:0">Verifica sicura dei file pubblicati. Non modifica dati, account o Supabase.</p>
+</section>
+
+<section class="card">
+  <div class="actions">
+    <button class="btn primary" onclick="run()">Avvia controllo completo</button>
+    <button class="btn secondary" onclick="location.reload()">Azzera</button>
+  </div>
+  <div id="base" class="muted" style="margin-top:10px"></div>
+</section>
+
+<section class="card">
+  <div class="summary">
+    <div class="kpi"><strong id="total">0</strong>Controllati</div>
+    <div class="kpi"><strong id="found">0</strong>Presenti</div>
+    <div class="kpi"><strong id="missing">0</strong>404 / assenti</div>
+    <div class="kpi"><strong id="duplicates">0</strong>Doppioni presenti</div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Pagine principali</h2>
+  <div id="results"></div>
+</section>
+
+<section class="card">
+  <h2>Doppioni da controllare</h2>
+  <div id="dupes"></div>
+</section>
+
+<section class="card">
+  <div class="actions">
+    <button class="btn secondary" onclick="copyReport()">Copia rapporto</button>
+    <button class="btn secondary" onclick="downloadReport()">Scarica rapporto TXT</button>
+  </div>
+</section>
+</main>
+
+<script>
+const canonical = [
+  'index.html',
+  'login.html',
+  'account-home.html',
+  'public.html',
+  'captain.html',
+  'captain-home.html',
+  'player.html',
+  'player-home.html',
+  'player-account.html',
+  'team.html',
+  'team-dashboard.html',
+  'teams-archive.html',
+  'calendar.html',
+  'groups.html',
+  'competitions.html',
+  'cup-italia.html',
+  'matches-view.html',
+  'match-center.html',
+  'lineups.html',
+  'admin-control.html',
+  'diagnostics.html',
+  'data-exchange.html',
+  'digital-card.html',
+  'verify-player.html',
+  'config.js',
+  'service-worker.js',
+  'manifest.webmanifest',
+  'app-theme.css',
+  'app-ui.js'
+];
+
+const duplicateCandidates = [
+  'account-home(1).html',
+  'account-home(2).html',
+  'account-home(5).html',
+  'captain-home-2.html',
+  'captain-dashboard-v991.html',
+  'captain-dashboard-v993.html',
+  'captain-player-card.html',
+  'captain-player-card-v993.html',
+  'index(20260806-155153).html',
+  'service-worker(7).js'
+];
+
+let report = [];
+
+async function exists(path){
+  try{
+    const url = new URL(path + (path.includes('?')?'&':'?') + 'audit=' + Date.now(), location.href);
+    const res = await fetch(url, {cache:'no-store'});
+    return {ok:res.ok,status:res.status,url:url.href};
+  }catch(error){
+    return {ok:false,status:'ERRORE',url:path,error:error.message};
+  }
+}
+
+function row(path,result,type){
+  const status = result.ok
+    ? '<span class="badge ok">PRESENTE</span>'
+    : `<span class="badge bad">${result.status===404?'404':'NON DISPONIBILE'}</span>`;
+  return `<div class="row grid">
+    <div><b>${path}</b><br><code>${result.url}</code></div>
+    ${status}
+    ${result.ok && path.endsWith('.html') ? `<button class="btn secondary" onclick="window.open('${path}','_blank')">Apri</button>` : '<span></span>'}
+  </div>`;
+}
+
+async function run(){
+  report=[];
+  document.getElementById('base').textContent='Percorso controllato: '+location.origin+location.pathname.replace(/[^/]*$/,'');
+  const results=document.getElementById('results');
+  const dupes=document.getElementById('dupes');
+  results.innerHTML='<div class="badge wait">Controllo in corso…</div>';
+  dupes.innerHTML='<div class="badge wait">Controllo in corso…</div>';
+
+  let found=0,missing=0,dupeCount=0;
+  const mainRows=[];
+  for(const path of canonical){
+    const r=await exists(path);
+    report.push({type:'principale',path,...r});
+    r.ok?found++:missing++;
+    mainRows.push(row(path,r,'principale'));
+  }
+  results.innerHTML=mainRows.join('');
+
+  const dupeRows=[];
+  for(const path of duplicateCandidates){
+    const r=await exists(path);
+    report.push({type:'doppione',path,...r});
+    if(r.ok){dupeCount++;dupeRows.push(row(path,r,'doppione'))}
+  }
+  dupes.innerHTML=dupeRows.length
+    ? `<div class="badge warn">Questi file esistono ancora e potrebbero creare confusione.</div>${dupeRows.join('')}`
+    : '<div class="badge ok">Nessun doppione noto trovato.</div>';
+
+  document.getElementById('total').textContent=canonical.length+duplicateCandidates.length;
+  document.getElementById('found').textContent=found;
+  document.getElementById('missing').textContent=missing;
+  document.getElementById('duplicates').textContent=dupeCount;
+}
+
+function reportText(){
+  const base=location.origin+location.pathname.replace(/[^/]*$/,'');
+  return [
+    'CONTROLLO STRUTTURA V9',
+    'Base: '+base,
+    'Data: '+new Date().toLocaleString('it-IT'),
+    '',
+    ...report.map(x=>`${x.type.toUpperCase()} | ${x.ok?'PRESENTE':'ASSENTE'} | ${x.status} | ${x.path}`)
+  ].join('\n');
+}
+
+async function copyReport(){
+  const text=reportText();
+  try{await navigator.clipboard.writeText(text);alert('Rapporto copiato.')}catch(e){prompt('Copia il rapporto:',text)}
+}
+function downloadReport(){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([reportText()],{type:'text/plain;charset=utf-8'}));
+  a.download='rapporto-v9.txt';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+window.run=run;window.copyReport=copyReport;window.downloadReport=downloadReport;
+</script>
+</body>
+</html>
