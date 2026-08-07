@@ -1,15 +1,39 @@
-V9.9.12 — FIX TEST COMPLETO
+AICS PADEL CHAMPIONSHIP — V9.9.13 CALENDARIO AUTO
 
-Base verificata direttamente contro i file attuali di GitHub main.
+BASE
+Questa è una patch CUMULATIVA: contiene tutte le correzioni V9.9.12
+più il nuovo motore di sistemazione automatica del calendario.
 
-Correzioni: tessere con loghi campionato/Coppa Italia e ritorno menu; nomina segretario; motivazione assenza visibile; caricamento documenti; partite in Gestione + tabella preferenze; dettaglio conflitti impianto; archivio loghi più robusto; dati completi tessera da Area Capitano/Admin.
+NUOVA FUNZIONE
+Nel Calendario trovi:
+⚡ Risolvi automaticamente anomalie
+
+Quando trova accavallamenti o conflitti impianto:
+1. prova prima a invertire casa e trasferta;
+2. se non basta, mantiene la squadra di casa e cerca il PRIMO SLOT FUTURO LIBERO;
+3. rispetta giorno, ora e campo della squadra ospitante;
+4. salta festività e date escluse;
+5. controlla contemporaneamente conflitti impianto e conflitti delle due squadre;
+6. controlla anche le partite già esistenti nelle altre competizioni;
+7. cerca fino a 52 settimane in avanti;
+8. dopo ogni modifica ricalcola tutti i conflitti per non crearne di nuovi.
+
+ALLA FINE MOSTRA
+- quante partite ha sistemato;
+- quante rimangono eventualmente irrisolte;
+- se non rimane nulla, puoi controllare l'anteprima e salvare.
+
+IMPORTANTE
+La correzione automatica NON salva immediatamente il calendario:
+prima crea l'anteprima. Il calendario diventa definitivo solo quando premi
+“Conferma e salva calendario”.
 
 INSTALLAZIONE
-1. Estrai lo ZIP.
-2. Carica/sostituisci i file della root nel repository V9.
-3. Carica database/SUPABASE_V9_9_12_FIX_TEST_COMPLETO.sql.
-4. Fai UN SOLO commit.
-5. Esegui lo SQL in Supabase SQL Editor.
-6. Attendi il deploy e apri captain-home.html?v=9912.
+Se NON hai ancora installato V9.9.12:
+- usa direttamente questo ZIP V9.9.13: è cumulativo.
 
-Non tocca V8, calendario, risultati, classifiche o distinte esistenti.
+Se hai già installato V9.9.12:
+- puoi sostituire anche solo calendar.html.
+
+Per le altre correzioni V9.9.12 esegui, se non l'hai già fatto:
+database/SUPABASE_V9_9_12_FIX_TEST_COMPLETO.sql

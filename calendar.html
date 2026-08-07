@@ -174,7 +174,7 @@ label{color:var(--aics-blue-dark)!important}
     <img class="brand-logo" src="assets/aics-logo.png" alt="AICS">
     <div>
       <h1 style="margin:0">Calendario automatico</h1>
-      <div class="muted">V9.5.1 · Orari locali italiani verificati prima del salvataggio</div>
+      <div class="muted">V9.9.13 · Risoluzione automatica completa di anomalie e accavallamenti</div>
     </div>
   </div>
 </header>
@@ -227,14 +227,17 @@ label{color:var(--aics-blue-dark)!important}
   </div>
 
   <div class="actions">
-    <button class="btn primary" onclick="previewCalendar()">Anteprima calendario</button><button id="confirmCalendarBtn" class="btn success hidden" onclick="confirmCalendar()">Conferma e salva calendario</button>
+    <button class="btn primary" onclick="previewCalendar()">Anteprima calendario</button>
+    <button class="btn blue" onclick="autoFixCalendarFromCurrentState()">⚡ Risolvi automaticamente anomalie</button>
+    <button id="confirmCalendarBtn" class="btn success hidden" onclick="confirmCalendar()">Conferma e salva calendario</button>
     <button class="btn secondary" onclick="loadFixtures()">Aggiorna elenco</button>
   </div>
   <div class="notice">
 In caso di sovrapposizione l’app prova automaticamente, nell’ordine:
-<b>inversione casa/trasferta</b>, <b>settimana precedente</b>,
-<b>settimana successiva</b> e poi fino a quattro settimane di distanza,
-controllando anche le partite già presenti nelle altre competizioni.
+<b>inversione casa/trasferta</b> e poi il <b>primo slot futuro realmente libero</b>
+della squadra di casa, rispettando giorno, ora, campo, festività/date escluse,
+conflitti impianto e accavallamenti delle due squadre. Il pulsante ⚡ può correggere
+in un solo passaggio tutte le anomalie rilevate.
 </div>
 <div id="msg" class="notice hidden"></div>
 </section>
@@ -839,6 +842,207 @@ function autoResolveConflicts(payload,competitionCode){
   };
 }
 
+
+
+function firstFutureFreeCandidate(match,home,away,working,existing,competitionCode,maxWeeks=52){
+  if(!match||!home||!away)return null;
+
+  // Cerca dal primo turno utile successivo fino a 52 settimane.
+  // candidateAtWeekOffset usa sempre giorno/ora/campo della squadra di casa
+  // e salta le date escluse tramite scheduleHomeFixture().
+  for(let offset=1;offset<=maxWeeks;offset++){
+    const candidate=candidateAtWeekOffset(match,home,away,offset,competitionCode);
+    if(candidateIsValid(candidate,match,working,existing)){
+      return {
+        ...candidate,
+        offset,
+        label:`AUTO · primo slot libero: +${offset} settimana${offset===1?'':'e'}`
+      };
+    }
+  }
+  return null;
+}
+
+function collectCalendarConflicts(payload,existing){
+  const problematic=[];
+  payload.forEach(match=>{
+    const others=[...payload.filter(x=>x!==match),...existing];
+    if(hasFacilityConflict(match,others)||hasTeamConflict(match,others)){
+      problematic.push(match);
+    }
+  });
+  return problematic;
+}
+
+function autoFixAllCalendarConflicts(payload,competitionCode,existingOverride){
+  const existing=existingOverride || allFixtures
+    .filter(f=>!(f.competition_code===competitionCode && f.phase==='Girone'))
+    .map(enrichExistingFixture);
+
+  const changed=new Set();
+  const swappedAlready=new Set();
+  const maxPasses=Math.max(20,payload.length*8);
+  let passes=0;
+
+  while(passes++<maxPasses){
+    const conflicts=collectCalendarConflicts(payload,existing);
+    if(!conflicts.length)break;
+
+    let progress=false;
+
+    for(const match of conflicts){
+      const home=teamById(match.home_team_id);
+      const away=teamById(match.away_team_id);
+      if(!home||!away)continue;
+
+      let solution=null;
+
+      // PRIORITÀ 1: inverti casa/trasferta una sola volta per quella partita.
+      if(!swappedAlready.has(match)){
+        const swap=candidateSwapHome(match,competitionCode);
+        swappedAlready.add(match);
+        if(candidateIsValid(swap,match,payload,existing)){
+          solution={
+            ...swap,
+            label:`AUTO · casa/trasferta invertite: ${away.name} in casa`
+          };
+        }
+      }
+
+      // PRIORITÀ 2: primo buco futuro disponibile mantenendo la squadra di casa.
+      if(!solution){
+        solution=firstFutureFreeCandidate(
+          match,
+          home,
+          away,
+          payload,
+          existing,
+          competitionCode,
+          52
+        );
+      }
+
+      // Se l'inversione era stata già tentata in un passaggio precedente,
+      // prova comunque il primo buco futuro con l'assetto attuale.
+      if(solution){
+        updateMatchSchedule(
+          match,
+          solution.home,
+          solution.away,
+          solution.scheduledAt,
+          solution.label
+        );
+        changed.add(match);
+        progress=true;
+        // Dopo ogni modifica ricalcoliamo tutto dall'inizio:
+        // evita di "risolvere" una partita creandone un'altra in conflitto.
+        break;
+      }
+    }
+
+    if(!progress)break;
+  }
+
+  const unresolved=collectCalendarConflicts(payload,existing);
+  const facility=detectFacilityConflicts([...payload,...existing])
+    .filter(c=>payload.includes(c.a)||payload.includes(c.b));
+
+  return {
+    changed:[...changed],
+    unresolved,
+    remainingFacilityConflicts:facility,
+    existing
+  };
+}
+
+function showAutoFixSummary(result,payload){
+  const unresolvedUnique=[...new Set(result.unresolved)];
+  const solved=result.changed.length;
+  const left=unresolvedUnique.length;
+
+  if(left===0){
+    msg(
+      `✅ Correzione automatica completata: ${solved} partite modificate. `+
+      `Nessun accavallamento o conflitto impianto residuo. Controlla l’anteprima e poi salva.`
+    );
+  }else{
+    msg(
+      `⚠️ Correzione automatica: ${solved} partite sistemate, ${left} ancora da verificare manualmente. `+
+      `Per queste ultime non è stato trovato uno slot libero entro 52 settimane.`,
+      true
+    );
+  }
+}
+
+async function autoFixCalendarFromCurrentState(){
+  try{
+    let payload=null;
+    let existing=null;
+    const code=$('competition').value;
+
+    // Se l'assistente conflitti è già aperto, usa esattamente quel calendario:
+    // non rigenera nulla e non perde le correzioni già fatte.
+    if(activeConflict?.payload?.length){
+      payload=activeConflict.payload;
+      existing=activeConflict.existing||[];
+    }else if(pendingCalendar?.length){
+      payload=pendingCalendar;
+    }else{
+      // Costruisce il calendario normale. Se l'algoritmo standard apre
+      // l'assistente, recupera comunque il payload da activeConflict.
+      try{
+        payload=await buildCalendarPayload();
+      }catch(err){
+        if(err?.isConflictAssistant&&activeConflict?.payload?.length){
+          payload=activeConflict.payload;
+          existing=activeConflict.existing||[];
+        }else{
+          throw err;
+        }
+      }
+    }
+
+    if(!payload?.length){
+      return msg('Nessuna partita disponibile da correggere.',true);
+    }
+
+    const result=autoFixAllCalendarConflicts(payload,code,existing);
+    pendingCalendar=payload;
+    closeConflictAssistant();
+
+    // Verifica finale delle regole casa/trasferta.
+    auditHomeAwayRules(pendingCalendar);
+
+    renderPendingCalendar();
+    showAutoFixSummary(result,pendingCalendar);
+
+    // Se restano problemi, riapre l'assistente sulla prima gara irrisolta.
+    if(result.unresolved.length){
+      const first=result.unresolved[0];
+      const attempts=createSuggestionAttempts(
+        first,
+        pendingCalendar,
+        result.existing||[],
+        code
+      );
+      openConflictAssistant(
+        first,
+        pendingCalendar,
+        result.existing||[],
+        attempts
+      );
+      assistantMsg(
+        `Risoluzione globale completata: ${result.changed.length} corrette. `+
+        `${result.unresolved.length} richiedono ancora una scelta manuale.`,
+        true
+      );
+    }
+  }catch(error){
+    msg('Correzione automatica non riuscita: '+(error?.message||String(error)),true);
+  }
+}
+
+window.autoFixCalendarFromCurrentState=autoFixCalendarFromCurrentState;
 
 function dateOnlyFromISO(value){
   const d=new Date(value);
@@ -1529,6 +1733,7 @@ guard().then(()=>Promise.all([loadFixtures(),loadBlackouts()]));
       <div class="field"><label>Campo</label><input id="manualVenue"></div>
     </div>
     <div class="actions">
+      <button type="button" class="btn blue" onclick="autoFixCalendarFromCurrentState()">⚡ Risolvi TUTTO automaticamente</button>
       <button type="button" class="btn primary" onclick="applyManualConflictSolution()">Applica eccezione manuale</button>
       <button type="button" class="btn secondary" onclick="openHomeTeamEditor()">Modifica disponibilità squadra di casa</button>
       <button type="button" class="btn secondary" onclick="openAwayTeamEditor()">Modifica disponibilità squadra ospite</button>
@@ -1567,4 +1772,4 @@ if ('serviceWorker' in navigator) {
 
 <div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
 <script src="app-ui.js?v=980stable"></script>
-</body></html>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui;opacity:.82">V9.9.13 CALENDARIO AUTO</div></body></html>
