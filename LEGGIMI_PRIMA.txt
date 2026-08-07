@@ -1,31 +1,15 @@
-V9 — CHIUSURA DELLE 3 FUNZIONI
+V9.9.12 — FIX TEST COMPLETO
 
-QUESTO PACCHETTO INTERVIENE SOLO SU:
-1. Rosa giocatori
-2. Segretari
-3. Comunicazioni e convocazioni
+Base verificata direttamente contro i file attuali di GitHub main.
 
-NON TOCCA:
-- Distinte e formazioni
-- Scanner QR
-- Calendario
-- Classifiche
-- Statistiche
-- Risultati
-- V8
+Correzioni: tessere con loghi campionato/Coppa Italia e ritorno menu; nomina segretario; motivazione assenza visibile; caricamento documenti; partite in Gestione + tabella preferenze; dettaglio conflitti impianto; archivio loghi più robusto; dati completi tessera da Area Capitano/Admin.
 
-INSTALLAZIONE:
+INSTALLAZIONE
 1. Estrai lo ZIP.
-2. Carica tutti i file nella root del repository V9.
-3. Conferma la sostituzione.
-4. Fai Commit changes.
-5. In Supabase esegui SOLO:
-   database/SUPABASE_V9_CHIUSURA_3_FUNZIONI.sql
-6. Apri:
-   captain-home.html?v=final3
+2. Carica/sostituisci i file della root nel repository V9.
+3. Carica database/SUPABASE_V9_9_12_FIX_TEST_COMPLETO.sql.
+4. Fai UN SOLO commit.
+5. Esegui lo SQL in Supabase SQL Editor.
+6. Attendi il deploy e apri captain-home.html?v=9912.
 
-CONTROLLO:
-- Rosa: dati completi visibili; FITP e certificato modificabili.
-- Segretari: nomina e revoca.
-- Comunicazioni: messaggi e convocazioni.
-- Giocatore: risposta disponibile / non disponibile.
+Non tocca V8, calendario, risultati, classifiche o distinte esistenti.

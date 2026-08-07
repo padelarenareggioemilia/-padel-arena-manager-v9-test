@@ -547,7 +547,7 @@
 
       <div class="pam-health-card bad">
         <strong id="healthConflicts">–</strong>
-        Conflitti impianto
+        Conflitti impianto<div id="healthConflictsDetail" style="font-size:11px;margin-top:5px">Risolti: – · Da risolvere: –</div>
       </div>
     </div>
 
@@ -1819,6 +1819,12 @@
       });
 
       healthConflictsEl.textContent = String(conflicts);
+      const detailEl=$('healthConflictsDetail');
+      const previousRaw=localStorage.getItem('pam_v9_last_venue_conflicts');
+      const previous=previousRaw===null?conflicts:Number(previousRaw);
+      const resolved=Math.max(0,previous-conflicts);
+      if(detailEl)detailEl.textContent=`Risolti dall’ultimo controllo: ${resolved} · Da risolvere: ${conflicts}`;
+      localStorage.setItem('pam_v9_last_venue_conflicts',String(conflicts));
 
       const hasWarnings =
         conflicts > 0 ||
@@ -1983,7 +1989,7 @@
     opacity:.75
   "
 >
-  V9.8 PLAYER FIX
+  V9.9.12 FIX TEST COMPLETO
 </div>
 
 <script src="app-ui.js?v=981playerfix"></script>

@@ -15,7 +15,7 @@
 <section id="app" class="hidden">
 <section class="card"><div class="tabs"><button class="tab active" data-v="home" onclick="setView('home')">Profilo</button><button class="tab" data-v="messages" onclick="setView('messages')">Comunicazioni</button><button class="tab" data-v="callups" onclick="setView('callups')">Convocazioni</button></div></section>
 <section class="card"><div id="content"></div></section>
-<section class="card"><div class="actions"><button class="btn secondary" onclick="location.href='digital-card.html?v=998'">Tessera digitale</button><button class="btn danger" onclick="logout()">Logout / Cambia account</button></div></section>
+<section class="card"><div class="actions"><button class="btn secondary" onclick="location.href='digital-card.html?v=9912'">Tessera digitale</button><button class="btn secondary" onclick="location.href='account-home.html?v=9912'">Menu account</button><button class="btn danger" onclick="logout()">Logout / Cambia account</button></div></section>
 </section></main>
 <script>
 const c=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);let s,portal,hub,view='home';const A=x=>Array.isArray(x)?x:[],E=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));function date(v){const d=new Date(v);return Number.isNaN(d.getTime())?String(v||''):d.toLocaleString('it-IT')}
@@ -26,4 +26,4 @@ async function respond(id,response){const note=response==='unavailable'?prompt('
 async function load(){try{if(!s)s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);const p=await s.rpc('get_my_player_portal');if(p.error)throw p.error;portal=Array.isArray(p.data)?p.data[0]:p.data;const h=await s.rpc('player_get_team_hub');if(h.error)throw h.error;hub=Array.isArray(h.data)?h.data[0]:h.data;teamName.textContent=portal.team?.name||'';status.textContent='Area giocatore aggiornata.';app.classList.remove('hidden');render()}catch(e){status.textContent='Errore: '+(e.message||e)}}
 async function logout(){try{await s.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=998')}
 Object.assign(window,{setView,sendMessage,respond,logout});load();
-</script></body></html>
+</script><div style="position:fixed;right:8px;bottom:8px;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui">V9.9.12 FIX TEST COMPLETO</div></body></html>
