@@ -1,0 +1,13 @@
+V9.9.14 - FIX TESSERA GIOCATORE SU TELEFONO
+
+Base conservata: V9.9.13 CALENDARIO AUTO.
+
+Correzioni in captain-player-card.html:
+- dimensioni controllate per i loghi di Serie A/B/C e Coppa Italia;
+- eliminata la visualizzazione dei loghi nelle dimensioni originali;
+- tessera adattata alla larghezza dello smartphone;
+- foto, dati e QR code disposti su una singola colonna su mobile;
+- eliminato lo scorrimento orizzontale e migliorata la gestione dei testi lunghi.
+
+Per aggiornare il sito sostituire almeno captain-player-card.html.
+Gli altri file sono inclusi per conservare la versione completa del progetto.
