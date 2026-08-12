@@ -1,0 +1,33 @@
+V9.9.16 - ASSISTENTE REGOLAMENTO
+
+FUNZIONI AGGIUNTE
+- Domande dei capitani basate sul regolamento ufficiale 2027.
+- Risposta immediata solo se esiste un riferimento normativo certo.
+- Indicazione degli articoli usati.
+- Invio automatico all'amministratore quando la risposta non è certa.
+- Archivio personale delle richieste del capitano.
+- Coda amministrativa con risposta ufficiale.
+- Possibilità di trasformare una risposta admin in chiarimento futuro.
+
+INSTALLAZIONE
+1. Caricare sul sito tutti i file HTML aggiornati, soprattutto:
+   index.html
+   captain-home.html
+   captain-regulation.html
+   admin-regulation.html
+   captain-player-card.html
+
+2. In Supabase SQL Editor eseguire una sola volta:
+   database/SUPABASE_V9_9_16_ASSISTENTE_REGOLAMENTO.sql
+
+3. Creare e distribuire la Supabase Edge Function usando la cartella:
+   supabase/functions/regulation-assistant
+
+4. Nei Secrets della Edge Function configurare:
+   OPENAI_API_KEY = chiave API OpenAI personale
+   OPENAI_MODEL = gpt-5-mini
+
+IMPORTANTE
+- La chiave OpenAI non deve essere inserita in config.js o nei file GitHub pubblici.
+- Non eseguire nuovamente i vecchi SQL se la V9.9.15 è già installata.
+- La funzione non inventa risposte: con confidenza inferiore al 78% inoltra la domanda all'admin.

@@ -65,6 +65,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;z-index:99;backg
 <button class="tab" data-view="secretaries" onclick="setView('secretaries')">Segretari</button>
 <button class="tab" data-view="communications" onclick="setView('communications')">Comunicazioni</button>
 <button class="tab" data-view="documents" onclick="setView('documents')">Documenti</button>
+<button class="tab" onclick="location.href='captain-regulation.html?v=9916'">Assistente Regolamento</button>
 <button class="tab" data-view="management" onclick="setView('management')">Gestione</button>
 </div></section>
 
@@ -312,5 +313,5 @@ async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}loc
 window.setView=setView;window.closeModal=closeModal;window.addPlayerModal=addPlayerModal;window.addPlayer=addPlayer;window.editPlayer=editPlayer;window.savePlayer=savePlayer;window.generateCard=generateCard;window.setPlayerStatus=setPlayerStatus;window.saveNotes=saveNotes;window.appointSecretary=appointSecretary;window.revokeSecretary=revokeSecretary;window.copyPlayerLink=copyPlayerLink;window.openLineup=openLineup;window.saveLineup=saveLineup;window.openOpponentScanner=openOpponentScanner;window.processQr=processQr;window.uploadTeamDocument=uploadTeamDocument;window.sendTeamMessage=sendTeamMessage;window.openCallup=openCallup;window.saveCallup=saveCallup;window.loadAll=loadAll;window.logout=logout;
 loadAll();
 </script>
-<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.15 FIX AREA CAPITANO MOBILE</div></body>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.16 ASSISTENTE REGOLAMENTO</div></body>
 </html>
