@@ -11,3 +11,9 @@ Correzioni in captain-player-card.html:
 
 Per aggiornare il sito sostituire almeno captain-player-card.html.
 Gli altri file sono inclusi per conservare la versione completa del progetto.
+
+V9.9.15 - FIX AREA CAPITANO SU TELEFONO
+- il messaggio di caricamento viene aggiornato correttamente a fine caricamento;
+- pulsante Aggiorna a larghezza piena e senza testo tagliato;
+- maggiore spazio inferiore per evitare la sovrapposizione dei comandi Safari;
+- indicatore della versione spostato nel flusso della pagina e non più sopra i pulsanti.
