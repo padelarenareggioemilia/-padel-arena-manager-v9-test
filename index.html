@@ -746,6 +746,11 @@
             <input id="enabled" type="checkbox" checked style="width:auto">
             Abilita accesso capitano
           </label>
+
+          <label class="notice">
+            <input id="teamEditEnabled" type="checkbox" checked style="width:auto">
+            Abilita il capitano a modificare logo, telefono e Serie
+          </label>
         </div>
       </div>
 
@@ -935,6 +940,7 @@
 
     $('form').reset();
     $('enabled').checked = true;
+    $('teamEditEnabled').checked = true;
     $('preview').innerHTML = 'LOGO';
     $('title').textContent = 'Crea nuova squadra';
     $('save').textContent = 'Salva squadra';
@@ -974,6 +980,7 @@
       }
 
       $('enabled').checked = team.captain_access_enabled !== false;
+      $('teamEditEnabled').checked = team.captain_team_edit_enabled !== false;
 
       if (team.logo_url) {
         $('preview').innerHTML = `
@@ -1199,6 +1206,7 @@
       home_match_time:$('homeTime').value || null,
       notes:$('notes').value.trim(),
       captain_access_enabled:$('enabled').checked,
+      captain_team_edit_enabled:$('teamEditEnabled').checked,
       updated_at:new Date().toISOString()
     };
 
@@ -1452,6 +1460,9 @@
                     ? ` alle ${esc(String(team.home_match_time).slice(0,5))}`
                     : ''
                 }
+                <br>
+                Modifica squadra capitano:
+                <b>${team.captain_team_edit_enabled===false?'DISABILITATA':'ABILITATA'}</b>
               </div>
             </div>
 
@@ -1470,6 +1481,14 @@
                 onclick='editTeam(${JSON.stringify(team.id)})'
               >
                 Modifica
+              </button>
+
+              <button
+                type="button"
+                class="btn ${team.captain_team_edit_enabled===false?'secondary':'primary'}"
+                onclick='toggleCaptainTeamEdit(${JSON.stringify(team.id)},${team.captain_team_edit_enabled===false?'true':'false'})'
+              >
+                ${team.captain_team_edit_enabled===false?'Abilita modifica squadra':'Disabilita modifica squadra'}
               </button>
 
               <div class="more-wrap">
@@ -1856,6 +1875,15 @@
     location.replace('login.html');
   }
 
+  async function toggleCaptainTeamEdit(teamId, enabled) {
+    const action=enabled?'abilitare':'disabilitare';
+    if(!confirm(`Vuoi ${action} la modifica della squadra per questo capitano?`))return;
+    const result=await s.rpc('admin_set_captain_team_edit',{p_team_id:teamId,p_enabled:enabled});
+    if(result.error){alert('Operazione non riuscita: '+result.error.message);return}
+    await loadTeams();
+    alert(enabled?'Modifica squadra abilitata.':'Modifica squadra disabilitata.');
+  }
+
   async function adminChangeAccount() {
     try {
       await s.auth.signOut();
@@ -1880,6 +1908,7 @@
   window.refreshDashboard = refreshDashboard;
   window.logout = logout;
   window.adminChangeAccount = adminChangeAccount;
+  window.toggleCaptainTeamEdit = toggleCaptainTeamEdit;
 
   $('form').addEventListener('submit', event => {
     event.preventDefault();
@@ -1990,7 +2019,7 @@
     opacity:.75
   "
 >
-  V9.9.16 ASSISTENTE REGOLAMENTO
+  V9.9.19 MODIFICA SQUADRA CAPITANO
 </div>
 
 <script src="app-ui.js?v=981playerfix"></script>
