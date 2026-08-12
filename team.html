@@ -780,7 +780,7 @@ async function init() {
   const requests = rosterResult.error ? [] : (rosterResult.data || []);
 
   const captainUrl = new URL(
-    'captain.html?invite=' + encodeURIComponent(team.captain_invite_token || ''),
+    'captain-activate.html?invite=' + encodeURIComponent(team.captain_invite_token || ''),
     window.location.href
   ).href;
 
@@ -981,7 +981,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.22 EMAIL E WHATSAPP</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.25 ATTIVAZIONE CAPITANI</div>
 <script src="app-ui.js?v=980stable"></script>
 </body>
 </html>

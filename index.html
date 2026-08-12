@@ -1366,7 +1366,7 @@
     $('teams').innerHTML = filteredTeams
       .map(team => {
         const captainLink = buildInviteLink(
-          'captain.html',
+          'captain-activate.html',
           team.captain_invite_token
         );
 
@@ -1921,7 +1921,7 @@
       captain_name:team.captain_name||'Capitano',
       team_name:team.name||'',
       captain_email:team.captain_email.trim().toLowerCase(),
-      captain_url:buildInviteLink('captain.html',team.captain_invite_token)
+      captain_url:buildInviteLink('captain-activate.html',team.captain_invite_token)
     }));
     const button=clickEvent?.currentTarget; if(button){button.disabled=true;button.textContent='Invio email in corso…'}
     try{
@@ -2068,7 +2068,7 @@
     opacity:.75
   "
 >
-  V9.9.23 INVIO UNICO CAPITANI
+  V9.9.25 ATTIVAZIONE ACCOUNT CAPITANI
 </div>
 
 <script src="app-ui.js?v=981playerfix"></script>

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#164a95">
+<title>AICS Padel Championship · Attiva Area Capitano</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--soft:#edf4fb}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(90deg,rgba(0,146,70,.06),transparent 25%,transparent 75%,rgba(206,43,55,.06)),var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";display:block;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%)}
+main{width:min(620px,calc(100% - 24px));margin:24px auto 70px}.hero,.card{border:1px solid var(--line);border-radius:22px;padding:20px;margin:12px 0;background:#fff;box-shadow:0 14px 34px rgba(8,47,104,.12)}
+.hero{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.hero img{width:100px;height:66px;object-fit:contain;background:#fff;border-radius:13px;padding:6px}
+.team{display:grid;grid-template-columns:82px 1fr;gap:14px;align-items:center}.team img{width:80px;height:80px;object-fit:contain;border:1px solid var(--line);border-radius:14px;background:#fff}.field{margin:13px 0}label{display:block;font-weight:900;margin-bottom:6px}input{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font:inherit}.btn{width:100%;border:0;border-radius:11px;padding:13px;font:inherit;font-weight:900;cursor:pointer;margin:5px 0}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);line-height:1.45}.ok{background:#eaf8f0;border-color:#77bd90}.err{background:#fdecef;border-color:#dd7a85}.hidden{display:none!important}.small{font-size:13px;color:#627b97}
+</style>
+</head>
+<body>
+<main>
+<section class="hero"><img src="assets/aics-logo.png" alt="AICS"><div><h1 style="margin:0">Attiva Area Capitano</h1><div>AICS Padel Championship 2027</div></div></section>
+<section class="card"><div id="status" class="notice">Verifica del collegamento personale…</div></section>
+<section id="panel" class="card hidden">
+  <div class="team"><img id="teamLogo" alt="Logo squadra"><div><h2 id="teamName" style="margin:0"></h2><div id="captainName"></div></div></div>
+  <div class="field"><label>Email del capitano</label><input id="email" type="email" readonly></div>
+  <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" minlength="8" placeholder="Almeno 8 caratteri"></div>
+  <button id="createBtn" class="btn primary">Crea il mio account Capitano</button>
+  <button id="loginBtn" class="btn secondary">Ho già un account: accedi</button>
+  <p class="small">Il collegamento è personale. L’account può essere associato esclusivamente all’email del capitano registrata per questa squadra.</p>
+</section>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);
+const token=new URLSearchParams(location.search).get('invite')||'';
+let invite=null;
+if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey){show('Configurazione Supabase non disponibile.',true);throw new Error('Configurazione mancante')}
+const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+function show(text,error=false,ok=false){$('status').textContent=text;$('status').className='notice '+(error?'err':ok?'ok':'')}
+function busy(value){$('createBtn').disabled=value;$('loginBtn').disabled=value}
+async function claimAndEnter(){
+  const result=await sb.rpc('captain_claim_invite',{p_token:token});
+  if(result.error)throw result.error;
+  show('Account collegato correttamente. Apertura Area Capitano…',false,true);
+  setTimeout(()=>location.replace('captain-home.html?v=9925'),500);
+}
+async function start(){
+  if(!token){show('Il collegamento è incompleto: codice personale mancante.',true);return}
+  const details=await sb.rpc('captain_invite_details',{p_token:token});
+  if(details.error){show('Collegamento non valido: '+details.error.message,true);return}
+  invite=Array.isArray(details.data)?details.data[0]:details.data;
+  $('teamName').textContent=invite.team_name||'Squadra';
+  $('captainName').textContent='Capitano: '+(invite.captain_name||'');
+  $('email').value=invite.captain_email||'';
+  $('teamLogo').src=invite.logo_url||'assets/aics-logo.png';
+  $('panel').classList.remove('hidden');
+  const session=(await sb.auth.getSession()).data.session;
+  if(session&&String(session.user.email||'').toLowerCase()===String(invite.captain_email||'').toLowerCase()){
+    try{await claimAndEnter()}catch(e){show(e.message||String(e),true)}
+  }else show('Collegamento verificato. Crea la password oppure accedi se possiedi già un account.',false,true);
+}
+$('createBtn').onclick=async()=>{
+  const password=$('password').value;
+  if(password.length<8)return show('La password deve contenere almeno 8 caratteri.',true);
+  busy(true);show('Creazione dell’account in corso…');
+  try{
+    await sb.auth.signOut({scope:'local'});
+    const redirect=new URL('captain-activate.html',location.href);redirect.searchParams.set('invite',token);
+    const result=await sb.auth.signUp({email:invite.captain_email,password,options:{emailRedirectTo:redirect.href}});
+    if(result.error)throw result.error;
+    if(result.data.session)await claimAndEnter();
+    else show('Account creato. Controlla la posta e conferma l’email; poi riapri questo collegamento.',false,true);
+  }catch(e){
+    const msg=e.message||String(e);
+    show(/already registered|already been registered/i.test(msg)?'Questa email possiede già un account. Usa il pulsante “Ho già un account: accedi”.':msg,true);
+    busy(false);
+  }
+};
+$('loginBtn').onclick=async()=>{
+  const password=$('password').value;
+  if(!password)return show('Inserisci la password del tuo account.',true);
+  busy(true);show('Accesso in corso…');
+  try{
+    await sb.auth.signOut({scope:'local'});
+    const result=await sb.auth.signInWithPassword({email:invite.captain_email,password});
+    if(result.error)throw result.error;
+    await claimAndEnter();
+  }catch(e){show(e.message||String(e),true);busy(false)}
+};
+start().catch(e=>show(e.message||String(e),true));
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+V9.9.25 - ATTIVAZIONE ACCOUNT CAPITANI
+
+IMPORTANTE: non reinviare le email prima di avere completato tutti i passaggi.
+
+1. SUPABASE
+Apri SQL Editor, incolla ed esegui tutto il contenuto di:
+SUPABASE_V9_9_25_ATTIVAZIONE_CAPITANI.sql
+
+2. GITHUB
+Carica o sostituisci nella cartella principale del repository questi file:
+- index.html
+- team.html
+- captain-activate.html (file nuovo)
+
+3. GOOGLE APPS SCRIPT
+Sostituisci il codice con GOOGLE_APPS_SCRIPT_INVIO_CAPITANI.gs.
+Poi: Esegui il deployment > Gestisci deployment > Modifica > Nuova versione
+> Esegui il deployment.
+L'URL dell'app Google resta lo stesso.
+
+4. PROVA PRIMA DI INVIARE A TUTTI
+Apri una squadra di prova e copia il nuovo link Capitano. Deve contenere:
+captain-activate.html?invite=
+Aprilo in una finestra privata, crea una password di almeno 8 caratteri
+e verifica che si apra l'Area Capitano corretta.
+
+5. INVIO
+Dopo la prova puoi usare il pulsante unico "Invia email a tutti i capitani".
+Le nuove email conterranno sia il pulsante sia il collegamento scritto in chiaro.
+

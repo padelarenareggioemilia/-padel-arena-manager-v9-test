@@ -73,7 +73,8 @@ function buildHtml(item) {
     '<p>Ciao <b>' + name + '</b>,</p>' +
     '<p>benvenuto nell’<b>Area Capitano AICS Padel Championship 2027</b> della squadra <b>' + team + '</b>.</p>' +
     '<p>Per entrare nella tua pagina personale:</p>' +
-    '<p><a href="' + url + '" style="display:inline-block;padding:12px 18px;background:#164a95;color:#fff;text-decoration:none;border-radius:10px;font-weight:bold">ENTRA NELL’AREA CAPITANO</a></p>' +
+    '<p><a href="' + url + '" target="_blank" rel="noopener" style="display:inline-block;padding:12px 18px;background:#164a95;color:#fff;text-decoration:none;border-radius:10px;font-weight:bold">ENTRA NELL’AREA CAPITANO</a></p>' +
+    '<p style="font-size:13px;color:#526b86">Se il pulsante non si apre, copia e incolla questo indirizzo nel browser:<br><a href="' + url + '">' + url + '</a></p>' +
     '<p>Al primo accesso segui le istruzioni visualizzate e utilizza l’email <b>' + email + '</b>.</p>' +
     '<p>Dalla tua Area Capitano potrai gestire la squadra, la rosa, le distinte, le comunicazioni e le partite. Conserva questo link perché è personale.</p>' +
     '<p>Cordiali saluti<br><b>Francesco Lignola</b><br>Comitato Tecnico Organizzativo<br>Referente Centro-Nord AICS Padel Championship 2027<br>Telefono: 327 691 0287<br>Email: <a href="mailto:aicspadeltour@gmail.com">aicspadeltour@gmail.com</a></p>' +
