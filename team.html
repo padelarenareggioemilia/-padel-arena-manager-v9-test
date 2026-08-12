@@ -702,6 +702,28 @@ async function copyLink(url) {
   }
 }
 
+async function toggleCaptainTeamEdit(enabled) {
+  const action=enabled?'abilitare':'disabilitare';
+  if(!confirm(`Vuoi ${action} la modifica della squadra per questo capitano?`))return;
+  const r=await sb.rpc('admin_set_captain_team_edit',{p_team_id:teamId,p_enabled:enabled});
+  if(r.error)return alert('Operazione non riuscita: '+r.error.message);
+  alert(enabled?'Modifiche del capitano abilitate.':'Modifiche del capitano disabilitate.');
+  await init();
+}
+
+async function captainWelcomeMessage(team,url,channel) {
+  const message=`Ciao ${team.captain_name||'Capitano'},\n\nbenvenuto nell’Area Capitano AICS Padel Championship 2027 della squadra ${team.name||''}.\n\nPer entrare nella tua pagina personale apri questo collegamento:\n${url}\n\nAl primo accesso segui le istruzioni visualizzate e utilizza sempre l’email del capitano: ${team.captain_email||''}.\n\nDalla tua Area Capitano potrai gestire la squadra, la rosa, le distinte, le comunicazioni e le partite. Conserva questo link perché è personale.\n\nCordiali saluti\nFrancesco Lignola\nComitato Tecnico Organizzativo\nReferente Centro-Nord AICS Padel Championship 2027\nTelefono: 327 691 0287\nEmail: aicspadeltour@gmail.com`;
+  if(channel==='whatsapp'){
+    const phone=String(team.captain_phone||'').replace(/\D/g,'');
+    if(!phone)return alert('Inserisci prima il telefono del capitano.');
+    window.open(`https://wa.me/${phone.startsWith('39')?phone:'39'+phone}?text=${encodeURIComponent(message)}`,'_blank');
+    return;
+  }
+  if(!team.captain_email)return alert('Inserisci prima l’email del capitano.');
+  const subject=`Benvenuto nell’Area Capitano - ${team.name||'AICS Padel Championship 2027'}`;
+  window.open(`https://mail.google.com/mail/?view=cm&fs=1&authuser=${encodeURIComponent('aicspadeltour@gmail.com')}&to=${encodeURIComponent(team.captain_email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,'_blank');
+}
+
 async function init() {
   if (!teamId) {
     box.innerHTML = `
@@ -789,10 +811,14 @@ async function init() {
           <div class="data-item"><b>Email capitano</b>${esc(team.captain_email || 'Non indicata')}</div>
           <div class="data-item"><b>Telefono capitano</b>${esc(team.captain_phone || 'Non indicato')}</div>
           <div class="data-item"><b>Accesso capitano</b>${team.captain_access_enabled === false ? 'Disabilitato' : 'Attivo'}</div>
+          <div class="data-item"><b>Modifiche squadra</b>${team.captain_team_edit_enabled === false ? 'DISABILITATE' : 'ABILITATE'}</div>
         </div>
 
         <div class="actions" style="margin-top:16px">
           <button class="btn primary" onclick="openInlineEditor()">Modifica squadra</button>
+          <button class="btn ${team.captain_team_edit_enabled===false?'primary':'danger'}" onclick="toggleCaptainTeamEdit(${team.captain_team_edit_enabled===false?'true':'false'})">${team.captain_team_edit_enabled===false?'Abilita modifiche capitano':'Disabilita modifiche capitano'}</button>
+          <button class="btn secondary" onclick='captainWelcomeMessage(${JSON.stringify(team)},${JSON.stringify(captainUrl)},"email")'>Invia via email</button>
+          <button class="btn secondary" onclick='captainWelcomeMessage(${JSON.stringify(team)},${JSON.stringify(captainUrl)},"whatsapp")'>Invia via WhatsApp</button>
           <button class="btn success" onclick="document.getElementById('manualPlayerPanel').scrollIntoView({behavior:'smooth'})">Aggiungi giocatore</button>
           <button class="btn secondary" onclick='copyLink(${JSON.stringify(captainUrl)})'>Copia link capitano</button>
           <button class="btn secondary" onclick='copyLink(${JSON.stringify(playerUrl)})'>Copia link giocatori</button>
@@ -943,7 +969,7 @@ async function init() {
   renderAdminRoster(requests);
 }
 
-window.copyLink = copyLink;
+window.copyLink = copyLink;window.toggleCaptainTeamEdit=toggleCaptainTeamEdit;window.captainWelcomeMessage=captainWelcomeMessage;
 init();
 </script>
 
@@ -955,7 +981,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.22 EMAIL E WHATSAPP</div>
 <script src="app-ui.js?v=980stable"></script>
 </body>
 </html>

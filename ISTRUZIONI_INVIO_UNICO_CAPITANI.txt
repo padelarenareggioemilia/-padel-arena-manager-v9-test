@@ -1,0 +1,16 @@
+CONFIGURAZIONE GRATUITA - INVIO EMAIL A TUTTI I CAPITANI
+
+1. Accedi a https://script.google.com con aicspadeltour@gmail.com.
+2. Crea un nuovo progetto.
+3. Copia nel progetto il contenuto del file GOOGLE_APPS_SCRIPT_INVIO_CAPITANI.gs.
+4. Sostituisci SOSTITUISCI-CON-UN-CODICE-SEGRETO-LUNGO con un codice scelto da te.
+5. Premi Distribuisci > Nuova distribuzione > Applicazione web.
+6. Esegui come: Me. Accesso: Chiunque.
+7. Autorizza l'invio delle email e copia l'URL dell'applicazione web.
+8. Nell'app V9 premi “Invia email a tutti i capitani”.
+9. Solo la prima volta, incolla l'URL dell'app e poi lo stesso codice segreto.
+
+Il browser conserva URL e codice sul dispositivo dell'amministratore. Ogni email
+parte separatamente dall'account aicspadeltour@gmail.com ed è personalizzata con
+nome capitano, squadra e link personale. Gli indirizzi degli altri capitani non
+sono visibili.

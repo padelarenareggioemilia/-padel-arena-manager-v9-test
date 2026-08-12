@@ -607,6 +607,10 @@
       </div>
 
       <div class="actions">
+        <button type="button" class="btn primary" onclick="sendWelcomeToAllCaptains(event)">
+          ✉️ Invia email a tutti i capitani
+        </button>
+
         <button
           type="button"
           class="btn secondary"
@@ -1491,6 +1495,8 @@
                 ${team.captain_team_edit_enabled===false?'Abilita modifica squadra':'Disabilita modifica squadra'}
               </button>
 
+              ${captainLink?`<button type="button" class="btn secondary" onclick='captainWelcomeMessage(${JSON.stringify(team.id)},${JSON.stringify(captainLink)},"email")'>Invia via email</button><button type="button" class="btn secondary" onclick='captainWelcomeMessage(${JSON.stringify(team.id)},${JSON.stringify(captainLink)},"whatsapp")'>Invia via WhatsApp</button>`:''}
+
               <div class="more-wrap">
                 <button
                   type="button"
@@ -1884,6 +1890,47 @@
     alert(enabled?'Modifica squadra abilitata.':'Modifica squadra disabilitata.');
   }
 
+  async function captainWelcomeMessage(teamId, url, channel) {
+    const team=allTeams.find(x=>x.id===teamId);
+    if(!team)return alert('Squadra non trovata.');
+    const message=`Ciao ${team.captain_name||'Capitano'},\n\nbenvenuto nell’Area Capitano AICS Padel Championship 2027 della squadra ${team.name||''}.\n\nPer entrare nella tua pagina personale apri questo collegamento:\n${url}\n\nAl primo accesso segui le istruzioni visualizzate e utilizza sempre l’email del capitano: ${team.captain_email||''}.\n\nDalla tua Area Capitano potrai gestire la squadra, la rosa, le distinte, le comunicazioni e le partite. Conserva questo link perché è personale.\n\nCordiali saluti\nFrancesco Lignola\nComitato Tecnico Organizzativo\nReferente Centro-Nord AICS Padel Championship 2027\nTelefono: 327 691 0287\nEmail: aicspadeltour@gmail.com`;
+    if(channel==='whatsapp'){
+      const phone=String(team.captain_phone||'').replace(/\D/g,'');
+      if(!phone)return alert('Inserisci prima il telefono del capitano.');
+      window.open(`https://wa.me/${phone.startsWith('39')?phone:'39'+phone}?text=${encodeURIComponent(message)}`,'_blank');
+      return;
+    }
+    if(!team.captain_email)return alert('Inserisci prima l’email del capitano.');
+    const subject=`Benvenuto nell’Area Capitano - ${team.name||'AICS Padel Championship 2027'}`;
+    window.open(`https://mail.google.com/mail/?view=cm&fs=1&authuser=${encodeURIComponent('aicspadeltour@gmail.com')}&to=${encodeURIComponent(team.captain_email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`,'_blank');
+  }
+
+  async function sendWelcomeToAllCaptains(clickEvent) {
+    const valid=allTeams.filter(team=>team.captain_email&&team.captain_invite_token);
+    const excluded=allTeams.filter(team=>!team.captain_email||!team.captain_invite_token);
+    if(!valid.length)return alert('Nessun capitano dispone contemporaneamente di email e link personale.');
+    if(!confirm(`Inviare ${valid.length} email personalizzate ai capitani?${excluded.length?`\n\n${excluded.length} squadre saranno escluse perché prive di email o link personale.`:''}`))return;
+    let endpoint=localStorage.getItem('pamCaptainMailerUrl')||'';
+    let secret=localStorage.getItem('pamCaptainMailerSecret')||'';
+    if(!endpoint){endpoint=prompt('Incolla l’URL dell’app Google per l’invio email:','')?.trim()||'';if(!endpoint)return}
+    if(!secret){secret=prompt('Inserisci il codice segreto configurato nell’app Google:','')?.trim()||'';if(!secret)return}
+    localStorage.setItem('pamCaptainMailerUrl',endpoint);
+    localStorage.setItem('pamCaptainMailerSecret',secret);
+    const emails=valid.map(team=>({
+      to:team.captain_email.trim().toLowerCase(),
+      captain_name:team.captain_name||'Capitano',
+      team_name:team.name||'',
+      captain_email:team.captain_email.trim().toLowerCase(),
+      captain_url:buildInviteLink('captain.html',team.captain_invite_token)
+    }));
+    const button=clickEvent?.currentTarget; if(button){button.disabled=true;button.textContent='Invio email in corso…'}
+    try{
+      await fetch(endpoint,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({secret,emails})});
+      alert(`${valid.length} email affidate al servizio di invio.${excluded.length?`\n${excluded.length} squadre escluse perché prive di email o link.`:''}`);
+    }catch(error){alert('Invio non riuscito: '+(error.message||String(error)))}
+    finally{if(button){button.disabled=false;button.textContent='✉️ Invia email a tutti i capitani'}}
+  }
+
   async function adminChangeAccount() {
     try {
       await s.auth.signOut();
@@ -1909,6 +1956,8 @@
   window.logout = logout;
   window.adminChangeAccount = adminChangeAccount;
   window.toggleCaptainTeamEdit = toggleCaptainTeamEdit;
+  window.captainWelcomeMessage = captainWelcomeMessage;
+  window.sendWelcomeToAllCaptains = sendWelcomeToAllCaptains;
 
   $('form').addEventListener('submit', event => {
     event.preventDefault();
@@ -2019,7 +2068,7 @@
     opacity:.75
   "
 >
-  V9.9.19 MODIFICA SQUADRA CAPITANO
+  V9.9.23 INVIO UNICO CAPITANI
 </div>
 
 <script src="app-ui.js?v=981playerfix"></script>
