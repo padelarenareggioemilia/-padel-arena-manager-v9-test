@@ -1,0 +1,15 @@
+AGGIORNAMENTO V9.9.30 - ACCOUNT GIOCATORE FACOLTATIVO
+
+Caricare nella cartella principale di GitHub tutti i file dello ZIP,
+sostituendo quelli già presenti.
+
+Nel modulo del nuovo giocatore è stata aggiunta la scelta:
+"Voglio creare anche il mio account personale".
+
+- Se la casella non viene selezionata, viene inviata soltanto l'iscrizione.
+- Se viene selezionata, compaiono Password e Conferma password.
+- Supabase invia l'email di conferma dell'indirizzo.
+- Dopo l'approvazione del capitano, il giocatore può entrare con email e password.
+- Rimane disponibile anche l'accesso senza password via email.
+
+Non occorre eseguire altro SQL.

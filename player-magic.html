@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Accesso giocatore</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+  <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f8fc;font-family:system-ui;color:#0a2e5e}.card{width:min(580px,calc(100% - 28px));padding:22px;border:1px solid #b9cde3;border-radius:22px;background:#fff;text-align:center}.notice{padding:13px;border:1px solid #b9cde3;border-radius:12px;background:#edf4fb}.err{background:#fdecef;border-color:#dd7a85}</style>
+</head>
+<body><main class="card"><img src="assets/aics-logo.png" alt="AICS" style="width:110px"><h1>Accesso giocatore</h1><div id="msg" class="notice">Collegamento del profilo in corso…</div></main>
+<script>
+const cfg=window.PAM_V9_CONFIG,s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),msg=document.getElementById('msg');
+async function start(){
+ try{
+  const session=(await s.auth.getSession()).data.session;
+  if(!session)throw new Error('Il collegamento email non è più valido. Richiedine uno nuovo.');
+  const r=await s.rpc('claim_my_approved_player');
+  if(r.error)throw r.error;
+  if(r.data&&r.data.success===false)throw new Error(r.data.message||'Profilo giocatore non trovato.');
+  msg.textContent='Accesso riconosciuto. Apertura Area Giocatore…';
+  setTimeout(()=>location.replace('player-home.html?v=9929'),500);
+ }catch(e){msg.textContent='Impossibile entrare: '+(e.message||String(e));msg.className='notice err'}
+}
+start();
+</script></body></html>

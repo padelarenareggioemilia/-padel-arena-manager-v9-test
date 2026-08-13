@@ -1371,7 +1371,7 @@
         );
 
         const playerLink = team.player_invite_token
-          ? new URL(`player.html?team=${encodeURIComponent(team.player_invite_token)}`, location.href).href
+          ? new URL(`public.html?player_invite=${encodeURIComponent(team.player_invite_token)}`, location.href).href
           : '';
 
         const captainButton = captainLink

@@ -192,6 +192,19 @@ async function init(){
  <div class="field"><label>Note</label><textarea id="nt"></textarea></div>
  <label class="notice"><input id="truth" type="checkbox" style="width:auto;margin-right:8px">
  Dichiaro che i dati e i documenti inseriti sono autentici, aggiornati e riferiti alla mia persona.</label>
+ <div class="notice" style="margin-top:14px">
+  <label style="display:flex;align-items:flex-start;gap:9px;font-weight:800;cursor:pointer">
+   <input id="createAccount" type="checkbox" style="width:auto;margin-top:4px" onchange="toggleAccountFields()">
+   <span>Voglio creare anche il mio account personale</span>
+  </label>
+  <div class="doc-note" style="margin-top:7px">Scelta facoltativa: potrai accedere in futuro con email e password. Puoi comunque inviare l’iscrizione senza creare alcun account.</div>
+  <div id="accountFields" class="hidden">
+   <div class="grid2" style="margin-top:10px">
+    <div class="field"><label>Password *</label><input id="accountPassword" type="password" minlength="8" autocomplete="new-password" placeholder="Almeno 8 caratteri"></div>
+    <div class="field"><label>Conferma password *</label><input id="accountPasswordConfirm" type="password" minlength="8" autocomplete="new-password"></div>
+   </div>
+  </div>
+ </div>
  <button id="sendBtn" class="btn primary">Invia richiesta</button><div id="m" class="notice hidden"></div></form>`;
  document.getElementById('photo').addEventListener('change',ev=>{
    photoFile=ev.target.files[0]||null;
@@ -200,6 +213,10 @@ async function init(){
      document.getElementById('photoPreview').innerHTML=`<img src="${u}" alt="Anteprima foto tessera">`;
    }
  });
+}
+function toggleAccountFields(){
+ const checked=document.getElementById('createAccount')?.checked;
+ document.getElementById('accountFields')?.classList.toggle('hidden',!checked);
 }
 function m(x,z=false){let a=document.getElementById('m');a.textContent=x;a.className='notice '+(z?'err':'ok');a.classList.remove('hidden')}
 async function uploadPhoto(){
@@ -214,6 +231,9 @@ async function uploadPhoto(){
 }
 async function sendRequest(){
  if(!document.getElementById('truth').checked)return m('Devi confermare la veridicità dei dati inseriti.',true);
+ const wantsAccount=document.getElementById('createAccount').checked;
+ const password=document.getElementById('accountPassword').value;
+ const passwordConfirm=document.getElementById('accountPasswordConfirm').value;
  let p={
   first_name:fn.value.trim(),last_name:ln.value.trim(),email:em.value.trim().toLowerCase(),
   phone:ph.value.trim(),birth_date:bd.value,birth_place:bp.value.trim(),
@@ -225,12 +245,30 @@ async function sendRequest(){
  'residence_postal_code','residence_province','gender','fitp_ranking','medical_certificate_expiry'])
   if(!p[k])return m('Compila tutti i campi obbligatori.',true);
  if(!/^\d{5}$/.test(p.residence_postal_code))return m('Il CAP deve contenere 5 cifre.',true);
+ if(wantsAccount&&password.length<8)return m('Per creare l’account scegli una password di almeno 8 caratteri.',true);
+ if(wantsAccount&&password!==passwordConfirm)return m('Le due password non coincidono.',true);
  try{
    sendBtn.disabled=true;m('Caricamento foto e invio richiesta...');
    p.photo_url=await uploadPhoto();
    let r=await s.rpc('submit_roster_request',{p_token:t,p_payload:p});
    if(r.error)throw r.error;
-   m('Richiesta inviata correttamente. Il capitano potrà verificarla e approvarla.');
+   if(wantsAccount){
+     const signup=await s.auth.signUp({
+       email:p.email,
+       password,
+       options:{emailRedirectTo:new URL('public.html?account_confirmed=1',location.href).href}
+     });
+     if(signup.error){
+       m('Iscrizione inviata correttamente. Non è stato possibile creare l’account: '+signup.error.message+' Puoi crearlo in seguito usando la stessa email.',true);
+       return;
+     }
+     m(signup.data.session
+       ? 'Iscrizione inviata e account creato. Dopo l’approvazione del capitano potrai entrare con email e password.'
+       : 'Iscrizione inviata e account creato. Controlla la tua email e conferma l’indirizzo. Dopo l’approvazione del capitano potrai entrare con email e password.');
+   }else{
+     m('Richiesta inviata correttamente senza creare un account. Il capitano potrà verificarla e approvarla.');
+   }
+   sendBtn.textContent='Richiesta inviata';
  }catch(err){sendBtn.disabled=false;m(err.message||String(err),true)}
 }
 init();
@@ -246,7 +284,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.28 ISCRIZIONE GIOCATORE</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.30 ACCOUNT FACOLTATIVO</div>
 <script src="app-ui.js?v=980stable"></script>
 <script>
 async function logoutAndChange(){

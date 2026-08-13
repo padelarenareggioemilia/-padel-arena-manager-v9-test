@@ -785,7 +785,7 @@ async function init() {
   ).href;
 
   const playerUrl = new URL(
-    'player.html?team=' + encodeURIComponent(team.player_invite_token || ''),
+    'public.html?player_invite=' + encodeURIComponent(team.player_invite_token || ''),
     window.location.href
   ).href;
 

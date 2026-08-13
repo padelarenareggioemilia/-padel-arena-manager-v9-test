@@ -20,7 +20,12 @@
 .primary{background:var(--blue);color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}
 .account-message{margin-top:14px}.account-message.ok{background:#ebf8f0;border-color:#79bf90}
 .account-message.err{background:#fdecef;border-color:#dd7a85}
+.choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.choice{border:1px solid var(--line);border-radius:17px;padding:17px;background:#fff;display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-height:150px}
+.choice h3{margin:0 0 7px;color:var(--blue)}.choice p{margin:0 0 14px;color:var(--muted);line-height:1.45}.choice .btn{margin-top:auto;width:100%}
+.login-panel{margin-top:14px;padding:16px;border:1px solid var(--line);border-radius:16px;background:var(--soft)}
 @media(max-width:800px){.player-account-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.choice-grid{grid-template-columns:1fr}.choice{min-height:0}}
 
 </style>
 <link rel="stylesheet" href="app-theme.css?v=980stable">
@@ -32,42 +37,51 @@
     <img id="headerLogo" class="logo" src="assets/aics-logo.png" alt="AICS">
     <div>
       <h1 id="headerTitle">AICS PADEL CHAMPIONSHIP</h1>
-      <div id="headerSubtitle">Navigazione Free: calendari, risultati e classifiche</div><div class="small" style="opacity:.85;margin-top:4px">RIFINITURA V9 · PLAYER 1.0</div>
+      <div id="headerSubtitle">Naviga Free oppure entra nella tua Area Giocatore</div><div class="small" style="opacity:.85;margin-top:4px">AICS PADEL CHAMPIONSHIP 2027</div>
     </div>
   </div>
   <button id="headerButton" class="btn secondary" onclick="location.href='login.html?v=recovery95'">Accedi / Cambia account</button>
 </header>
 <section class="card" style="margin-top:12px">
-  <div class="notice"><b>Modalità Free attiva.</b> Puoi consultare Serie A, Serie B, Serie C, Coppa Italia e Supercoppa senza effettuare l'accesso.</div>
+  <div class="notice"><b>Benvenuto.</b> Puoi navigare liberamente senza account oppure scegliere, più sotto, la modalità di accesso adatta a te.</div>
 </section>
-
-<section id="landingView" class="card">
-  <div class="notice">Clicca sullo stemma per aprire calendario, risultati e classifica della singola competizione.</div>
-  <div class="grid5" id="competitionCards"></div>
-</section>
-
-
 
 <section id="playerAccountSection" class="card player-account-card">
-  <h2>Area giocatore</h2>
-  <div class="notice">
-    Inserisci la stessa email utilizzata per l’iscrizione alla squadra.
-    Riceverai un link sicuro per entrare senza password e senza compilare una nuova registrazione.
+  <span id="area-giocatore"></span><h2>Area Giocatore</h2>
+  <div class="notice">Scegli la situazione che ti riguarda. Per consultare calendari, risultati e classifiche non è obbligatorio registrarsi.</div>
+  <div class="choice-grid">
+    <div class="choice"><h3>Naviga Free</h3><p>Consulta liberamente competizioni, calendari, risultati e classifiche senza registrazione.</p><button class="btn primary" onclick="scrollToCompetitions()">Apri il portale pubblico</button></div>
+    <div class="choice"><h3>Ho già email e password</h3><p>Hai già creato le credenziali? Accedi normalmente alla tua area personale.</p><button class="btn primary" onclick="togglePlayerLogin()">Login giocatore</button></div>
+    <div class="choice"><h3>Sono un nuovo giocatore</h3><p>Inserisco anagrafica, dati sportivi e foto. Alla fine posso scegliere liberamente se creare anche un account con password.</p><button class="btn primary" onclick="openNewPlayerRegistration()">Compila l’iscrizione</button></div>
+    <div class="choice"><h3>Sono già nella rosa</h3><p>Il capitano mi ha già inserito e approvato, ma non ho mai creato una password. Ricevo un accesso temporaneo e sicuro via email, senza dover scegliere una password.</p><button class="btn primary" onclick="toggleMagicLink()">Entra con la mia email</button></div>
   </div>
 
-  <div class="player-account-panel">
+  <div id="playerLoginPanel" class="login-panel hidden">
+    <h3>Login giocatore</h3>
+    <div class="field"><label>Email</label><input id="playerLoginEmail" type="email" autocomplete="email"></div>
+    <div class="field"><label>Password</label><input id="playerLoginPassword" type="password" autocomplete="current-password"></div>
+    <button id="playerLoginButton" class="btn primary" onclick="loginPlayerWithPassword()">Accedi</button>
+  </div>
+
+  <div id="playerMagicPanel" class="player-account-panel hidden" style="margin-top:14px">
+    <h3>Accesso senza password</h3>
+    <div class="notice">Inserisci la stessa email già comunicata al capitano. Riceverai un collegamento sicuro via email.</div>
     <div class="field">
       <label for="quickPlayerEmail">Email usata per l’iscrizione</label>
       <input id="quickPlayerEmail" type="email" autocomplete="email" placeholder="nome@email.it">
     </div>
     <div class="actions">
       <button id="quickPlayerButton" class="btn primary" onclick="sendPlayerMagicLink()">Entra con la mia email</button>
-      <button class="btn secondary" onclick="openMyAccountFromFree()">Home del mio account</button>
-      <button class="btn secondary" onclick="location.href='login.html?v=player10'">Accedi con password</button>
     </div>
   </div>
 
   <div id="playerAccountMessage" class="notice account-message">Pronto.</div>
+</section>
+
+<section id="landingView" class="card">
+  <h2>Naviga Free</h2>
+  <div class="notice">Clicca sullo stemma per aprire calendario, risultati e classifica della singola competizione.</div>
+  <div class="grid5" id="competitionCards"></div>
 </section>
 
 <section id="competitionView" class="hidden">
@@ -89,6 +103,23 @@
 const cfg=window.PAM_V9_CONFIG;
 const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 const $=id=>document.getElementById(id);
+const pageParams=new URLSearchParams(location.search);
+const playerInvite=pageParams.get('player_invite')||pageParams.get('team')||pageParams.get('invite')||'';
+
+function scrollToCompetitions(){$('landingView').scrollIntoView({behavior:'smooth',block:'start'})}
+function togglePlayerLogin(){$('playerLoginPanel').classList.toggle('hidden');$('playerMagicPanel').classList.add('hidden');$('playerLoginPanel').scrollIntoView({behavior:'smooth',block:'center'})}
+function toggleMagicLink(){$('playerMagicPanel').classList.toggle('hidden');$('playerLoginPanel').classList.add('hidden');$('playerMagicPanel').scrollIntoView({behavior:'smooth',block:'center'})}
+function openNewPlayerRegistration(){
+  if(!playerInvite){playerAccountMessage('Questo collegamento non contiene la squadra. Chiedi al capitano il link personale di iscrizione.',true);return}
+  location.href='player.html?team='+encodeURIComponent(playerInvite);
+}
+async function loginPlayerWithPassword(){
+  const email=($('playerLoginEmail').value||'').trim().toLowerCase(),password=$('playerLoginPassword').value;
+  if(!email||!password)return playerAccountMessage('Inserisci email e password.',true);
+  const button=$('playerLoginButton');button.disabled=true;button.textContent='Accesso in corso…';
+  try{const r=await sb.auth.signInWithPassword({email,password});if(r.error)throw r.error;location.replace('account-home.html?v=9929')}
+  catch(e){playerAccountMessage(e.message||String(e),true);button.disabled=false;button.textContent='Accedi'}
+}
 
 
 function playerAccountMessage(text,error=false){
@@ -111,7 +142,7 @@ async function sendPlayerMagicLink(){
       return playerAccountMessage('Non risulta alcun giocatore approvato con questa email. Verifica l’indirizzo oppure contatta il capitano.',true);
     }
 
-    const redirectTo=new URL('player-dashboard.html?magic=1&v=player10',location.href).href;
+    const redirectTo=new URL('player-magic.html?v=9929',location.href).href;
     const result=await sb.auth.signInWithOtp({
       email,
       options:{shouldCreateUser:true,emailRedirectTo:redirectTo}
@@ -131,6 +162,7 @@ async function openMyAccountFromFree(){
 }
 window.sendPlayerMagicLink=sendPlayerMagicLink;
 window.openMyAccountFromFree=openMyAccountFromFree;
+Object.assign(window,{scrollToCompetitions,togglePlayerLogin,toggleMagicLink,openNewPlayerRegistration,loginPlayerWithPassword});
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
 const logos={
   SERIE_A:'assets/serie-a.png?v=987',
@@ -234,9 +266,8 @@ async function loadCompetition(){
   render();
 }
 window.setView=setView;
-const pageParams=new URLSearchParams(location.search);
 if(pageParams.get('claim')==='1')setTimeout(()=>claimPlayerFromFree(),250);
-if(code)loadCompetition();else loadLanding();
+if(code)loadCompetition();else{loadLanding();if(playerInvite)setTimeout(()=>$('playerAccountSection').scrollIntoView({behavior:'smooth',block:'start'}),300)}
 </script>
 <script src="app-ui.js?v=980stable"></script>
 </body>
