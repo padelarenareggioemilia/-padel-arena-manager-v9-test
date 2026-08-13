@@ -144,12 +144,12 @@ label{color:var(--aics-blue-dark)!important}
 <section id="box" class="card">Verifica squadra...</section>
 <script>
 const c=window.PAM_V9_CONFIG,s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),
-t=new URLSearchParams(location.search).get('team'),b=document.getElementById('box');
+params=new URLSearchParams(location.search),t=params.get('team')||params.get('invite'),b=document.getElementById('box');
 const e=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 let team,photoFile=null;
 async function init(){
  let r=await s.rpc('public_team_by_player_invite',{p_token:t});
- if(r.error||!r.data)return b.innerHTML='<h2>Link non valido</h2>';
+ if(r.error||!r.data){b.innerHTML='<h2>Link non valido</h2><p>Chiedi al capitano o all’amministratore di copiare nuovamente il link di iscrizione della squadra.</p>';return;}
  team=r.data;
  b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}">`:''}
  <h2>${e(team.name)}</h2><p class="muted">${e(team.series||'')} · ${e(team.club_name||'')}</p>
@@ -246,7 +246,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.7 STABLE</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.28 ISCRIZIONE GIOCATORE</div>
 <script src="app-ui.js?v=980stable"></script>
 <script>
 async function logoutAndChange(){
