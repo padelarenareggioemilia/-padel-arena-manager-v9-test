@@ -1,0 +1,35 @@
+AICS PADEL CHAMPIONSHIP - V9.9.33 SEGRETARI, MODALITA E TRASFERIMENTI
+
+AGGIORNAMENTO CIRCOSCRITTO ALLA SEZIONE SEGRETARI.
+Non modifica calendario, rosa, partite, portale pubblico, accessi capitani o altre funzioni.
+
+ORDINE DI INSTALLAZIONE
+
+1. SUPABASE
+   Aprire SQL Editor ed eseguire tutto il file:
+   SUPABASE_V9_9_31_SEGRETARI.sql
+
+2. GITHUB
+   Sostituire soltanto:
+   captain-home.html
+
+   Sostituire anche:
+   player-home.html
+
+   Sostituire anche:
+   index.html
+
+   Aggiungere il nuovo file:
+   secretary-activate.html
+
+   Aggiungere anche:
+   player-transfers.html
+
+Non caricare gli altri file contenuti nello ZIP: sono inclusi soltanto come copia cumulativa della V9.9.30.
+
+PROVA CONSIGLIATA
+- provare prima con un account giocatore già collegato;
+- provare poi con un indirizzo senza account e copiare il link generato;
+- verificare che la persona compaia tra i Segretari attivi.
+- verificare il passaggio con un click tra Modalità Giocatore e Modalità Segretario.
+- verificare Trasferimenti giocatori con una scheda di prova.
