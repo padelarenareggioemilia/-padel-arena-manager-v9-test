@@ -1370,10 +1370,9 @@
           team.captain_invite_token
         );
 
-        const playerLink = buildInviteLink(
-          'player.html',
-          team.player_invite_token
-        );
+        const playerLink = team.player_invite_token
+          ? new URL(`player.html?team=${encodeURIComponent(team.player_invite_token)}`, location.href).href
+          : '';
 
         const captainButton = captainLink
           ? `
