@@ -1,7 +1,7 @@
 window.PAM_V9_CONFIG = {
   supabaseUrl: "https://ggnmpzfuqchcwzgaxxzx.supabase.co",
   supabasePublishableKey: "sb_publishable_JJUF1lt3lob4r0z2UBTOiw_2YUjk18m",
-  version: "9.1.1-calendar-fix"
+  version: "9.1.2-constrained-calendar"
 };
 
 /*
@@ -791,6 +791,83 @@ window.PAM_V9_CONFIG = {
         console.info('[V9 calendario] Assistente conflitti senza anticipi/posticipi installato');
       }catch(e){
         console.error('[V9 calendario] errore fix assistente conflitti',e);
+      }
+    },0);
+  });
+})();
+
+/* V9 - GENERATORE VINCOLATO ALLA RADICE: IL CONFLITTO NON VIENE CREATO */
+(function(){
+  const isCalendar = /(^|\/)calendar\.html(?:$|[?#])/i.test(location.pathname + location.search + location.hash)
+    || /(^|\/)calendar\.html$/i.test(location.pathname);
+  if(!isCalendar) return;
+
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      try{
+        const originalRoundRobin = window.roundRobin;
+        if(typeof originalRoundRobin !== 'function' || originalRoundRobin._v9Constrained) return;
+
+        function norm(v){ return String(v ?? '').trim().toLowerCase(); }
+
+        // La chiave descrive ESCLUSIVAMENTE lo slot casalingo della squadra.
+        function homeSlotKey(team){
+          if(!team) return '';
+          const facility = (typeof facilityKey === 'function')
+            ? facilityKey(team, team.home_court)
+            : [team.home_court,team.club_address,team.club_city].map(norm).join('|');
+          const day = norm(team.home_match_day);
+          const time = norm(team.home_match_time || team.home_time || team.match_time);
+          return [facility,day,time].join('||');
+        }
+
+        function orientRound(pairs){
+          const n=pairs.length;
+          // Per ogni partita ci sono solo 2 possibilità: originale o invertita.
+          // Cerchiamo una combinazione in cui nessuna squadra di casa occupi
+          // lo stesso slot casalingo di un'altra.
+          const max=1<<n;
+
+          for(let mask=0; mask<max; mask++){
+            const candidate=pairs.map((pair,i)=>{
+              const [a,b]=pair;
+              return (mask & (1<<i)) ? [b,a] : [a,b];
+            });
+
+            const used=new Set();
+            let valid=true;
+            for(const [home] of candidate){
+              const key=homeSlotKey(home);
+              if(!key) continue;
+              if(used.has(key)){ valid=false; break; }
+              used.add(key);
+            }
+            if(valid) return candidate;
+          }
+          return pairs;
+        }
+
+        const constrained = function(teamList){
+          const rounds=originalRoundRobin(teamList);
+          return (rounds||[]).map(round=>orientRound(round));
+        };
+        constrained._v9Constrained=true;
+        window.roundRobin=constrained;
+
+        // L'assistente non deve più proporre correzioni temporali.
+        // Se un caso eccezionale resta irrisolvibile, viene solo segnalato.
+        window.createSuggestionAttempts = function(){
+          return [{
+            title:'Conflitto non risolvibile nel sorteggio',
+            ok:false,
+            description:'Il calendario non sposta partite di settimana. Verificare i dati del campo casalingo delle squadre coinvolte.',
+            reason:'Nessun anticipo o posticipo automatico consentito.'
+          }];
+        };
+
+        console.info('[V9 calendario] Generatore vincolato casa/trasferta attivo');
+      }catch(e){
+        console.error('[V9 calendario] errore generatore vincolato',e);
       }
     },0);
   });
