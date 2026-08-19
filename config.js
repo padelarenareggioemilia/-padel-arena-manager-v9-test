@@ -435,3 +435,198 @@ window.PAM_V9_CONFIG = {
     },0);
   });
 })();
+
+/* V9 - FIX PROGRESSIONE GIORNATE: UNA GIORNATA = UNA SETTIMANA */
+(function(){
+  const isCalendar = /(^|\/)calendar\.html(?:$|[?#])/i.test(location.pathname + location.search + location.hash)
+    || /(^|\/)calendar\.html$/i.test(location.pathname);
+  if(!isCalendar) return;
+
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      try{
+        /*
+         * Sostituisce la generazione del calendario con una progressione rigida:
+         * G1 = offset 0
+         * G2 = offset 1
+         * ...
+         * ritorno = continua dopo l'ultima giornata di andata
+         * Nessuna giornata può condividere lo stesso offset/settimana.
+         */
+        window.buildCalendarPayload = async function(){
+          if(!$('startDate').value) throw new Error('Inserisci la data di partenza.');
+          await fetchData();
+          if(!groups.length) throw new Error('Prima devi creare i gironi.');
+          if(!validateTeams(false)) throw new Error('Correggi prima i dati delle squadre indicati sopra.');
+
+          const formula=$('formula').value;
+          const intervalWeeks=Number($('interval').value);
+          const code=$('competition').value;
+          const payload=[];
+
+          let globalRoundNumber = 1;
+          let globalRoundOffset = 0;
+
+          for(const group of groups){
+            const groupTeams=members
+              .filter(member=>member.group_id===group.id)
+              .map(member=>teams.find(team=>team.id===member.team_id))
+              .filter(Boolean);
+
+            const rounds=roundRobin(groupTeams);
+
+            // ANDATA: ogni giornata usa un offset distinto e progressivo.
+            rounds.forEach((pairs,index)=>{
+              const roundNumber = globalRoundNumber++;
+              const roundOffset = globalRoundOffset++;
+
+              pairs.forEach(([home,away])=>{
+                const homeSchedule=scheduleHomeFixture(
+                  $('startDate').value,
+                  home,
+                  roundOffset,
+                  code,
+                  intervalWeeks
+                );
+                const local=localPartsFromISO(homeSchedule.scheduledAt);
+
+                payload.push({
+                  competition_code:code,
+                  phase:'Girone',
+                  group_id:group.id,
+                  round_number:roundNumber,
+                  home_team_id:home.id,
+                  away_team_id:away.id,
+                  scheduled_at:homeSchedule.scheduledAt,
+                  venue:homeSchedule.venue,
+                  _home_name:home.name,
+                  _away_name:away.name,
+                  _configured_day:home.home_match_day,
+                  _configured_time:homeSchedule.configuredTime,
+                  _local_date:local.date,
+                  _local_time:local.time,
+                  _local_weekday:local.weekday,
+                  _facility_key:facilityKey(home,home.home_court),
+                  _facility_label:[home.home_court,home.club_address,home.club_city].filter(Boolean).join(' · '),
+                  _duration_minutes:matchDurationMinutes(home)
+                });
+
+                assertHomeRule(payload[payload.length-1]);
+              });
+            });
+
+            // RITORNO: continua DOPO l'ultima giornata di andata.
+            if(formula==='double'){
+              rounds.forEach((pairs,index)=>{
+                const roundNumber = globalRoundNumber++;
+                const roundOffset = globalRoundOffset++;
+
+                pairs.forEach(([first,second])=>{
+                  const home=second;
+                  const away=first;
+
+                  const homeSchedule=scheduleHomeFixture(
+                    $('startDate').value,
+                    home,
+                    roundOffset,
+                    code,
+                    intervalWeeks
+                  );
+                  const local=localPartsFromISO(homeSchedule.scheduledAt);
+
+                  payload.push({
+                    competition_code:code,
+                    phase:'Girone',
+                    group_id:group.id,
+                    round_number:roundNumber,
+                    home_team_id:home.id,
+                    away_team_id:away.id,
+                    scheduled_at:homeSchedule.scheduledAt,
+                    venue:homeSchedule.venue,
+                    _home_name:home.name,
+                    _away_name:away.name,
+                    _configured_day:home.home_match_day,
+                    _configured_time:homeSchedule.configuredTime,
+                    _local_date:local.date,
+                    _local_time:local.time,
+                    _local_weekday:local.weekday,
+                    _facility_key:facilityKey(home,home.home_court),
+                    _facility_label:[home.home_court,home.club_address,home.club_city].filter(Boolean).join(' · '),
+                    _duration_minutes:matchDurationMinutes(home)
+                  });
+
+                  assertHomeRule(payload[payload.length-1]);
+                });
+              });
+            }
+          }
+
+          // Controllo strutturale: nessuna giornata diversa può usare lo stesso offset temporale.
+          const roundDateMap = new Map();
+          for(const m of payload){
+            const date = m._local_date;
+            if(!roundDateMap.has(m.round_number)) roundDateMap.set(m.round_number,new Set());
+            roundDateMap.get(m.round_number).add(date);
+          }
+
+          const roundNumbers=[...roundDateMap.keys()].sort((a,b)=>a-b);
+          for(let i=1;i<roundNumbers.length;i++){
+            const prev=roundNumbers[i-1], curr=roundNumbers[i];
+            const prevDates=[...roundDateMap.get(prev)];
+            const currDates=[...roundDateMap.get(curr)];
+            const same=prevDates.some(d=>currDates.includes(d));
+            if(same){
+              throw new Error(
+                `Errore progressione giornate: G${prev} e G${curr} risultano nello stesso giorno/settimana.`
+              );
+            }
+          }
+
+          const resolution=autoResolveConflicts(payload,code);
+
+          if(
+            resolution.unresolved.length ||
+            resolution.remainingFacilityConflicts.length
+          ){
+            const conflictMatch=
+              resolution.unresolved[0] ||
+              resolution.remainingFacilityConflicts[0]?.a;
+
+            const attempts=createSuggestionAttempts(
+              conflictMatch,
+              payload,
+              resolution.existing||[],
+              code
+            );
+
+            openConflictAssistant(
+              conflictMatch,
+              payload,
+              resolution.existing||[],
+              attempts
+            );
+
+            const err=new Error('CONFLICT_ASSISTANT_OPENED');
+            err.isConflictAssistant=true;
+            throw err;
+          }
+
+          auditHomeAwayRules(payload);
+
+          payload._resolvedCount=resolution.resolved.length;
+          payload._calendarDiagnosis={
+            ...(payload._calendarDiagnosis||{}),
+            totalRounds:roundNumbers.length,
+            progression:'OK'
+          };
+
+          return payload;
+        };
+
+        console.info('[V9 calendario] Fix progressione giornate installato');
+      }catch(e){
+        console.error('[V9 calendario] errore fix progressione giornate', e);
+      }
+    },0);
+  });
+})();
