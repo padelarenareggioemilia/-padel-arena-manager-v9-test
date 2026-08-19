@@ -357,3 +357,81 @@ window.PAM_V9_CONFIG = {
     }, 0);
   });
 })();
+
+/* V9 - TASTO ELIMINA TUTTE LE PARTITE DELLA COMPETIZIONE SELEZIONATA */
+(function(){
+  const isCalendar = /(^|\/)calendar\.html(?:$|[?#])/i.test(location.pathname + location.search + location.hash)
+    || /(^|\/)calendar\.html$/i.test(location.pathname);
+  if(!isCalendar) return;
+
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      try{
+        const actions = document.querySelector('section.card .actions');
+        if(!actions || document.getElementById('deleteAllFixturesBtn')) return;
+
+        const btn = document.createElement('button');
+        btn.id = 'deleteAllFixturesBtn';
+        btn.className = 'btn danger';
+        btn.type = 'button';
+        btn.textContent = '🗑 Elimina tutte le partite';
+        actions.appendChild(btn);
+
+        btn.addEventListener('click', async function(){
+          try{
+            const code = document.getElementById('competition')?.value;
+            if(!code) return alert('Seleziona prima una competizione.');
+
+            const label = document.getElementById('competition')?.selectedOptions?.[0]?.textContent || code;
+
+            const first = confirm(
+              `ATTENZIONE\n\nStai per eliminare TUTTE le partite di ${label}.\n`+
+              `L'operazione non può essere annullata.\n\nVuoi continuare?`
+            );
+            if(!first) return;
+
+            const typed = prompt(
+              `Per confermare definitivamente l'eliminazione di tutte le partite di ${label}, `+
+              `scrivi ELIMINA`
+            );
+            if(typed !== 'ELIMINA') {
+              alert('Eliminazione annullata.');
+              return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Eliminazione in corso…';
+
+            const res = await s.from('fixtures').delete().eq('competition_code', code);
+            if(res.error) throw res.error;
+
+            pendingCalendar = [];
+            fixtures = [];
+            allFixtures = (allFixtures || []).filter(f => f.competition_code !== code);
+
+            if(typeof clearCalendarPreview === 'function') clearCalendarPreview();
+            if(typeof loadFixtures === 'function') await loadFixtures();
+
+            if(typeof msg === 'function'){
+              msg(`✅ Tutte le partite di ${label} sono state eliminate.`);
+            } else {
+              alert(`Tutte le partite di ${label} sono state eliminate.`);
+            }
+          }catch(err){
+            console.error(err);
+            if(typeof msg === 'function'){
+              msg('Errore durante l’eliminazione: '+(err?.message || String(err)), true);
+            } else {
+              alert('Errore durante l’eliminazione: '+(err?.message || String(err)));
+            }
+          }finally{
+            btn.disabled = false;
+            btn.textContent = '🗑 Elimina tutte le partite';
+          }
+        });
+      }catch(e){
+        console.error('[V9 calendario] errore tasto elimina tutte le partite', e);
+      }
+    },0);
+  });
+})();
