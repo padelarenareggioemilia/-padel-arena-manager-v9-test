@@ -630,3 +630,183 @@ window.PAM_V9_CONFIG = {
     },0);
   });
 })();
+
+/* V9 - FIX ASSISTENTE CONFLITTI: NIENTE ANTICIPI/POSTICIPI */
+(function(){
+  const isCalendar = /(^|\/)calendar\.html(?:$|[?#])/i.test(location.pathname + location.search + location.hash)
+    || /(^|\/)calendar\.html$/i.test(location.pathname);
+  if(!isCalendar) return;
+
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      try{
+        /*
+         * L'assistente può proporre SOLO:
+         * 1) inversione coordinata casa/trasferta;
+         * 2) compensazione automatica della gara di ritorno.
+         * Non propone MAI anticipi/posticipi.
+         */
+        window.createSuggestionAttempts = function(match,payload,existing,competitionCode){
+          const attempts=[];
+          if(!match) return attempts;
+
+          const home=teamById(match.home_team_id);
+          const away=teamById(match.away_team_id);
+          const reverse=(payload||[]).find(x =>
+            x!==match &&
+            x.group_id===match.group_id &&
+            x.home_team_id===match.away_team_id &&
+            x.away_team_id===match.home_team_id
+          );
+
+          const swap=candidateSwapHome(match,competitionCode);
+          let ok=false;
+          let reason='';
+
+          if(!swap){
+            reason='Impossibile costruire l’inversione casa/trasferta.';
+          }else if(document.getElementById('formula')?.value==='double' && !reverse){
+            reason='Non è stata trovata la corrispondente gara di ritorno da compensare.';
+          }else{
+            const test={...match};
+            try{
+              updateMatchSchedule(test,swap.home,swap.away,swap.scheduledAt,'test');
+              const others=[
+                ...(payload||[]).filter(x=>x!==match && x!==reverse),
+                ...(existing||[])
+              ];
+              ok=!hasFacilityConflict(test,others);
+
+              if(ok && reverse){
+                const reverseSwap=candidateSwapHome(reverse,competitionCode);
+                if(!reverseSwap){
+                  ok=false;
+                  reason='La gara di ritorno non può essere compensata.';
+                }else{
+                  const testReturn={...reverse};
+                  updateMatchSchedule(
+                    testReturn,
+                    reverseSwap.home,
+                    reverseSwap.away,
+                    reverseSwap.scheduledAt,
+                    'test ritorno'
+                  );
+                  const returnOthers=[
+                    ...(payload||[]).filter(x=>x!==match && x!==reverse),
+                    test,
+                    ...(existing||[])
+                  ];
+                  if(hasFacilityConflict(testReturn,returnOthers)){
+                    ok=false;
+                    reason='L’inversione risolve l’andata ma crea un conflitto nella gara di ritorno.';
+                  }
+                }
+              }
+
+              if(!ok && !reason){
+                reason='L’inversione casa/trasferta crea un altro conflitto sul campo.';
+              }
+            }catch(e){
+              ok=false;
+              reason=e?.message||String(e);
+            }
+          }
+
+          attempts.push({
+            title:'Inverti casa/trasferta + compensa ritorno',
+            ok,
+            description: reverse
+              ? `${away?.name||'Squadra ospite'} gioca in casa in questa gara; nel ritorno ${home?.name||'Squadra'} torna automaticamente in casa. Nessuna settimana viene spostata.`
+              : `${away?.name||'Squadra ospite'} gioca in casa. Nessuna settimana viene spostata.`,
+            reason,
+            _v9CoordinatedSwap:true
+          });
+
+          return attempts;
+        };
+
+        const oldApply=window.applySuggestedConflictSolution;
+        window.applySuggestedConflictSolution = function(index){
+          try{
+            const ctx=activeConflict;
+            const attempt=ctx?.attempts?.[index];
+            if(!ctx || !attempt) return;
+
+            if(!attempt._v9CoordinatedSwap){
+              return oldApply ? oldApply(index) : undefined;
+            }
+            if(!attempt.ok){
+              if(typeof assistantMsg==='function'){
+                assistantMsg(attempt.reason||'Soluzione non applicabile.',true);
+              }
+              return;
+            }
+
+            const match=ctx.match;
+            const payload=ctx.payload||[];
+            const existing=ctx.existing||[];
+            const code=document.getElementById('competition')?.value;
+            const reverse=payload.find(x =>
+              x!==match &&
+              x.group_id===match.group_id &&
+              x.home_team_id===match.away_team_id &&
+              x.away_team_id===match.home_team_id
+            );
+
+            const s1={...match};
+            const s2=reverse?{...reverse}:null;
+
+            const swap=candidateSwapHome(match,code);
+            updateMatchSchedule(
+              match,swap.home,swap.away,swap.scheduledAt,
+              'MANUALE · inversione coordinata casa/trasferta'
+            );
+
+            if(reverse){
+              const rs=candidateSwapHome(reverse,code);
+              updateMatchSchedule(
+                reverse,rs.home,rs.away,rs.scheduledAt,
+                'MANUALE · compensazione automatica ritorno'
+              );
+            }
+
+            const changed=[match,reverse].filter(Boolean);
+            const all=[...payload,...existing];
+            const bad=changed.some(m=>all.some(o=>o!==m && hasFacilityConflict(m,[o])));
+            if(bad){
+              Object.assign(match,s1);
+              if(reverse&&s2)Object.assign(reverse,s2);
+              if(typeof assistantMsg==='function'){
+                assistantMsg('Inversione annullata: creerebbe un altro conflitto campo.',true);
+              }
+              return;
+            }
+
+            pendingCalendar=payload;
+            closeConflictAssistant();
+            if(typeof renderPendingCalendar==='function')renderPendingCalendar();
+
+            const remaining=collectCalendarConflicts(payload,existing);
+            if(remaining.length){
+              const next=remaining[0];
+              const nextAttempts=createSuggestionAttempts(next,payload,existing,code);
+              openConflictAssistant(next,payload,existing,nextAttempts);
+              if(typeof assistantMsg==='function'){
+                assistantMsg(`Inversione applicata. Restano ${remaining.length} partite coinvolte in conflitti campo.`,true);
+              }
+            }else if(typeof msg==='function'){
+              msg('✅ Conflitti campo risolti senza spostare nessuna partita di settimana.');
+            }
+          }catch(e){
+            console.error(e);
+            if(typeof assistantMsg==='function')assistantMsg(e?.message||String(e),true);
+          }
+        };
+
+        console.info('[V9 calendario] Assistente conflitti senza anticipi/posticipi installato');
+      }catch(e){
+        console.error('[V9 calendario] errore fix assistente conflitti',e);
+      }
+    },0);
+  });
+})();
