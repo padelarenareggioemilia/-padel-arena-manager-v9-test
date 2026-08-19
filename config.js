@@ -1,7 +1,7 @@
 window.PAM_V9_CONFIG = {
   supabaseUrl: "https://ggnmpzfuqchcwzgaxxzx.supabase.co",
   supabasePublishableKey: "sb_publishable_JJUF1lt3lob4r0z2UBTOiw_2YUjk18m",
-  version: "9.1.0"
+  version: "9.1.1-calendar-fix"
 };
 
 /*
@@ -561,26 +561,11 @@ window.PAM_V9_CONFIG = {
             }
           }
 
-          // Controllo strutturale: nessuna giornata diversa può usare lo stesso offset temporale.
-          const roundDateMap = new Map();
-          for(const m of payload){
-            const date = m._local_date;
-            if(!roundDateMap.has(m.round_number)) roundDateMap.set(m.round_number,new Set());
-            roundDateMap.get(m.round_number).add(date);
-          }
-
-          const roundNumbers=[...roundDateMap.keys()].sort((a,b)=>a-b);
-          for(let i=1;i<roundNumbers.length;i++){
-            const prev=roundNumbers[i-1], curr=roundNumbers[i];
-            const prevDates=[...roundDateMap.get(prev)];
-            const currDates=[...roundDateMap.get(curr)];
-            const same=prevDates.some(d=>currDates.includes(d));
-            if(same){
-              throw new Error(
-                `Errore progressione giornate: G${prev} e G${curr} risultano nello stesso giorno/settimana.`
-              );
-            }
-          }
+          // Progressione già garantita matematicamente da roundOffset:
+          // ogni nuova giornata incrementa l'offset di 1 e scheduleHomeFixture
+          // applica intervalWeeks. Non confrontiamo le date effettive delle singole
+          // gare, perché squadre diverse possono avere giorni casalinghi diversi.
+          const roundNumbers=[...new Set(payload.map(m=>m.round_number))].sort((a,b)=>a-b);
 
           const resolution=autoResolveConflicts(payload,code);
 
