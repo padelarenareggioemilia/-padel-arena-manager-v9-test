@@ -1,11 +1,30 @@
-V9 FINALE — SOLO 3 CORREZIONI
+V9 CALENDARIO PULITO 9.2.0
 
-Carica nella ROOT del repository V9 tutti i file estratti.
-Conferma la sostituzione dei file con lo stesso nome.
-Esegui poi database/SUPABASE_V9_FINAL_3_CORREZIONI.sql.
+CARICA NELLA CARTELLA PRINCIPALE DEL REPOSITORY ENTRAMBI I FILE:
+1. config.js        -> SOSTITUISCI quello esistente
+2. calendar-v9-clean.js -> AGGIUNGI questo nuovo file
 
-Apri: captain-home.html?v=final3real
+NON MODIFICARE calendar.html.
 
-In basso deve comparire: V9 FINALE 3 CORREZIONI
+Perché ora sono due file:
+- config.js torna pulito e contiene solo configurazione + caricamento del nuovo motore.
+- calendar-v9-clean.js contiene tutta la calendarizzazione.
+- vengono eliminate le vecchie patch accumulate.
 
-Non sono state modificate distinte, calendario, classifiche, statistiche o risultati.
+REGOLA FONDAMENTALE RISOLTA:
+Se B&B e CT Correggio condividono campo/giorno/ora, in OGNI giornata:
+- una deve essere in CASA
+- l'altra deve essere in TRASFERTA
+Anche nel caso in cui entrambe fossero state in trasferta, il motore cambia
+l'orientamento: altrimenti nel ritorno sarebbero entrambe in casa.
+
+ALTRE REGOLE:
+- ritorno speculare;
+- nessun anticipo/posticipo automatico di singole partite;
+- festività/date escluse spostano l'intera giornata;
+- l'intervallo 1/2 settimane resta progressivo;
+- resta il tasto Elimina tutte le partite con doppia conferma.
+
+DOPO IL CARICAMENTO:
+Apri calendar.html con un parametro nuovo, per esempio:
+calendar.html?v=920clean1
