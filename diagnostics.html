@@ -1,162 +1,124 @@
 <!doctype html>
 <html lang="it">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AICS PADEL CHAMPIONSHIP · Centro diagnostico</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
 <style>
 :root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--amber:#d6a52d;--bg:#f4f8fc;--soft:#edf4fb;--text:#0a2e5e;--muted:#637b96;--line:#b9cde3}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
 body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--green) 0 33.33%,#fff 33.33% 66.66%,var(--red) 66.66%);z-index:30}
 .shell{max-width:1400px;margin:auto;padding:18px 12px 90px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0;box-shadow:0 13px 28px rgba(8,47,104,.1)}
 .hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;display:flex;justify-content:space-between;align-items:center;gap:14px}.brand{display:flex;align-items:center;gap:13px}.brand img{width:102px;height:70px;object-fit:contain;background:#fff;border-radius:13px;padding:5px}.hero h1{margin:0}.muted{color:var(--muted)}.hero .muted{color:#dce9f7}.small{font-size:12px}
-.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.success{background:var(--green);color:#fff}.danger{background:var(--red);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}.tiny{padding:7px 9px;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.danger{background:var(--red);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}.tiny{padding:7px 9px;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.kpi{border:1px solid var(--line);border-radius:15px;padding:13px;text-align:center;background:#fff;cursor:pointer}.kpi strong{display:block;font-size:27px}.kpi span{font-size:12px;color:var(--muted)}.kpi.bad{border-color:#d97c86;background:#fff5f6}.kpi.warn{border-color:#d8b753;background:#fff9e8}.kpi.good{border-color:#78bd90;background:#f2fbf5}
 .notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:9px 0;white-space:pre-line}.ok{background:#ebf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}.warnbox{background:#fff7dd;border-color:#d9b757}.hidden{display:none!important}
 .section{border:1px solid var(--line);border-radius:16px;margin:12px 0;overflow:hidden}.section-head{width:100%;border:0;background:var(--soft);padding:13px 15px;display:flex;justify-content:space-between;align-items:center;font:inherit;font-weight:1000;color:var(--text);cursor:pointer;text-align:left}.section-body{padding:0 12px 12px}.section.collapsed .section-body{display:none}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:1000;border:1px solid var(--line)}.red{background:#fdecef;color:#982333;border-color:#dc7b86}.yellow{background:#fff7dd;color:#7b5b08;border-color:#d8b753}.green{background:#eaf8f0;color:#17683c;border-color:#78bd90}
-.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px;margin-top:10px}table{border-collapse:collapse;width:100%;min-width:900px}th,td{padding:9px;border-bottom:1px solid #dce6f0;text-align:left;vertical-align:middle}th{background:var(--blue);color:#fff}.logo{width:38px;height:38px;object-fit:contain;border:1px solid #d5e1ed;border-radius:8px;background:#fff}.status-line{display:flex;align-items:center;gap:8px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px;margin-top:10px}table{border-collapse:collapse;width:100%;min-width:900px}th,td{padding:9px;border-bottom:1px solid #dce6f0;text-align:left;vertical-align:middle}th{background:var(--blue);color:#fff}.logo{width:38px;height:38px;object-fit:contain;border:1px solid #d5e1ed;border-radius:8px;background:#fff}
 .progress{height:12px;border-radius:999px;background:#dde8f2;overflow:hidden}.progress span{display:block;height:100%;width:0;background:var(--green);transition:.25s}
 @media(max-width:950px){.kpis{grid-template-columns:repeat(2,1fr)}.hero{align-items:flex-start}}
-</style>
-</head>
+</style></head>
 <body><main class="shell">
 <div class="actions"><button class="btn secondary" onclick="location.href='index.html'">← Home</button><button class="btn secondary" onclick="location.href='admin-control.html'">Controllo campionato</button></div>
-<header class="hero">
-  <div class="brand"><img src="assets/aics-logo.png"><div><h1>AICS PADEL CHAMPIONSHIP</h1><div class="muted">Centro diagnostico V9</div></div></div>
-  <span class="badge green">SOLO ADMIN</span>
-</header>
-
-<section class="card">
-  <div class="actions" style="justify-content:space-between">
-    <div><h2 style="margin:0">Stato generale</h2><div class="muted">Controllo di squadre, giocatori, calendari, tessere e Storage.</div></div>
-    <button id="runBtn" class="btn primary" onclick="runDiagnostics()">Esegui diagnostica completa</button>
-  </div>
-  <div id="progressBox" class="hidden" style="margin-top:12px"><div class="progress"><span id="progress"></span></div><div id="progressText" class="small muted" style="margin-top:5px"></div></div>
-  <div id="mainMsg" class="notice">Premi “Esegui diagnostica completa”.</div>
-</section>
-
-<section id="summaryCard" class="card hidden">
-  <div class="kpis">
-    <div class="kpi good"><strong id="kTeams">0</strong><span>Squadre in Serie</span></div>
-    <div class="kpi bad" onclick="scrollToSection('teamsNoSeries')"><strong id="kNoSeries">0</strong><span>Senza Serie</span></div>
-    <div class="kpi warn" onclick="scrollToSection('teamsNoLogo')"><strong id="kNoLogo">0</strong><span>Senza logo</span></div>
-    <div class="kpi warn" onclick="scrollToSection('incompletePlayers')"><strong id="kIncomplete">0</strong><span>Profili incompleti</span></div>
-    <div class="kpi bad" onclick="scrollToSection('expiredMedical')"><strong id="kExpired">0</strong><span>Certificati scaduti</span></div>
-    <div class="kpi bad" onclick="scrollToSection('fixtureConflicts')"><strong id="kConflicts">0</strong><span>Conflitti calendario</span></div>
-  </div>
-</section>
-
-<section id="detailsCard" class="card hidden">
-  <div id="sections"></div>
-</section>
-
-<section class="card">
-  <h2>Test Storage immagini</h2>
-  <div class="notice">Esegue un piccolo caricamento di prova nei bucket dei loghi e delle foto, poi elimina immediatamente il file.</div>
-  <div class="actions"><button class="btn secondary" onclick="testStorage('team-logos')">Test loghi squadre</button><button class="btn secondary" onclick="testStorage('player-photos')">Test foto giocatori</button></div>
-  <div id="storageMsg" class="notice hidden"></div>
-</section>
+<header class="hero"><div class="brand"><img src="assets/aics-logo.png"><div><h1>AICS PADEL CHAMPIONSHIP</h1><div class="muted">Centro diagnostico V9 · conflitti reali</div></div></div><span class="badge green">SOLO ADMIN</span></header>
+<section class="card"><div class="actions" style="justify-content:space-between"><div><h2 style="margin:0">Stato generale</h2><div class="muted">Controllo di squadre, giocatori, calendari, tessere e Storage.</div></div><button id="runBtn" class="btn primary" onclick="runDiagnostics()">Esegui diagnostica completa</button></div>
+<div id="progressBox" class="hidden" style="margin-top:12px"><div class="progress"><span id="progress"></span></div><div id="progressText" class="small muted" style="margin-top:5px"></div></div><div id="mainMsg" class="notice">Premi “Esegui diagnostica completa”.</div></section>
+<section id="summaryCard" class="card hidden"><div class="kpis">
+<div class="kpi good"><strong id="kTeams">0</strong><span>Squadre in Serie</span></div><div class="kpi bad" onclick="scrollToSection('teamsNoSeries')"><strong id="kNoSeries">0</strong><span>Senza Serie</span></div><div class="kpi warn" onclick="scrollToSection('teamsNoLogo')"><strong id="kNoLogo">0</strong><span>Senza logo</span></div><div class="kpi warn" onclick="scrollToSection('incompletePlayers')"><strong id="kIncomplete">0</strong><span>Profili incompleti</span></div><div class="kpi bad" onclick="scrollToSection('expiredMedical')"><strong id="kExpired">0</strong><span>Certificati scaduti</span></div><div class="kpi bad" onclick="scrollToSection('fixtureConflicts')"><strong id="kConflicts">0</strong><span>Conflitti REALI calendario</span></div>
+</div></section>
+<section id="detailsCard" class="card hidden"><div id="sections"></div></section>
+<section class="card"><h2>Test Storage immagini</h2><div class="notice">Esegue un piccolo caricamento di prova nei bucket dei loghi e delle foto, poi elimina immediatamente il file.</div><div class="actions"><button class="btn secondary" onclick="testStorage('team-logos')">Test loghi squadre</button><button class="btn secondary" onclick="testStorage('player-photos')">Test foto giocatori</button></div><div id="storageMsg" class="notice hidden"></div></section>
 </main>
-
 <script>
 const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
 let report=null;
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+const norm=x=>String(x??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
 function msg(text,error=false){$('mainMsg').textContent=text;$('mainMsg').className='notice '+(error?'err':'ok')}
 function storageMsg(text,error=false){$('storageMsg').textContent=text;$('storageMsg').className='notice '+(error?'err':'ok');$('storageMsg').classList.remove('hidden')}
 function scrollToSection(id){document.getElementById(id)?.scrollIntoView({behavior:'smooth'})}
 function openTeam(id){location.href=`team.html?id=${encodeURIComponent(id)}`}
-function section(id,title,count,severity,html){
-  return `<section id="${id}" class="section ${count?'':'collapsed'}"><button class="section-head" onclick="this.closest('.section').classList.toggle('collapsed')"><span>${esc(title)}</span><span class="badge ${severity}">${count}</span></button><div class="section-body">${html}</div></section>`;
-}
+function section(id,title,count,severity,html){return `<section id="${id}" class="section ${count?'':'collapsed'}"><button class="section-head" onclick="this.closest('.section').classList.toggle('collapsed')"><span>${esc(title)}</span><span class="badge ${severity}">${count}</span></button><div class="section-body">${html}</div></section>`}
 function empty(text){return `<div class="notice ok">${esc(text)}</div>`}
-function teamTable(rows,extra=''){
-  if(!rows?.length)return empty('Nessuna anomalia.');
-  return `<div class="table-wrap"><table><thead><tr><th>Logo</th><th>Squadra</th><th>Serie</th><th>Club / Città</th>${extra}<th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.logo_url?`<img class="logo" src="${esc(r.logo_url)}">`:'—'}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.series||'—')}</td><td>${esc(r.club_name||'')} · ${esc(r.club_city||'')}</td>${extra?`<td>${esc(r.detail||'')}</td>`:''}<td><button class="btn secondary tiny" onclick="openTeam('${r.id}')">Apri</button>${r.can_delete?` <button class="btn danger tiny" onclick="deleteEmptyTeam('${r.id}',${JSON.stringify(r.name)})">Elimina record vuoto</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;
-}
-function playerTable(rows){
-  if(!rows?.length)return empty('Nessuna anomalia.');
-  return `<div class="table-wrap"><table><thead><tr><th>Giocatore</th><th>Squadra</th><th>Problema</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc((r.first_name||'')+' '+(r.last_name||''))}</b></td><td>${esc(r.team_name||'')}</td><td>${esc(r.problem||'')}</td><td><button class="btn secondary tiny" onclick="openTeam('${r.team_id}')">Apri squadra</button></td></tr>`).join('')}</tbody></table></div>`;
-}
-function conflictTable(rows){
-  if(!rows?.length)return empty('Nessun conflitto esatto di impianto/orario.');
-  return `<div class="table-wrap"><table><thead><tr><th>Data e ora</th><th>Impianto</th><th>Partita 1</th><th>Partita 2</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${new Date(r.scheduled_at).toLocaleString('it-IT')}</td><td>${esc(r.venue||'')}</td><td>${esc(r.match_1)}</td><td>${esc(r.match_2)}</td><td><button class="btn secondary tiny" onclick="location.href='calendar.html'">Apri calendario</button></td></tr>`).join('')}</tbody></table></div>`;
-}
-function duplicateTable(rows){
-  if(!rows?.length)return empty('Nessun possibile duplicato.');
-  return `<div class="table-wrap"><table><thead><tr><th>Nome normalizzato</th><th>Record</th><th>Serie</th><th>Nota</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.normalized_name)}</b></td><td>${esc(r.names)}</td><td>${esc(r.series_list||'')}</td><td>Controllare manualmente prima di eliminare o unire.</td></tr>`).join('')}</tbody></table></div>`;
+function teamTable(rows,extra=''){if(!rows?.length)return empty('Nessuna anomalia.');return `<div class="table-wrap"><table><thead><tr><th>Logo</th><th>Squadra</th><th>Serie</th><th>Club / Città</th>${extra}<th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.logo_url?`<img class="logo" src="${esc(r.logo_url)}">`:'—'}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.series||'—')}</td><td>${esc(r.club_name||'')} · ${esc(r.club_city||'')}</td>${extra?`<td>${esc(r.detail||'')}</td>`:''}<td><button class="btn secondary tiny" onclick="openTeam('${r.id}')">Apri</button></td></tr>`).join('')}</tbody></table></div>`}
+function playerTable(rows){if(!rows?.length)return empty('Nessuna anomalia.');return `<div class="table-wrap"><table><thead><tr><th>Giocatore</th><th>Squadra</th><th>Problema</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc((r.first_name||'')+' '+(r.last_name||''))}</b></td><td>${esc(r.team_name||'')}</td><td>${esc(r.problem||'')}</td><td><button class="btn secondary tiny" onclick="openTeam('${r.team_id}')">Apri squadra</button></td></tr>`).join('')}</tbody></table></div>`}
+function duplicateTable(rows){if(!rows?.length)return empty('Nessun possibile duplicato.');return `<div class="table-wrap"><table><thead><tr><th>Nome normalizzato</th><th>Record</th><th>Serie</th><th>Nota</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.normalized_name)}</b></td><td>${esc(r.names)}</td><td>${esc(r.series_list||'')}</td><td>Controllare manualmente prima di eliminare o unire.</td></tr>`).join('')}</tbody></table></div>`}
+function conflictTable(rows){if(!rows?.length)return empty('Nessun conflitto reale: nessun campo è occupato contemporaneamente da due squadre di casa diverse.');return `<div class="notice err"><b>Questi sono gli unici conflitti ancora da risolvere.</b><br>Una riga = un solo campo/data/ora, senza doppioni A↔B.</div><div class="table-wrap"><table><thead><tr><th>Data e ora</th><th>Impianto/campo</th><th>Squadre di casa contemporanee</th><th>Partite coinvolte</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${new Date(r.scheduled_at).toLocaleString('it-IT')}</td><td>${esc(r.venue)}</td><td><b>${esc(r.home_teams)}</b></td><td>${esc(r.matches)}</td><td><button class="btn secondary tiny" onclick="location.href='calendar.html'">Apri calendario</button></td></tr>`).join('')}</tbody></table></div>`}
+
+/* FONTE UNICA DEI CONFLITTI:
+   NON usa report.fixture_conflicts della RPC.
+   Raggruppa direttamente fixtures per data/ora + campo.
+   Nello stesso slot, più record della STESSA squadra di casa contano una sola volta.
+   Se ci sono almeno DUE squadre di casa DIVERSE => UN SOLO conflitto per quello slot.
+*/
+async function calculateRealConflicts(){
+ const [fr,tr]=await Promise.all([
+   sb.from('fixtures').select('id,scheduled_at,venue,home_team_id,away_team_id'),
+   sb.from('teams').select('id,name,home_court')
+ ]);
+ if(fr.error)throw fr.error;if(tr.error)throw tr.error;
+ const teams=new Map((tr.data||[]).map(t=>[String(t.id),t])),slots=new Map();
+ for(const f of fr.data||[]){
+   if(!f.scheduled_at||!f.home_team_id)continue;
+   const h=teams.get(String(f.home_team_id)),a=teams.get(String(f.away_team_id));if(!h)continue;
+   const venue=String(f.venue||h.home_court||'').trim();if(!venue)continue;
+   const d=new Date(f.scheduled_at);if(Number.isNaN(d.getTime()))continue;
+   const key=d.toISOString()+'||'+norm(venue);
+   if(!slots.has(key))slots.set(key,{scheduled_at:f.scheduled_at,venue,byHome:new Map()});
+   const slot=slots.get(key),hid=String(f.home_team_id);
+   if(!slot.byHome.has(hid))slot.byHome.set(hid,{home:h.name||'Squadra casa',matches:new Map()});
+   const item=slot.byHome.get(hid);
+   item.matches.set(String(f.id),`${h.name||'Squadra casa'} – ${a?.name||'Squadra ospite'}`);
+ }
+ const out=[];
+ for(const slot of slots.values()){
+   const homes=[...slot.byHome.values()];
+   if(homes.length<2)continue;
+   out.push({
+     scheduled_at:slot.scheduled_at,venue:slot.venue,
+     home_teams:homes.map(x=>x.home).join(' + '),
+     matches:homes.flatMap(x=>[...x.matches.values()]).join(' | ')
+   });
+ }
+ return out.sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
 }
 function renderReport(){
-  const s=report.summary;
-  $('kTeams').textContent=s.teams_in_series;$('kNoSeries').textContent=s.teams_without_series;$('kNoLogo').textContent=s.teams_without_logo;
-  $('kIncomplete').textContent=s.incomplete_players;$('kExpired').textContent=s.expired_medical;$('kConflicts').textContent=s.fixture_conflicts;
-  $('sections').innerHTML=
-    section('teamsNoSeries','Squadre senza Serie',report.teams_without_series.length,'red',teamTable(report.teams_without_series,'detail'))+
-    section('duplicateTeams','Possibili squadre duplicate',report.duplicate_teams.length,'yellow',duplicateTable(report.duplicate_teams))+
-    section('teamsNoLogo','Squadre senza logo',report.teams_without_logo.length,'yellow',teamTable(report.teams_without_logo))+
-    section('teamsNoCaptain','Squadre senza capitano',report.teams_without_captain.length,'yellow',teamTable(report.teams_without_captain))+
-    section('incompletePlayers','Giocatori con profilo incompleto',report.incomplete_players.length,'yellow',playerTable(report.incomplete_players))+
-    section('expiredMedical','Certificati medici scaduti',report.expired_medical.length,'red',playerTable(report.expired_medical))+
-    section('playersNoPhoto','Giocatori senza foto tessera',report.players_without_photo.length,'yellow',playerTable(report.players_without_photo))+
-    section('fixtureConflicts','Conflitti esatti di calendario',report.fixture_conflicts.length,'red',conflictTable(report.fixture_conflicts))+
-    section('unpublished','Competizioni non pubblicate',report.unpublished_competitions.length,'yellow',report.unpublished_competitions.length?`<div class="notice warnbox">${report.unpublished_competitions.map(x=>esc(x.competition_code)).join(', ')}</div>`:empty('Tutte le competizioni configurate risultano pubblicate.'))+
-    section('cards','Tessere digitali da controllare',report.card_issues.length,'yellow',playerTable(report.card_issues));
-  $('summaryCard').classList.remove('hidden');$('detailsCard').classList.remove('hidden');
+ const s=report.summary;
+ $('kTeams').textContent=s.teams_in_series;$('kNoSeries').textContent=s.teams_without_series;$('kNoLogo').textContent=s.teams_without_logo;$('kIncomplete').textContent=s.incomplete_players;$('kExpired').textContent=s.expired_medical;$('kConflicts').textContent=report.fixture_conflicts.length;
+ $('sections').innerHTML=
+ section('teamsNoSeries','Squadre senza Serie',report.teams_without_series.length,'red',teamTable(report.teams_without_series,'detail'))+
+ section('duplicateTeams','Possibili squadre duplicate',report.duplicate_teams.length,'yellow',duplicateTable(report.duplicate_teams))+
+ section('teamsNoLogo','Squadre senza logo',report.teams_without_logo.length,'yellow',teamTable(report.teams_without_logo))+
+ section('teamsNoCaptain','Squadre senza capitano',report.teams_without_captain.length,'yellow',teamTable(report.teams_without_captain))+
+ section('incompletePlayers','Giocatori con profilo incompleto',report.incomplete_players.length,'yellow',playerTable(report.incomplete_players))+
+ section('expiredMedical','Certificati medici scaduti',report.expired_medical.length,'red',playerTable(report.expired_medical))+
+ section('playersNoPhoto','Giocatori senza foto tessera',report.players_without_photo.length,'yellow',playerTable(report.players_without_photo))+
+ section('fixtureConflicts','Conflitti REALI ancora da risolvere',report.fixture_conflicts.length,'red',conflictTable(report.fixture_conflicts))+
+ section('unpublished','Competizioni non pubblicate',report.unpublished_competitions.length,'yellow',report.unpublished_competitions.length?`<div class="notice warnbox">${report.unpublished_competitions.map(x=>esc(x.competition_code)).join(', ')}</div>`:empty('Tutte le competizioni configurate risultano pubblicate.'))+
+ section('cards','Tessere digitali da controllare',report.card_issues.length,'yellow',playerTable(report.card_issues));
+ $('summaryCard').classList.remove('hidden');$('detailsCard').classList.remove('hidden');
 }
-async function guard(){
-  const s=await sb.auth.getSession();if(!s.data.session){location.href='login.html';return false}
-  const p=await sb.from('profiles').select('role').eq('id',s.data.session.user.id).maybeSingle();
-  if(p.data?.role!=='admin'){location.href='public.html';return false}
-  return true;
-}
+async function guard(){const s=await sb.auth.getSession();if(!s.data.session){location.href='login.html';return false}const p=await sb.from('profiles').select('role').eq('id',s.data.session.user.id).maybeSingle();if(p.data?.role!=='admin'){location.href='public.html';return false}return true}
 async function runDiagnostics(){
-  $('runBtn').disabled=true;$('runBtn').textContent='Analisi in corso…';$('progressBox').classList.remove('hidden');$('progress').style.width='20%';$('progressText').textContent='Interrogazione del database…';
-  try{
-    const r=await sb.rpc('run_v9_diagnostics');
-    if(r.error)throw r.error;
-    $('progress').style.width='85%';$('progressText').textContent='Preparazione del report…';
-    report=r.data;
-    const [teamsResult,rolesResult]=await Promise.all([
-      sb.from('teams').select('id,name,series,club_name,club_city,logo_url,captain_name,captain_email'),
-      sb.from('team_user_roles').select('team_id,role,active').eq('role','captain').eq('active',true)
-    ]);
-    if(!teamsResult.error){
-      const roleTeams=new Set((rolesResult.data||[]).map(x=>x.team_id));
-      report.teams_without_captain=(teamsResult.data||[]).filter(team=>
-        !String(team.captain_name||'').trim() &&
-        !String(team.captain_email||'').trim() &&
-        !roleTeams.has(team.id)
-      ).map(team=>({...team,can_delete:false,detail:'Capitano non indicato'}));
-    }
-    renderReport();$('progress').style.width='100%';$('progressText').textContent='Diagnostica completata.';
-    const total=report.summary.total_anomalies;
-    msg(total?`Diagnostica completata: ${total} segnalazioni da controllare.`:'Diagnostica completata: nessuna anomalia rilevata.');
-  }catch(e){msg(e.message||String(e),true)}
-  finally{$('runBtn').disabled=false;$('runBtn').textContent='Esegui diagnostica completa'}
+ $('runBtn').disabled=true;$('runBtn').textContent='Analisi in corso…';$('progressBox').classList.remove('hidden');$('progress').style.width='20%';$('progressText').textContent='Interrogazione del database…';
+ try{
+  const [r,realConflicts]=await Promise.all([sb.rpc('run_v9_diagnostics'),calculateRealConflicts()]);
+  if(r.error)throw r.error;
+  report=r.data;
+  const oldConflictCount=Number(report.summary?.fixture_conflicts||0);
+  report.fixture_conflicts=realConflicts;
+  if(report.summary){
+    report.summary.fixture_conflicts=realConflicts.length;
+    if(Number.isFinite(Number(report.summary.total_anomalies)))report.summary.total_anomalies=Math.max(0,Number(report.summary.total_anomalies)-oldConflictCount+realConflicts.length);
+  }
+  const [teamsResult,rolesResult]=await Promise.all([sb.from('teams').select('id,name,series,club_name,club_city,logo_url,captain_name,captain_email'),sb.from('team_user_roles').select('team_id,role,active').eq('role','captain').eq('active',true)]);
+  if(!teamsResult.error){const roleTeams=new Set((rolesResult.data||[]).map(x=>x.team_id));report.teams_without_captain=(teamsResult.data||[]).filter(team=>!String(team.captain_name||'').trim()&&!String(team.captain_email||'').trim()&&!roleTeams.has(team.id)).map(team=>({...team,can_delete:false,detail:'Capitano non indicato'}))}
+  renderReport();$('progress').style.width='100%';$('progressText').textContent='Diagnostica completata.';
+  const total=report.summary.total_anomalies;msg(total?`Diagnostica completata: ${total} segnalazioni da controllare. Conflitti calendario reali: ${realConflicts.length}.`:'Diagnostica completata: nessuna anomalia rilevata.');
+ }catch(e){msg(e.message||String(e),true)}
+ finally{$('runBtn').disabled=false;$('runBtn').textContent='Esegui diagnostica completa'}
 }
-async function deleteEmptyTeam(id,name){
-  if(!confirm(`Eliminare il record vuoto "${name}"?\n\nLa funzione controllerà tutte le dipendenze prima di procedere.`))return;
-  const r=await sb.rpc('delete_empty_team_safely_v11',{p_team_id:id});
-  if(r.error)return msg(r.error.message,true);
-  msg(r.data?.message||'Squadra eliminata correttamente.');
-  await runDiagnostics();
-}
-async function testStorage(bucket){
-  const path=`diagnostics/${Date.now()}-${crypto.randomUUID()}.png`;
-  const png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),c=>c.charCodeAt(0));
-  try{
-    storageMsg(`Test ${bucket} in corso…`);
-    const up=await sb.storage.from(bucket).upload(path,new Blob([png],{type:'image/png'}),{contentType:'image/png',upsert:false});
-    if(up.error)throw up.error;
-    const del=await sb.storage.from(bucket).remove([path]);
-    if(del.error)throw new Error(`Caricamento riuscito, ma cancellazione test fallita: ${del.error.message}`);
-    storageMsg(`Bucket "${bucket}" funzionante: caricamento e cancellazione riusciti.`);
-  }catch(e){storageMsg(`Bucket "${bucket}" non funzionante: ${e.message||String(e)}`,true)}
-}
-window.runDiagnostics=runDiagnostics;window.deleteEmptyTeam=deleteEmptyTeam;window.testStorage=testStorage;window.openTeam=openTeam;window.scrollToSection=scrollToSection;
-guard();
-</script>
-</body>
-</html>
+async function deleteEmptyTeam(id,name){if(!confirm(`Eliminare il record vuoto "${name}"?\n\nLa funzione controllerà tutte le dipendenze prima di procedere.`))return;const r=await sb.rpc('delete_empty_team_safely_v11',{p_team_id:id});if(r.error)return msg(r.error.message,true);msg(r.data?.message||'Squadra eliminata correttamente.');await runDiagnostics()}
+async function testStorage(bucket){const path=`diagnostics/${Date.now()}-${crypto.randomUUID()}.png`;const png=Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),c=>c.charCodeAt(0));try{storageMsg(`Test ${bucket} in corso…`);const up=await sb.storage.from(bucket).upload(path,new Blob([png],{type:'image/png'}),{contentType:'image/png',upsert:false});if(up.error)throw up.error;const del=await sb.storage.from(bucket).remove([path]);if(del.error)throw new Error(`Caricamento riuscito, ma cancellazione test fallita: ${del.error.message}`);storageMsg(`Bucket "${bucket}" funzionante: caricamento e cancellazione riusciti.`)}catch(e){storageMsg(`Bucket "${bucket}" non funzionante: ${e.message||String(e)}`,true)}}
+window.runDiagnostics=runDiagnostics;window.deleteEmptyTeam=deleteEmptyTeam;window.testStorage=testStorage;window.openTeam=openTeam;window.scrollToSection=scrollToSection;guard();
+</script></body></html>
