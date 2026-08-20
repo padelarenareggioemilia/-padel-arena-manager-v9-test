@@ -58,6 +58,33 @@ function sharedFacilityKey(team,venue){
   return `court:${norm(venue||team?.home_court||team?.id||'')}`;
 }
 
+/* 10.11 - VINCOLO STRUTTURALE "STADIO CONDIVISO"
+   Due squadre appartengono allo stesso blocco se hanno:
+   - stesso impianto/campo di casa;
+   - stesso giorno casalingo;
+   - stesso orario casalingo.
+
+   In uno stesso turno può essercene UNA SOLA in casa.
+   Se giocano tra loro è derby: una sola gara, quindi sempre valido.
+*/
+function sharedHomeSlotKey(team){
+  if(!team) return '';
+
+  const court=norm(team.home_court||'');
+  const day=String(dayIndex(team.home_match_day));
+  const time=String(normalizeTime(team.home_match_time)||'');
+
+  if(!court || day==='undefined' || !time) return '';
+
+  return `${court}|${day}|${time}`;
+}
+
+function sameSharedHomeSlotTeams(teamA,teamB){
+  const a=sharedHomeSlotKey(teamA);
+  const b=sharedHomeSlotKey(teamB);
+  return !!a && a===b;
+}
+
 function overlap(a,b){
   if(!a?.scheduled_at||!b?.scheduled_at) return false;
 
@@ -78,6 +105,23 @@ function sameLogicalMatch(a,b){
 
 function realFacilityConflict(a,b){
   if(!a||!b||sameLogicalMatch(a,b)) return false;
+
+  /* VINCOLO PRINCIPALE 10.11:
+     stesso impianto + stesso giorno casalingo + stesso orario casalingo
+     = stesso "stadio condiviso".
+     Due gare distinte non possono avere entrambe una squadra di quel blocco in casa
+     nello stesso turno temporale.
+  */
+  if(
+    a._shared_home_slot_key &&
+    b._shared_home_slot_key &&
+    a._shared_home_slot_key===b._shared_home_slot_key &&
+    overlap(a,b)
+  ){
+    return true;
+  }
+
+  /* controllo classico di sicurezza sull'occupazione impianto */
   if(!a._facility_key||!b._facility_key) return false;
 
   return a._facility_key===b._facility_key && overlap(a,b);
@@ -168,6 +212,7 @@ function makeFixture(group,roundNumber,home,away,anchor,competitionCode){
     _local_weekday:local.weekday,
     _round_anchor:dateKeyLocal(anchor),
     _facility_key:sharedFacilityKey(home,home.home_court),
+    _shared_home_slot_key:sharedHomeSlotKey(home),
     _duration_minutes:durationMinutes(home)
   };
 
@@ -192,6 +237,7 @@ function externalFixtures(code){
         _home_name:home.name,
         _away_name:away?.name||f.away_placeholder||'Ospite',
         _facility_key:sharedFacilityKey(home,f.venue||home.home_court),
+        _shared_home_slot_key:sharedHomeSlotKey(home),
         _duration_minutes:durationMinutes(home)
       };
     })
@@ -249,6 +295,30 @@ function orientationOptions(matching,group,roundNo,anchor,code){
       makeFixture(group,roundNo,home,away,anchor,code)
     );
 
+    /* 10.11 - BLOCCO PREVENTIVO:
+       se due gare distinte hanno squadre di casa appartenenti allo stesso
+       blocco "impianto + giorno + ora", l'orientazione viene scartata SUBITO.
+       Il GLOBAL SORT deve quindi provarne un'altra prima di accettare la giornata.
+    */
+    let sharedSlotViolation=false;
+
+    for(let x=0;x<fixtures.length;x++){
+      for(let y=x+1;y<fixtures.length;y++){
+        if(
+          fixtures[x]._shared_home_slot_key &&
+          fixtures[x]._shared_home_slot_key===fixtures[y]._shared_home_slot_key
+        ){
+          sharedSlotViolation=true;
+          break;
+        }
+      }
+      if(sharedSlotViolation) break;
+    }
+
+    if(sharedSlotViolation){
+      continue;
+    }
+
     /* Se una gara cade su data esclusa, questa orientazione
        NON è valida in questo weekend. */
     if(roundTouchesExcludedDate(fixtures,code)){
@@ -282,7 +352,28 @@ function mirroredFixtures(option,group,roundNo,anchor,code){
 }
 
 function compatibleWithExternal(fixtures,external){
-  return !fixtures.some(f=>conflictsAny(f,external));
+  for(const f of fixtures){
+    for(const e of (external||[])){
+      if(sameLogicalMatch(f,e)) continue;
+
+      /* stessa "casa condivisa" nello stesso intervallo:
+         orientazione non accettabile */
+      if(
+        f._shared_home_slot_key &&
+        e._shared_home_slot_key &&
+        f._shared_home_slot_key===e._shared_home_slot_key &&
+        overlap(f,e)
+      ){
+        return false;
+      }
+
+      if(realFacilityConflict(f,e)){
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 /* Cerca opzioni valide per una giornata.
@@ -711,7 +802,7 @@ try{
     box.textContent||''
   )){
     box.innerHTML=
-      '<b>Regola calendario:</b> GLOBAL SORT con derby e impianti condivisi. '+
+      '<b>Regola calendario:</b> GLOBAL SORT con alternanza obbligatoria delle squadre che condividono impianto, giorno e orario. '+
       'Le <b>date escluse già configurate</b> vengono rispettate secondo la loro applicazione: '+
       '<b>Tutte le competizioni</b> oppure la singola competizione selezionata. '+
       'Se una partita della giornata cadrebbe su una data esclusa, '+
@@ -1146,7 +1237,7 @@ function openSimpleConflictResolver(){
         <div>
           <h2 style="margin:0 0 5px">Risolvi conflitto</h2>
           <div style="color:#627b97">
-            Ricerca a catena nella stessa settimana + controllo incrociato tra gironi.
+            Ricerca a catena nella stessa settimana + vincolo strutturale di alternanza casa/trasferta.
             ${search.explored} combinazioni analizzate.
           </div>
         </div>
@@ -1327,7 +1418,7 @@ if(!installDeleteAllButton()){
 }
 
 console.info(
-  '[V9 calendario] Motore 10.10 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
+  '[V9 calendario] Motore 10.11 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
 );
 
 })();
