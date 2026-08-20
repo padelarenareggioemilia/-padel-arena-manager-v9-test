@@ -1,12 +1,16 @@
-/* calendar-v9-clean.js - V9 SIMPLE 10.5 GLOBAL SORT + INTERRUZIONI
- *
- * BASE IDENTICA ALLA 10.4 GLOBAL SORT.
- * UNICA AGGIUNTA:
- * - legge le interruzioni/festività già presenti in calendar_blackouts;
- * - se una settimana contiene una data esclusa valida per la competizione,
- *   salta l'intera settimana e colloca la giornata nella prima settimana utile successiva;
- * - nessun'altra logica del sorteggio viene modificata.
- */
+/* calendar-v9-clean.js - V9 SIMPLE 10.7
+   GLOBAL SORT + SOSPENSIONI ORIGINALI PER DATA
+
+   Regola sospensioni:
+   - usa ESATTAMENTE le date presenti in calendar_blackouts;
+   - ogni riga può valere per ALL oppure per una singola competition_code;
+   - il motore genera UNA GIORNATA INTERA;
+   - se anche UNA partita della giornata cade su una data esclusa applicabile,
+     NON sposta quella partita: sposta L'INTERA GIORNATA al blocco successivo;
+   - poi riprova accoppiamenti + CASA/TRASFERTA con il GLOBAL SORT;
+   - il ritorno resta speculare;
+   - nessuna interpretazione artificiale "settimana bloccata".
+*/
 (function(){
 'use strict';
 
@@ -56,100 +60,58 @@ function sharedFacilityKey(team,venue){
 
 function overlap(a,b){
   if(!a?.scheduled_at||!b?.scheduled_at) return false;
+
   const a0=new Date(a.scheduled_at).getTime();
   const b0=new Date(b.scheduled_at).getTime();
   const a1=a0+(a._duration_minutes||120)*60000;
   const b1=b0+(b._duration_minutes||120)*60000;
+
   return a0<b1 && b0<a1;
 }
 
 function sameLogicalMatch(a,b){
-  if(a?.id && b?.id && String(a.id)===String(b.id)) return true;
-  const ak=pairKeyIds(a?.home_team_id,a?.away_team_id);
-  const bk=pairKeyIds(b?.home_team_id,b?.away_team_id);
-  return ak===bk;
+  if(a?.id&&b?.id&&String(a.id)===String(b.id)) return true;
+
+  return pairKeyIds(a?.home_team_id,a?.away_team_id)===
+         pairKeyIds(b?.home_team_id,b?.away_team_id);
 }
 
 function realFacilityConflict(a,b){
-  if(!a||!b) return false;
-  if(sameLogicalMatch(a,b)) return false;
+  if(!a||!b||sameLogicalMatch(a,b)) return false;
   if(!a._facility_key||!b._facility_key) return false;
+
   return a._facility_key===b._facility_key && overlap(a,b);
 }
 
 /* =========================
-   INTERRUZIONI / FESTIVITÀ
+   SOSPENSIONI ORIGINALI
    ========================= */
 
-/* True se la data è esclusa per la competizione corrente */
-function isBlackoutDate(dateKey,competitionCode){
-  return (blackouts||[]).some(b=>{
-    const code=String(b.competition_code||'ALL').toUpperCase();
-    return String(b.blackout_date||'')===dateKey &&
-      (code==='ALL' || code===String(competitionCode).toUpperCase());
-  });
+function blackoutApplies(row,competitionCode){
+  const scope=String(row?.competition_code||'ALL').toUpperCase();
+  const code=String(competitionCode||'').toUpperCase();
+
+  return scope==='ALL' || scope===code;
 }
 
-/* Restituisce lunedì della settimana della data */
-function mondayOfWeek(d){
-  const x=new Date(d);
-  const day=(x.getDay()+6)%7;
-  x.setDate(x.getDate()-day);
-  x.setHours(12,0,0,0);
-  return x;
+function excludedDateSet(competitionCode){
+  return new Set(
+    (blackouts||[])
+      .filter(row=>blackoutApplies(row,competitionCode))
+      .map(row=>String(row.blackout_date||'').slice(0,10))
+      .filter(Boolean)
+  );
 }
 
-/* Se QUALSIASI blackout della competizione cade nella settimana,
-   la settimana viene considerata interrotta e non ospita una giornata.
-*/
-function weekIsBlocked(anchor,competitionCode){
-  const monday=mondayOfWeek(anchor);
-  for(let i=0;i<7;i++){
-    const d=addDays(monday,i);
-    if(isBlackoutDate(dateKeyLocal(d),competitionCode)){
-      return true;
-    }
-  }
-  return false;
+function fixtureFallsOnExcludedDate(fixture,competitionCode){
+  if(!fixture?.scheduled_at) return false;
+
+  const date=dateKeyLocal(new Date(fixture.scheduled_at));
+  return excludedDateSet(competitionCode).has(date);
 }
 
-/* Calcola la settimana effettiva della giornata N:
-   avanza di intervalWeeks, ma salta tutte le settimane bloccate.
-*/
-function buildRoundAnchors(start,totalRounds,intervalWeeks,competitionCode){
-  const anchors=[];
-  let cursor=new Date(start);
-
-  while(anchors.length<totalRounds){
-    while(weekIsBlocked(cursor,competitionCode)){
-      cursor=addDays(cursor,7);
-    }
-
-    anchors.push(new Date(cursor));
-
-    cursor=addDays(cursor,intervalWeeks*7);
-  }
-
-  return anchors;
-}
-
-/* Per il ritorno continuiamo DOPO l'ultima giornata di andata,
-   saltando ancora le settimane interrotte.
-*/
-function buildReturnAnchors(afterDate,totalRounds,intervalWeeks,competitionCode){
-  const anchors=[];
-  let cursor=addDays(afterDate,intervalWeeks*7);
-
-  while(anchors.length<totalRounds){
-    while(weekIsBlocked(cursor,competitionCode)){
-      cursor=addDays(cursor,7);
-    }
-
-    anchors.push(new Date(cursor));
-    cursor=addDays(cursor,intervalWeeks*7);
-  }
-
-  return anchors;
+function roundTouchesExcludedDate(fixtures,competitionCode){
+  return fixtures.some(f=>fixtureFallsOnExcludedDate(f,competitionCode));
 }
 
 function homeOccurrence(anchor,team){
@@ -187,7 +149,7 @@ function makeFixture(group,roundNumber,home,away,anchor,competitionCode){
   const occ=homeOccurrence(anchor,home);
   const local=localPartsFromISO(occ.scheduled_at);
 
-  const f={
+  const fixture={
     competition_code:competitionCode,
     phase:'Girone',
     group_id:group.id,
@@ -208,9 +170,11 @@ function makeFixture(group,roundNumber,home,away,anchor,competitionCode){
     _duration_minutes:durationMinutes(home)
   };
 
-  if(typeof assertHomeRule==='function') assertHomeRule(f);
+  if(typeof assertHomeRule==='function'){
+    assertHomeRule(fixture);
+  }
 
-  return f;
+  return fixture;
 }
 
 function externalFixtures(code){
@@ -237,6 +201,7 @@ function conflictsAny(f,others){
   return others.some(o=>realFacilityConflict(f,o));
 }
 
+/* Tutti gli accoppiamenti possibili della giornata */
 function generateMatchings(nodes,usedPairs){
   const out=[];
 
@@ -251,7 +216,7 @@ function generateMatchings(nodes,usedPairs){
     for(let i=1;i<remaining.length;i++){
       const b=remaining[i];
 
-      if(a.__bye || b.__bye){
+      if(a.__bye||b.__bye){
         const next=remaining.filter((_,idx)=>idx!==0&&idx!==i);
         rec(next,[...pairs,[a,b]]);
         continue;
@@ -269,18 +234,25 @@ function generateMatchings(nodes,usedPairs){
   return out;
 }
 
+/* Tutte le orientazioni CASA/TRASFERTA valide della giornata */
 function orientationOptions(matching,group,roundNo,anchor,code){
   const realPairs=matching.filter(([a,b])=>!a.__bye&&!b.__bye);
   const out=[];
 
   for(let mask=0;mask<(1<<realPairs.length);mask++){
     const pairs=realPairs.map(([a,b],i)=>
-      (mask&(1<<i)) ? [b,a] : [a,b]
+      (mask&(1<<i))?[b,a]:[a,b]
     );
 
     const fixtures=pairs.map(([home,away])=>
       makeFixture(group,roundNo,home,away,anchor,code)
     );
+
+    /* Se una gara cade su data esclusa, questa orientazione
+       NON è valida in questo weekend. */
+    if(roundTouchesExcludedDate(fixtures,code)){
+      continue;
+    }
 
     let valid=true;
 
@@ -309,65 +281,53 @@ function mirroredFixtures(option,group,roundNo,anchor,code){
 }
 
 function compatibleWithExternal(fixtures,external){
-  for(const f of fixtures){
-    if(conflictsAny(f,external)) return false;
-  }
-  return true;
+  return !fixtures.some(f=>conflictsAny(f,external));
 }
 
-function solveGroup({
+/* Cerca opzioni valide per una giornata.
+   Se il weekend non permette NESSUNA opzione perché tocca sospensioni
+   o crea conflitti, sposta TUTTA LA GIORNATA al weekend successivo.
+*/
+function findRoundCandidates({
+  nodes,
+  usedPairs,
   group,
-  groupTeams,
-  firstAnchors,
-  returnAnchors,
+  roundNo,
+  baseAnchor,
+  intervalWeeks,
   code,
   isDouble,
-  external
+  totalRounds,
+  external,
+  minReturnAnchor
 }){
-  const nodes=[...groupTeams];
+  const MAX_WEEK_SHIFTS=60;
 
-  if(nodes.length%2){
-    nodes.push({id:`BYE-${group.id}`,name:'RIPOSO',__bye:true});
-  }
-
-  const totalRounds=nodes.length-1;
-  const chosen=[];
-  const usedPairs=new Set();
-
-  function matchingScore(matching){
-    let score=0;
-
-    for(const [a,b] of matching){
-      if(a.__bye||b.__bye) continue;
-
-      const ka=sharedFacilityKey(a,a.home_court);
-      const kb=sharedFacilityKey(b,b.home_court);
-
-      if(ka===kb) score+=10;
-    }
-
-    return score;
-  }
-
-  function rec(roundIndex){
-    if(roundIndex===totalRounds){
-      return true;
-    }
-
-    const roundNo=roundIndex+1;
-    const firstAnchor=firstAnchors[roundIndex];
-    const returnAnchor=isDouble ? returnAnchors[roundIndex] : null;
+  for(let shift=0;shift<MAX_WEEK_SHIFTS;shift++){
+    const anchor=addDays(baseAnchor,shift*7);
 
     let matchings=generateMatchings(nodes,usedPairs);
-    matchings.sort((a,b)=>matchingScore(b)-matchingScore(a));
+
+    /* Derby / squadre stesso impianto prima */
+    matchings.sort((a,b)=>{
+      function score(m){
+        let s=0;
+        for(const [x,y] of m){
+          if(x.__bye||y.__bye) continue;
+          if(sharedFacilityKey(x,x.home_court)===sharedFacilityKey(y,y.home_court)){
+            s+=10;
+          }
+        }
+        return s;
+      }
+      return score(b)-score(a);
+    });
+
+    const candidates=[];
 
     for(const matching of matchings){
-      let options=orientationOptions(
-        matching,
-        group,
-        roundNo,
-        firstAnchor,
-        code
+      const options=orientationOptions(
+        matching,group,roundNo,anchor,code
       );
 
       for(const option of options){
@@ -375,74 +335,195 @@ function solveGroup({
           continue;
         }
 
-        let returnFixtures=[];
-
-        if(isDouble){
-          returnFixtures=mirroredFixtures(
-            option,
-            group,
-            roundNo+totalRounds,
-            returnAnchor,
-            code
-          );
-
-          let returnOk=true;
-
-          for(let i=0;i<returnFixtures.length;i++){
-            if(
-              conflictsAny(
-                returnFixtures[i],
-                returnFixtures.filter((_,j)=>j!==i)
-              ) ||
-              conflictsAny(returnFixtures[i],external)
-            ){
-              returnOk=false;
-              break;
-            }
-          }
-
-          if(!returnOk) continue;
-        }
-
-        const added=[];
-
-        for(const [a,b] of matching){
-          if(a.__bye||b.__bye) continue;
-
-          const key=pairKeyIds(a.id,b.id);
-          usedPairs.add(key);
-          added.push(key);
-        }
-
-        chosen.push({
-          roundNo,
-          firstFixtures:option.fixtures,
-          returnFixtures
+        candidates.push({
+          matching,
+          option,
+          anchor
         });
-
-        if(rec(roundIndex+1)){
-          return true;
-        }
-
-        chosen.pop();
-
-        for(const key of added){
-          usedPairs.delete(key);
-        }
       }
+    }
+
+    if(candidates.length){
+      return candidates;
+    }
+  }
+
+  return [];
+}
+
+/* GLOBAL SORT DELL'ANDATA.
+   Gli anchor delle giornate sono dinamici:
+   la successiva parte dall'ultima giornata realmente collocata
+   + intervalWeeks.
+*/
+function solveFirstLeg({
+  group,
+  groupTeams,
+  start,
+  intervalWeeks,
+  code,
+  external
+}){
+  const nodes=[...groupTeams];
+
+  if(nodes.length%2){
+    nodes.push({
+      id:`BYE-${group.id}`,
+      name:'RIPOSO',
+      __bye:true
+    });
+  }
+
+  const totalRounds=nodes.length-1;
+  const usedPairs=new Set();
+  const chosen=[];
+
+  function rec(roundIndex,nextBaseAnchor){
+    if(roundIndex===totalRounds){
+      return true;
+    }
+
+    const roundNo=roundIndex+1;
+
+    const candidates=findRoundCandidates({
+      nodes,
+      usedPairs,
+      group,
+      roundNo,
+      baseAnchor:nextBaseAnchor,
+      intervalWeeks,
+      code,
+      external
+    });
+
+    for(const candidate of candidates){
+      const added=[];
+
+      for(const [a,b] of candidate.matching){
+        if(a.__bye||b.__bye) continue;
+
+        const key=pairKeyIds(a.id,b.id);
+        usedPairs.add(key);
+        added.push(key);
+      }
+
+      chosen.push({
+        roundNo,
+        pairs:candidate.option.pairs,
+        firstFixtures:candidate.option.fixtures,
+        firstAnchor:candidate.anchor
+      });
+
+      const next=addDays(
+        candidate.anchor,
+        intervalWeeks*7
+      );
+
+      if(rec(roundIndex+1,next)){
+        return true;
+      }
+
+      chosen.pop();
+      added.forEach(k=>usedPairs.delete(k));
     }
 
     return false;
   }
 
-  if(!rec(0)){
+  if(!rec(0,start)){
     throw new Error(
-      `Non riesco a costruire un calendario completo per il girone ${group.name||''} `+
-      `rispettando impianti condivisi e interruzioni. Nessuna partita è stata spostata singolarmente.`
+      `Non riesco a costruire l'andata del girone ${group.name||''} `+
+      `rispettando sospensioni e impianti condivisi.`
     );
   }
 
-  return chosen;
+  return {
+    chosen,
+    totalRounds
+  };
+}
+
+/* Costruisce il ritorno speculare.
+   Anche qui, se una giornata speculare cade su una sospensione,
+   sposta L'INTERA GIORNATA al weekend successivo.
+*/
+function buildReturnLeg({
+  group,
+  firstLeg,
+  startAnchor,
+  intervalWeeks,
+  code,
+  external
+}){
+  const returns=[];
+  let nextBase=new Date(startAnchor);
+
+  for(let i=0;i<firstLeg.chosen.length;i++){
+    const first=firstLeg.chosen[i];
+    const returnRoundNo=first.roundNo+firstLeg.totalRounds;
+
+    let placed=false;
+
+    for(let shift=0;shift<60;shift++){
+      const anchor=addDays(nextBase,shift*7);
+
+      const fixtures=first.pairs.map(([home,away])=>
+        makeFixture(
+          group,
+          returnRoundNo,
+          away,
+          home,
+          anchor,
+          code
+        )
+      );
+
+      if(roundTouchesExcludedDate(fixtures,code)){
+        continue;
+      }
+
+      let internalConflict=false;
+
+      for(let x=0;x<fixtures.length;x++){
+        if(
+          conflictsAny(
+            fixtures[x],
+            fixtures.filter((_,j)=>j!==x)
+          )
+        ){
+          internalConflict=true;
+          break;
+        }
+      }
+
+      if(internalConflict){
+        continue;
+      }
+
+      if(!compatibleWithExternal(fixtures,external)){
+        continue;
+      }
+
+      returns.push({
+        roundNo:returnRoundNo,
+        fixtures,
+        anchor
+      });
+
+      nextBase=addDays(anchor,intervalWeeks*7);
+      placed=true;
+      break;
+    }
+
+    if(!placed){
+      throw new Error(
+        `Non riesco a collocare la giornata di ritorno G${returnRoundNo} `+
+        `rispettando le sospensioni configurate.`
+      );
+    }
+  }
+
+  return returns;
 }
 
 window.buildCalendarPayload=async function(){
@@ -457,7 +538,9 @@ window.buildCalendarPayload=async function(){
   }
 
   if(!validateTeams(false)){
-    throw new Error('Completa prima giorno, ora e campo delle squadre.');
+    throw new Error(
+      'Completa prima giorno, ora e campo delle squadre.'
+    );
   }
 
   const code=$id('competition').value;
@@ -465,65 +548,75 @@ window.buildCalendarPayload=async function(){
   const intervalWeeks=Number($id('interval').value||1);
   const start=fromDateKey($id('startDate').value);
   const external=externalFixtures(code);
-
   const payload=[];
 
   for(const group of groups){
     const groupTeams=members
       .filter(m=>String(m.group_id)===String(group.id))
-      .map(m=>teams.find(t=>String(t.id)===String(m.team_id)))
+      .map(m=>teams.find(
+        t=>String(t.id)===String(m.team_id)
+      ))
       .filter(Boolean);
 
     if(groupTeams.length<2) continue;
 
-    const nodeCount=groupTeams.length%2 ? groupTeams.length+1 : groupTeams.length;
-    const totalRounds=nodeCount-1;
-
-    /* costruzione delle settimane utili, saltando festività/interruzioni */
-    const firstAnchors=buildRoundAnchors(
-      start,
-      totalRounds,
-      intervalWeeks,
-      code
-    );
-
-    const returnAnchors=isDouble
-      ? buildReturnAnchors(
-          firstAnchors[firstAnchors.length-1],
-          totalRounds,
-          intervalWeeks,
-          code
-        )
-      : [];
-
-    const solved=solveGroup({
+    const firstLeg=solveFirstLeg({
       group,
       groupTeams,
-      firstAnchors,
-      returnAnchors,
+      start,
+      intervalWeeks,
       code,
-      isDouble,
       external
     });
 
-    for(const round of solved){
-      payload.push(...round.firstFixtures);
-    }
+    firstLeg.chosen.forEach(r=>
+      payload.push(...r.firstFixtures)
+    );
 
     if(isDouble){
-      for(const round of solved){
-        payload.push(...round.returnFixtures);
-      }
+      const lastFirstAnchor=
+        firstLeg.chosen[firstLeg.chosen.length-1].firstAnchor;
+
+      const returnStart=addDays(
+        lastFirstAnchor,
+        intervalWeeks*7
+      );
+
+      const returns=buildReturnLeg({
+        group,
+        firstLeg,
+        startAnchor:returnStart,
+        intervalWeeks,
+        code,
+        external
+      });
+
+      returns.forEach(r=>
+        payload.push(...r.fixtures)
+      );
     }
   }
 
+  /* SICUREZZA FINALE:
+     nessuna gara può essere su una data esclusa.
+  */
+  for(const f of payload){
+    if(fixtureFallsOnExcludedDate(f,code)){
+      throw new Error(
+        `ERRORE INTERNO: ${f._home_name} – ${f._away_name} `+
+        `è stata collocata su una data esclusa (${f._local_date}).`
+      );
+    }
+  }
+
+  /* Controllo finale reale impianti */
   for(let i=0;i<payload.length;i++){
     for(let j=i+1;j<payload.length;j++){
       if(realFacilityConflict(payload[i],payload[j])){
         throw new Error(
-          `Conflitto reale residuo: ${payload[i]._home_name} – ${payload[i]._away_name} `+
-          `e ${payload[j]._home_name} – ${payload[j]._away_name} `+
-          `occupano contemporaneamente lo stesso impianto.`
+          `Conflitto reale residuo: `+
+          `${payload[i]._home_name} – ${payload[i]._away_name} e `+
+          `${payload[j]._home_name} – ${payload[j]._away_name}.`
         );
       }
     }
@@ -547,12 +640,15 @@ window.buildCalendarPayload=async function(){
     conflictsSolved:0,
     conflictsUnresolved:0,
     progression:'OK',
-    rule:'GLOBAL SORT + interruzioni: accoppiamenti e casa/trasferta costruiti insieme, settimane festive saltate, ritorno speculare.'
+    rule:
+      'GLOBAL SORT + sospensioni originali: '+
+      'se una giornata tocca una data esclusa, viene spostata interamente.'
   };
 
   return payload;
 };
 
+/* Nessuna vecchia riparazione automatica */
 window.autoResolveConflicts=function(){
   return {
     resolved:[],
@@ -575,21 +671,29 @@ try{
 }catch(_){}
 
 [...document.querySelectorAll('button')].forEach(btn=>{
-  if(/Risolvi automaticamente anomalie/i.test(btn.textContent||'')){
+  if(/Risolvi automaticamente anomalie/i.test(
+    btn.textContent||''
+  )){
     btn.style.display='none';
   }
 });
 
 [...document.querySelectorAll('.notice')].forEach(box=>{
-  if(/regola calendario|inversione casa\/trasferta|accavallamenti/i.test(box.textContent||'')){
+  if(/regola calendario|inversione casa\/trasferta|accavallamenti/i.test(
+    box.textContent||''
+  )){
     box.innerHTML=
-      '<b>Regola calendario:</b> il sorteggio costruisce insieme <b>accoppiamenti e CASA ↔ TRASFERTA</b>. '+
-      'Le squadre che condividono un campo vengono alternate come negli stadi condivisi nel calcio. '+
-      'Le <b>interruzioni/festività già configurate vengono rispettate</b>: la settimana viene saltata e il campionato riprende dalla prima settimana utile. '+
-      'Il ritorno è speculare e nessuna singola partita viene spostata arbitrariamente.';
+      '<b>Regola calendario:</b> GLOBAL SORT con derby e impianti condivisi. '+
+      'Le <b>date escluse già configurate</b> vengono rispettate secondo la loro applicazione: '+
+      '<b>Tutte le competizioni</b> oppure la singola competizione selezionata. '+
+      'Se una partita della giornata cadrebbe su una data esclusa, '+
+      '<b>viene rinviata l’intera giornata</b> al blocco utile successivo. '+
+      'Nessuna partita viene spostata da sola.';
   }
 });
 
-console.info('[V9 calendario] Motore 10.5 GLOBAL SORT + INTERRUZIONI attivo');
+console.info(
+  '[V9 calendario] Motore 10.7 GLOBAL SORT + SOSPENSIONI ORIGINALI attivo'
+);
 
 })();
