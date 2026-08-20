@@ -1,30 +1,27 @@
-V9 CALENDARIO PULITO 9.2.0
+V9 - CALENDARIO + DIAGNOSTICA RIFATTI DA ZERO
 
-CARICA NELLA CARTELLA PRINCIPALE DEL REPOSITORY ENTRAMBI I FILE:
-1. config.js        -> SOSTITUISCI quello esistente
-2. calendar-v9-clean.js -> AGGIUNGI questo nuovo file
+QUESTI FILE SONO PARALLELI E NON SOSTITUISCONO ANCORA LA V9:
+- calendar-clean.html
+- diagnostics-clean.html
 
-NON MODIFICARE calendar.html.
+Caricali nella root del repository insieme agli altri file.
 
-Perché ora sono due file:
-- config.js torna pulito e contiene solo configurazione + caricamento del nuovo motore.
-- calendar-v9-clean.js contiene tutta la calendarizzazione.
-- vengono eliminate le vecchie patch accumulate.
+TEST:
+1. Apri calendar-clean.html.
+2. Scegli Serie A, data iniziale, intervallo e formula.
+3. Fai Anteprima. Il motore NON sposta mai una singola partita di settimana.
+4. Se l'anteprima è corretta, salva.
+5. Apri diagnostics-clean.html e premi Esegui controllo.
+6. Il risultato deve essere:
+   ✅ CALENDARIO REGOLARE
+   oppure un elenco preciso di errori reali.
 
-REGOLA FONDAMENTALE RISOLTA:
-Se B&B e CT Correggio condividono campo/giorno/ora, in OGNI giornata:
-- una deve essere in CASA
-- l'altra deve essere in TRASFERTA
-Anche nel caso in cui entrambe fossero state in trasferta, il motore cambia
-l'orientamento: altrimenti nel ritorno sarebbero entrambe in casa.
-
-ALTRE REGOLE:
+REGOLE IMPLEMENTATE:
+- solo la squadra di casa determina giorno/ora/campo;
+- ospite completamente passivo sullo slot;
+- unica correzione automatica: inversione CASA/TRASFERTA;
 - ritorno speculare;
-- nessun anticipo/posticipo automatico di singole partite;
-- festività/date escluse spostano l'intera giornata;
-- l'intervallo 1/2 settimane resta progressivo;
-- resta il tasto Elimina tutte le partite con doppia conferma.
-
-DOPO IL CARICAMENTO:
-Apri calendar.html con un parametro nuovo, per esempio:
-calendar.html?v=920clean1
+- conflitto campo solo con reale sovrapposizione oraria sullo stesso campo;
+- cancellazione singola solo per fixture.id e verifica conteggio;
+- cancellazione totale separata con doppia conferma e verifica finale;
+- diagnostica legge solo dati salvati, non applica correzioni.

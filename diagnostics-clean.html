@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS Padel Championship · Diagnostica CLEAN</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--amber:#b68100;--bg:#f4f8fc;--soft:#edf4fb;--text:#0a2e5e;--muted:#627b97;--line:#b9cde3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--green) 0 33%,#fff 33% 66%,var(--red) 66%);z-index:99}
+.shell{max-width:1250px;margin:auto;padding:18px 12px 80px}.card,.top{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px;margin:12px 0}.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-radius:22px;padding:18px;display:flex;align-items:center;gap:14px}.hero img{width:108px;height:64px;object-fit:contain;background:#fff;border-radius:13px;padding:5px}.hero h1{margin:0}.muted{color:var(--muted)}.hero .muted{color:#d9e6f5}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}
+select{padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:#fff}.status{font-size:24px;font-weight:1000;padding:18px;border-radius:14px;text-align:center}.good{background:#eaf8f0;border:1px solid #78bd90;color:#17683c}.bad{background:#fdecef;border:1px solid #db7783;color:#982333}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}.kpi{padding:13px;border:1px solid var(--line);border-radius:13px;text-align:center}.kpi strong{font-size:26px;display:block}.section{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:12px 0}.section h3{margin:0;padding:11px 13px;background:var(--soft)}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;min-width:900px}th,td{padding:9px;border-bottom:1px solid #dde7f0;text-align:left;vertical-align:top}th{background:var(--blue);color:#fff}.notice{padding:11px;border:1px solid var(--line);border-radius:11px;background:var(--soft);margin:10px 0}
+@media(max-width:850px){.kpis{grid-template-columns:1fr 1fr}}
+</style></head>
+<body><main class="shell">
+<div class="top actions"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='index.html'">⌂ Home</button><button class="btn secondary" onclick="location.href='calendar-clean.html'">Calendario CLEAN</button></div>
+<header class="hero"><img src="assets/aics-logo.png"><div><h1>Diagnostica calendario CLEAN</h1><div class="muted">Legge soltanto le partite realmente salvate · nessuna correzione automatica</div></div></header>
+<section class="card"><div class="actions"><select id="competition"><option value="ALL">Tutte le competizioni</option><option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option><option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option><option value="SUPERCOPPA">Supercoppa</option></select><button class="btn primary" onclick="run()">Esegui controllo</button></div><div id="status" class="notice">Pronto.</div></section>
+<section id="result" class="card" style="display:none"><div class="kpis"><div class="kpi"><strong id="kMatches">0</strong>Partite</div><div class="kpi"><strong id="kVenue">0</strong>Conflitti campo</div><div class="kpi"><strong id="kTeam">0</strong>Conflitti squadra</div><div class="kpi"><strong id="kRound">0</strong>Errori giornate</div><div class="kpi"><strong id="kHome">0</strong>Errori regola casa</div></div><div id="final"></div><div id="sections"></div></section>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG,s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function norm(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
+function normalizeTime(v){const m=String(v||'').match(/(\d{1,2}):(\d{2})/);return m?`${String(+m[1]).padStart(2,'0')}:${m[2]}`:''}
+function venueKey(t,venue){return `${norm(venue||t?.home_court)}|${norm(t?.club_city)}`}
+function dur(t){return Number(t?.match_slot_minutes||120)}
+function overlap(a,b){const as=new Date(a.scheduled_at).getTime(),bs=new Date(b.scheduled_at).getTime();return as<bs+(b._duration||120)*60000&&bs<as+(a._duration||120)*60000}
+function dayName(d){return ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'][d.getDay()]}
+function section(title,rows,headers,fields){
+ if(!rows.length)return `<div class="section"><h3>${esc(title)} · 0</h3><div class="notice good">Nessun problema.</div></div>`;
+ return `<div class="section"><h3>${esc(title)} · ${rows.length}</h3><div class="tablewrap"><table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${fields.map(f=>`<td>${esc(typeof f==='function'?f(r):r[f])}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+}
+async function guard(){const x=await s.auth.getSession();if(!x.data.session){location.href='login.html';return false}const p=await s.from('profiles').select('role').eq('id',x.data.session.user.id).maybeSingle();if(p.data?.role!=='admin'){location.href='public.html';return false}return true}
+
+async function run(){
+ $('status').textContent='Controllo in corso…';
+ try{
+  const code=$('competition').value;
+  const [tr,fr]=await Promise.all([s.from('teams').select('*'),code==='ALL'?s.from('fixtures').select('*').order('scheduled_at'):s.from('fixtures').select('*').eq('competition_code',code).order('scheduled_at')]);
+  if(tr.error||fr.error)throw(tr.error||fr.error);
+  const teams=tr.data||[],by=new Map(teams.map(t=>[String(t.id),t]));
+  const rows=(fr.data||[]).map(f=>{const h=by.get(String(f.home_team_id)),a=by.get(String(f.away_team_id));return {...f,_home:h?.name||f.home_placeholder||'Casa',_away:a?.name||f.away_placeholder||'Ospite',_venueKey:venueKey(h,f.venue),_duration:dur(h)}});
+
+  const venue=[],teamConf=[],duplicates=[],roundErrors=[],homeErrors=[];
+  const seenPairs=new Set();
+  for(let i=0;i<rows.length;i++)for(let j=i+1;j<rows.length;j++){
+    const a=rows[i],b=rows[j];if(!overlap(a,b))continue;
+    if(a._venueKey&&a._venueKey===b._venueKey)venue.push({when:new Date(a.scheduled_at).toLocaleString('it-IT'),venue:a.venue,m1:`${a._home} – ${a._away}`,m2:`${b._home} – ${b._away}`});
+    const ids=[a.home_team_id,a.away_team_id].filter(Boolean).map(String),ids2=[b.home_team_id,b.away_team_id].filter(Boolean).map(String);
+    const common=ids.find(x=>ids2.includes(x));if(common)teamConf.push({team:by.get(common)?.name||common,m1:`${a._home} – ${a._away}`,m2:`${b._home} – ${b._away}`,when:new Date(a.scheduled_at).toLocaleString('it-IT')});
+  }
+  const dupMap=new Map();
+  rows.forEach(r=>{const k=[r.competition_code,r.phase,r.group_id,r.round_number,r.home_team_id,r.away_team_id,r.scheduled_at,norm(r.venue)].join('|');if(!dupMap.has(k))dupMap.set(k,[]);dupMap.get(k).push(r)});
+  for(const x of dupMap.values())if(x.length>1)duplicates.push({count:x.length,match:`${x[0]._home} – ${x[0]._away}`,when:new Date(x[0].scheduled_at).toLocaleString('it-IT')});
+
+  // Stessa squadra due volte nella stessa giornata
+  const rg=new Map();
+  rows.filter(r=>r.phase==='Girone'&&r.round_number).forEach(r=>{const k=`${r.competition_code}|${r.group_id}|${r.round_number}`;if(!rg.has(k))rg.set(k,[]);rg.get(k).push(r)});
+  for(const [k,list] of rg){
+    const counts=new Map();list.forEach(r=>[r.home_team_id,r.away_team_id].filter(Boolean).forEach(id=>counts.set(String(id),(counts.get(String(id))||0)+1)));
+    for(const [id,n] of counts)if(n>1)roundErrors.push({type:'Squadra duplicata nella giornata',detail:`${by.get(id)?.name||id} compare ${n} volte`,round:k});
+  }
+  // Progressione giornate: round consecutivi non possono occupare la stessa settimana ISO
+  const cg=new Map();rows.filter(r=>r.phase==='Girone'&&r.round_number).forEach(r=>{const k=`${r.competition_code}|${r.group_id}`;if(!cg.has(k))cg.set(k,new Map());const m=cg.get(k);if(!m.has(r.round_number))m.set(r.round_number,[]);m.get(r.round_number).push(r)});
+  function weekIndex(iso){const d=new Date(iso);const monday=new Date(d);const day=(d.getDay()+6)%7;monday.setDate(d.getDate()-day);monday.setHours(0,0,0,0);return Math.floor(monday.getTime()/604800000)}
+  for(const [key,m] of cg){const ns=[...m.keys()].sort((a,b)=>a-b);for(let i=1;i<ns.length;i++){const prev=Math.min(...m.get(ns[i-1]).map(r=>weekIndex(r.scheduled_at))),cur=Math.min(...m.get(ns[i]).map(r=>weekIndex(r.scheduled_at)));if(cur<=prev)roundErrors.push({type:'Progressione giornate non valida',detail:`G${ns[i-1]} e G${ns[i]} non avanzano di settimana`,round:key})}}
+
+  // Regola squadra di casa
+  rows.filter(r=>r.home_team_id&&r.scheduled_at).forEach(r=>{const h=by.get(String(r.home_team_id));if(!h)return;const d=new Date(r.scheduled_at),time=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;const expDay=norm(h.home_match_day),actDay=norm(dayName(d)),expTime=normalizeTime(h.home_match_time),sameVenue=norm(r.venue)===norm(h.home_court);if(expDay&&expDay!==actDay||expTime&&expTime!==time||h.home_court&&!sameVenue)homeErrors.push({match:`${r._home} – ${r._away}`,expected:`${h.home_match_day||'?'} ${expTime||'?'} · ${h.home_court||'?'}`,actual:`${dayName(d)} ${time} · ${r.venue||'?'}`})});
+
+  // Coerenza numero incontri tra coppie nello stesso girone
+  for(const [key,m] of cg){
+    const pair=new Map();[...m.values()].flat().forEach(r=>{const ids=[String(r.home_team_id),String(r.away_team_id)].sort().join('|');pair.set(ids,(pair.get(ids)||0)+1)});
+    const values=[...pair.values()];if(values.length){const expected=values.every(x=>x===2)?2:values.every(x=>x===1)?1:null;if(expected===null)roundErrors.push({type:'Andata/ritorno incoerente',detail:'Alcune coppie si incontrano una volta e altre due volte.',round:key})}
+  }
+
+  $('kMatches').textContent=rows.length;$('kVenue').textContent=venue.length;$('kTeam').textContent=teamConf.length;$('kRound').textContent=roundErrors.length+duplicates.length;$('kHome').textContent=homeErrors.length;
+  const total=venue.length+teamConf.length+roundErrors.length+duplicates.length+homeErrors.length;
+  $('final').innerHTML=total===0?'<div class="status good">✅ CALENDARIO REGOLARE</div>':`<div class="status bad">❌ ${total} ERRORI REALI DA CONTROLLARE</div>`;
+  $('sections').innerHTML=
+   section('Conflitti reali di campo',venue,['Data/ora','Campo','Partita 1','Partita 2'],['when','venue','m1','m2'])+
+   section('Squadra impegnata contemporaneamente',teamConf,['Squadra','Partita 1','Partita 2','Data/ora'],['team','m1','m2','when'])+
+   section('Partite duplicate',duplicates,['Numero copie','Partita','Data/ora'],['count','match','when'])+
+   section('Errori di giornate / andata-ritorno',roundErrors,['Tipo','Dettaglio','Gruppo/turno'],['type','detail','round'])+
+   section('Violazioni regola squadra di casa',homeErrors,['Partita','Doveva essere','È salvata come'],['match','expected','actual']);
+  $('result').style.display='block';$('status').textContent=`Controllo completato su ${rows.length} partite.`;
+ }catch(e){$('status').textContent='Errore: '+(e.message||String(e))}
+}
+guard();
+</script></body></html>

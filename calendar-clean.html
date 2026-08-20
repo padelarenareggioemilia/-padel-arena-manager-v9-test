@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS Padel Championship · Calendario CLEAN</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--blue:#164a95;--blue2:#082f68;--green:#009246;--red:#ce2b37;--amber:#b68100;--bg:#f4f8fc;--panel:#fff;--soft:#edf4fb;--text:#0a2e5e;--muted:#627b97;--line:#b9cde3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}
+body:before{content:"";position:fixed;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--green) 0 33%,#fff 33% 66%,var(--red) 66%);z-index:99}
+.shell{max-width:1250px;margin:auto;padding:18px 12px 80px}.card,.top{background:#fff;border:1px solid var(--line);border-radius:18px;padding:15px;margin:12px 0;box-shadow:0 12px 28px rgba(8,47,104,.08)}
+.hero{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-radius:22px;padding:18px;display:flex;align-items:center;gap:14px}.hero img{width:108px;height:64px;object-fit:contain;background:#fff;border-radius:13px;padding:5px}.hero h1{margin:0}.muted{color:var(--muted)}.hero .muted{color:#d9e6f5}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text);font:inherit}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer;font:inherit}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.danger{background:var(--red);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
+.notice{padding:11px 12px;border-radius:11px;border:1px solid var(--line);background:var(--soft);margin:10px 0;white-space:pre-line}.ok{background:#eaf8f0;border-color:#78bd90}.err{background:#fdecef;border-color:#db7783}.warn{background:#fff7dd;border-color:#d8b753}
+.hidden{display:none!important}.small{font-size:12px}.matchday{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin:12px 0}.matchday h3{margin:0;padding:11px 13px;background:var(--soft)}.fixture{display:grid;grid-template-columns:80px 1fr 190px 250px;gap:10px;padding:11px 13px;border-top:1px solid #dde7f0;align-items:center}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#e8f1fb;border:1px solid var(--line);font-size:11px;font-weight:900}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px}table{border-collapse:collapse;width:100%;min-width:900px}th,td{padding:9px;border-bottom:1px solid #dde7f0;text-align:left}th{background:var(--blue);color:#fff}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.fixture{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="shell">
+<div class="top actions">
+<button class="btn secondary" onclick="history.back()">← Indietro</button>
+<button class="btn secondary" onclick="location.href='index.html'">⌂ Home</button>
+<button class="btn secondary" onclick="location.href='groups.html'">Gironi</button>
+<button class="btn secondary" onclick="location.href='competitions.html'">Competizioni</button>
+<button class="btn secondary" onclick="location.href='diagnostics-clean.html'">Diagnostica CLEAN</button>
+</div>
+
+<header class="hero">
+<img src="assets/aics-logo.png" alt="AICS">
+<div><h1>Calendario CLEAN</h1><div class="muted">Nuovo motore indipendente · nessuna riparazione automatica · nessuno spostamento di singole partite</div></div>
+</header>
+
+<section class="card">
+<div class="grid">
+<div class="field"><label>Competizione</label><select id="competition">
+<option value="SERIE_A">Serie A</option><option value="SERIE_B">Serie B</option><option value="SERIE_C">Serie C</option><option value="COPPA_ITALIA">Coppa Italia</option>
+</select></div>
+<div class="field"><label>Data di partenza</label><input id="startDate" type="date"></div>
+<div class="field"><label>Intervallo giornate</label><select id="interval"><option value="1">Ogni settimana</option><option value="2">Ogni 2 settimane</option></select></div>
+<div class="field"><label>Formula</label><select id="formula"><option value="single">Solo andata</option><option value="double" selected>Andata e ritorno</option></select></div>
+<div class="field"><label>Durata gara</label><select id="duration"><option value="90">90 minuti</option><option value="120" selected>120 minuti</option><option value="150">150 minuti</option></select></div>
+</div>
+
+<div class="notice">
+<b>Regole del nuovo motore</b>
+• La giornata resta nel proprio blocco settimanale.
+• Giorno, ora e campo sono esclusivamente quelli della squadra di casa.
+• La squadra ospite non impone giorno, ora o campo.
+• Per risolvere un conflitto si prova soltanto CASA ↔ TRASFERTA.
+• Il ritorno è lo specchio esatto dell’andata.
+• Un conflitto di campo esiste solo se due gare occupano realmente lo stesso campo e le fasce orarie si sovrappongono.
+</div>
+
+<div class="actions">
+<button id="previewBtn" class="btn primary" onclick="previewCalendar()">Anteprima calendario</button>
+<button class="btn secondary" onclick="loadAll()">Aggiorna elenco</button>
+<button class="btn danger" onclick="deleteAllCompetition()">🗑 Elimina tutte le partite</button>
+</div>
+<div id="msg" class="notice">Pronto.</div>
+</section>
+
+<section id="previewCard" class="card hidden">
+<div class="actions" style="justify-content:space-between"><h2 style="margin:0">Anteprima da salvare</h2><button class="btn primary" onclick="saveCalendar()">Conferma e salva calendario</button></div>
+<div id="preview"></div>
+</section>
+
+<section class="card">
+<h2>Partite attualmente salvate</h2>
+<div id="fixtures"></div>
+</section>
+</main>
+
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let teams=[],groups=[],members=[],fixtures=[],allFixtures=[],blackouts=[],pending=[];
+
+function message(text,error=false,warn=false){$('msg').textContent=text;$('msg').className='notice '+(error?'err':warn?'warn':'ok')}
+function norm(v){return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()}
+function normalizeTime(v){const m=String(v||'').match(/(\d{1,2}):(\d{2})/);return m?`${String(+m[1]).padStart(2,'0')}:${m[2]}`:''}
+function dayIndex(v){const x=norm(v);return {domenica:0,dom:0,lunedi:1,lun:1,martedi:2,mar:2,mercoledi:3,mer:3,giovedi:4,gio:4,venerdi:5,ven:5,sabato:6,sab:6}[x]}
+function dateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function fromKey(k){const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d,12)}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function localISO(date,time){const [y,m,d]=date.split('-').map(Number),[hh,mm]=time.split(':').map(Number);return new Date(y,m-1,d,hh,mm,0,0).toISOString()}
+function localParts(iso){const d=new Date(iso);return {date:dateKey(d),time:`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`,weekday:['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'][d.getDay()]}}
+function team(id){return teams.find(t=>String(t.id)===String(id))}
+function venueKeyFromTeam(t,venue){return `${norm(venue||t?.home_court)}|${norm(t?.club_city)}`}
+function durationFor(t){return Number(t?.match_slot_minutes||$('duration').value||120)}
+function overlap(a,b){const as=new Date(a.scheduled_at).getTime(),bs=new Date(b.scheduled_at).getTime();return as<bs+(b._duration||120)*60000 && bs<as+(a._duration||120)*60000}
+
+async function guard(){
+ const sess=await s.auth.getSession(); if(!sess.data.session){location.href='login.html';return false}
+ const p=await s.from('profiles').select('role').eq('id',sess.data.session.user.id).maybeSingle();
+ if(p.data?.role!=='admin'){location.href='public.html';return false} return true;
+}
+
+async function loadAll(){
+ const code=$('competition').value;
+ const [tr,gr,mr,fr,ar,br]=await Promise.all([
+   s.from('teams').select('*'),
+   s.from('competition_groups').select('*').eq('competition_code',code).order('sort_order'),
+   s.from('competition_group_teams').select('*'),
+   s.from('fixtures').select('*').eq('competition_code',code).order('scheduled_at'),
+   s.from('fixtures').select('*').order('scheduled_at'),
+   s.from('calendar_blackouts').select('*').order('blackout_date')
+ ]);
+ const e=tr.error||gr.error||mr.error||fr.error||ar.error||br.error;if(e)throw e;
+ teams=tr.data||[];groups=gr.data||[];members=(mr.data||[]).filter(m=>groups.some(g=>String(g.id)===String(m.group_id)));
+ fixtures=fr.data||[];allFixtures=ar.data||[];blackouts=br.data||[];
+ renderFixtures();
+}
+
+function roundRobin(list){
+ const a=[...list];if(a.length%2)a.push(null);const rounds=[];
+ for(let r=0;r<a.length-1;r++){const pairs=[];for(let i=0;i<a.length/2;i++){const x=a[i],y=a[a.length-1-i];if(x&&y)pairs.push([x,y])}rounds.push(pairs);a.splice(1,0,a.pop())}
+ return rounds;
+}
+
+function occurrence(anchor,t){
+ const di=dayIndex(t.home_match_day),time=normalizeTime(t.home_match_time);
+ if(di===undefined||!time||!String(t.home_court||'').trim())throw new Error(`Completa giorno, ora e campo di casa per ${t.name}.`);
+ const d=new Date(anchor);let n=0;while(d.getDay()!==di&&n++<7)d.setDate(d.getDate()+1);
+ return {scheduled_at:localISO(dateKey(d),time),venue:t.home_court,_venueKey:venueKeyFromTeam(t,t.home_court),_duration:durationFor(t)};
+}
+function isBlackout(match,code){return blackouts.some(b=>b.blackout_date===localParts(match.scheduled_at).date&&(b.competition_code==='ALL'||b.competition_code===code))}
+function enrichExisting(f){
+ const h=team(f.home_team_id);return {...f,_home:h?.name||f.home_placeholder||'Casa',_away:team(f.away_team_id)?.name||f.away_placeholder||'Ospite',_venueKey:venueKeyFromTeam(h,f.venue),_duration:durationFor(h)};
+}
+function conflicts(match,others){
+ return others.filter(o=>{
+   if(!o.scheduled_at)return false;
+   const venue=match._venueKey&&o._venueKey&&match._venueKey===o._venueKey&&overlap(match,o);
+   const ids=[match.home_team_id,match.away_team_id].filter(Boolean).map(String);
+   const tids=[o.home_team_id,o.away_team_id].filter(Boolean).map(String);
+   const sameTeam=ids.some(id=>tids.includes(id))&&overlap(match,o);
+   return venue||sameTeam;
+ });
+}
+function makeMatch(group,round,home,away,anchor,code){
+ const occ=occurrence(anchor,home),lp=localParts(occ.scheduled_at);
+ return {competition_code:code,phase:'Girone',group_id:group.id,round_number:round,home_team_id:home.id,away_team_id:away.id,scheduled_at:occ.scheduled_at,venue:occ.venue,_home:home.name,_away:away.name,_venueKey:occ._venueKey,_duration:occ._duration,_local:lp};
+}
+
+function explainBlock(candidate,others){
+ const bad=conflicts(candidate,others)[0]; if(!bad)return '';
+ const sameVenue=candidate._venueKey===bad._venueKey&&overlap(candidate,bad);
+ const who=`${bad._home||team(bad.home_team_id)?.name||'Casa'} – ${bad._away||team(bad.away_team_id)?.name||'Ospite'}`;
+ const when=new Date(bad.scheduled_at).toLocaleString('it-IT');
+ return sameVenue?`campo occupato da ${who} (${when}, ${bad.venue||'campo non indicato'})`:`una delle squadre gioca già contro ${who} (${when})`;
+}
+
+function chooseRoundOrientation(rawPairs,group,roundNo,anchor,returnAnchor,code,external,isDouble){
+ const n=rawPairs.length,limit=1<<n;let last='';
+ for(let mask=0;mask<limit;mask++){
+   const oriented=rawPairs.map(([a,b],i)=>(mask&(1<<i))?[b,a]:[a,b]);
+   const first=oriented.map(([h,a])=>makeMatch(group,roundNo,h,a,anchor,code));
+   let ok=true;
+   for(let i=0;i<first.length;i++){
+     if(isBlackout(first[i],code)){last=`${first[i]._home}: data esclusa ${first[i]._local.date}`;ok=false;break}
+     const blocker=[...first.filter((_,j)=>j!==i),...external];
+     const why=explainBlock(first[i],blocker);if(why){last=`${first[i]._home}: ${why}`;ok=false;break}
+   }
+   if(!ok)continue;
+   if(isDouble){
+     const ret=oriented.map(([h,a])=>makeMatch(group,roundNo,a,h,returnAnchor,code));
+     for(let i=0;i<ret.length;i++){
+       if(isBlackout(ret[i],code)){last=`ritorno ${ret[i]._home}: data esclusa ${ret[i]._local.date}`;ok=false;break}
+       const blocker=[...ret.filter((_,j)=>j!==i),...external];
+       const why=explainBlock(ret[i],blocker);if(why){last=`ritorno ${ret[i]._home}: ${why}`;ok=false;break}
+     }
+   }
+   if(ok)return oriented;
+ }
+ throw new Error(`G${roundNo}: nessuna combinazione CASA/TRASFERTA è possibile. Ultimo blocco verificato: ${last}`);
+}
+
+async function build(){
+ await loadAll();
+ if(!groups.length)throw new Error('Prima crea i gironi.');
+ const code=$('competition').value,start=fromKey($('startDate').value),interval=Number($('interval').value),isDouble=$('formula').value==='double';
+ if(!$('startDate').value)throw new Error('Inserisci la data di partenza.');
+ const external=allFixtures.filter(f=>f.competition_code!==code).map(enrichExisting);
+ const result=[];
+ for(const g of groups){
+   const list=members.filter(m=>String(m.group_id)===String(g.id)).map(m=>team(m.team_id)).filter(Boolean);
+   const raw=roundRobin(list),count=raw.length,chosen=[];
+   for(let i=0;i<count;i++){
+     const a1=addDays(start,i*interval*7),a2=isDouble?addDays(start,(i+count)*interval*7):null;
+     chosen.push(chooseRoundOrientation(raw[i],g,i+1,a1,a2,code,external,isDouble));
+   }
+   chosen.forEach((pairs,i)=>pairs.forEach(([h,a])=>result.push(makeMatch(g,i+1,h,a,addDays(start,i*interval*7),code))));
+   if(isDouble)chosen.forEach((pairs,i)=>pairs.forEach(([h,a])=>result.push(makeMatch(g,i+1+count,a,h,addDays(start,(i+count)*interval*7),code))));
+ }
+ // controllo globale finale tra gruppi
+ for(let i=0;i<result.length;i++){
+   const blocker=[...result.filter((_,j)=>j!==i),...external];
+   const why=explainBlock(result[i],blocker);if(why)throw new Error(`Conflitto reale: ${result[i]._home} – ${result[i]._away}: ${why}`);
+ }
+ return result.sort((a,b)=>(a.round_number-b.round_number)||new Date(a.scheduled_at)-new Date(b.scheduled_at));
+}
+
+function groupedHtml(rows){
+ const by=new Map();rows.forEach(r=>{const k=r.round_number||0;if(!by.has(k))by.set(k,[]);by.get(k).push(r)});
+ return [...by.entries()].sort((a,b)=>a[0]-b[0]).map(([round,list])=>`<div class="matchday"><h3>Giornata ${round} · ${list.length} partite</h3>${list.map(r=>`<div class="fixture"><span class="badge">G${round}</span><div><b>${esc(r._home||team(r.home_team_id)?.name)}</b> contro <b>${esc(r._away||team(r.away_team_id)?.name)}</b><div class="small muted">${esc(localParts(r.scheduled_at).weekday)} ${new Date(r.scheduled_at).toLocaleDateString('it-IT')} ore ${esc(localParts(r.scheduled_at).time)}</div></div><div><b>${esc(r.venue)}</b></div><div class="notice ok">CASA: ${esc(r._home||team(r.home_team_id)?.name)} · slot rispettato</div></div>`).join('')}</div>`).join('');
+}
+
+async function previewCalendar(){
+ try{$('previewBtn').disabled=true;pending=await build();$('preview').innerHTML=groupedHtml(pending);$('previewCard').classList.remove('hidden');message(`Anteprima pronta: ${pending.length} partite. Nessun conflitto reale rilevato.`)}catch(e){pending=[];$('previewCard').classList.add('hidden');message(e.message||String(e),true)}finally{$('previewBtn').disabled=false}
+}
+async function saveCalendar(){
+ if(!pending.length)return message('Prima genera l’anteprima.',true);
+ const code=$('competition').value,label=$('competition').selectedOptions[0].textContent;
+ if(!confirm(`Sostituire le partite di Girone di ${label} con queste ${pending.length} partite?`))return;
+ try{
+   const del=await s.from('fixtures').delete().eq('competition_code',code).eq('phase','Girone');if(del.error)throw del.error;
+   const rows=pending.map(x=>({competition_code:x.competition_code,phase:x.phase,group_id:x.group_id,round_number:x.round_number,home_team_id:x.home_team_id,away_team_id:x.away_team_id,scheduled_at:x.scheduled_at,venue:x.venue}));
+   const ins=await s.from('fixtures').insert(rows);if(ins.error)throw ins.error;
+   pending=[];$('previewCard').classList.add('hidden');await loadAll();message(`Calendario ${label} salvato: ${rows.length} partite.`);
+ }catch(e){message(`Salvataggio fallito: ${e.message||e}`,true)}
+}
+
+async function deleteOne(id){
+ const before=(await s.from('fixtures').select('id',{count:'exact',head:true}).eq('competition_code',$('competition').value)).count||0;
+ const row=fixtures.find(f=>String(f.id)===String(id));if(!row)return;
+ const h=team(row.home_team_id)?.name||row.home_placeholder||'Casa',a=team(row.away_team_id)?.name||row.away_placeholder||'Ospite';
+ if(!confirm(`Eliminare SOLO questa partita?\n\n${h} – ${a}`))return;
+ const r=await s.from('fixtures').delete().eq('id',id);if(r.error)return message(r.error.message,true);
+ const after=(await s.from('fixtures').select('id',{count:'exact',head:true}).eq('competition_code',$('competition').value)).count||0;
+ await loadAll();
+ if(after!==before-1)return message(`ATTENZIONE: attese ${before-1} partite residue, il database ne restituisce ${after}. Fermarsi e controllare.`,true);
+ message(`Eliminata una sola partita: ${h} – ${a}.`);
+}
+async function deleteAllCompetition(){
+ const code=$('competition').value,label=$('competition').selectedOptions[0].textContent;
+ const count=(await s.from('fixtures').select('id',{count:'exact',head:true}).eq('competition_code',code)).count||0;
+ if(!count)return message(`Nessuna partita di ${label} da eliminare.`,false,true);
+ if(!confirm(`ATTENZIONE\n\nEliminare TUTTE le ${count} partite di ${label}?`))return;
+ if(prompt(`Seconda conferma: scrivi ELIMINA ${label.toUpperCase()}`)!==`ELIMINA ${label.toUpperCase()}`)return message('Operazione annullata.',false,true);
+ const r=await s.from('fixtures').delete().eq('competition_code',code);if(r.error)return message(r.error.message,true);
+ const left=(await s.from('fixtures').select('id',{count:'exact',head:true}).eq('competition_code',code)).count||0;
+ await loadAll();if(left!==0)return message(`Cancellazione incompleta: risultano ancora ${left} partite.`,true);
+ message(`Tutte le ${count} partite di ${label} sono state eliminate.`);
+}
+function renderFixtures(){
+ if(!fixtures.length){$('fixtures').innerHTML='<div class="notice">Nessuna partita programmata.</div>';return}
+ const rows=fixtures.map(f=>`<tr><td>${esc(f.phase)}${f.round_number?' · G'+f.round_number:''}</td><td>${esc(team(f.home_team_id)?.name||f.home_placeholder||'Da definire')}</td><td>${esc(team(f.away_team_id)?.name||f.away_placeholder||'Da definire')}</td><td>${esc(new Date(f.scheduled_at).toLocaleString('it-IT'))}</td><td>${esc(f.venue||'')}</td><td><button class="btn danger" onclick="deleteOne('${f.id}')">Elimina</button></td></tr>`).join('');
+ $('fixtures').innerHTML=`<div class="tablewrap"><table><thead><tr><th>Turno</th><th>Casa</th><th>Ospite</th><th>Data/ora</th><th>Campo</th><th>Azione</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+$('competition').onchange=()=>{pending=[];$('previewCard').classList.add('hidden');loadAll().catch(e=>message(e.message,true))};
+guard().then(ok=>ok&&loadAll().catch(e=>message(e.message,true)));
+</script>
+</body></html>
