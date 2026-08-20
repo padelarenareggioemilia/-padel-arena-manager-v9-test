@@ -561,13 +561,24 @@ window.buildCalendarPayload=async function(){
 
     if(groupTeams.length<2) continue;
 
+    /* 10.10:
+       Il girone corrente deve vedere ANCHE le partite già costruite
+       degli altri gironi della stessa competizione.
+       Questo evita che due gironi indipendenti assegnino due squadre
+       dello stesso impianto contemporaneamente in casa.
+    */
+    const crossGroupExternal=[
+      ...external,
+      ...payload.map(f=>({...f}))
+    ];
+
     const firstLeg=solveFirstLeg({
       group,
       groupTeams,
       start,
       intervalWeeks,
       code,
-      external
+      external:crossGroupExternal
     });
 
     firstLeg.chosen.forEach(r=>
@@ -589,7 +600,11 @@ window.buildCalendarPayload=async function(){
         startAnchor:returnStart,
         intervalWeeks,
         code,
-        external
+        /* Anche il ritorno deve rispettare gli altri gironi già costruiti */
+        external:[
+          ...external,
+          ...payload.map(f=>({...f}))
+        ]
       });
 
       returns.forEach(r=>
@@ -1131,7 +1146,7 @@ function openSimpleConflictResolver(){
         <div>
           <h2 style="margin:0 0 5px">Risolvi conflitto</h2>
           <div style="color:#627b97">
-            Ricerca a catena nella stessa settimana.
+            Ricerca a catena nella stessa settimana + controllo incrociato tra gironi.
             ${search.explored} combinazioni analizzate.
           </div>
         </div>
@@ -1312,7 +1327,7 @@ if(!installDeleteAllButton()){
 }
 
 console.info(
-  '[V9 calendario] Motore 10.9 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
+  '[V9 calendario] Motore 10.10 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
 );
 
 })();
