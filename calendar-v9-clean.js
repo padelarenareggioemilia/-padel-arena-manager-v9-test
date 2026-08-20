@@ -708,15 +708,18 @@ try{
 
 
 /* =========================================================
-   ASSISTENTE RISOLVI CONFLITTO - 10.8
+   ASSISTENTE RISOLVI CONFLITTO - 10.9
+   RISOLUZIONE A CATENA NELLA STESSA SETTIMANA
+
    VINCOLI INVIOLABILI:
-   - MAI spostare settimana/giornata;
-   - MAI inventare ora o campo;
-   - ospite passivo;
+   - MAI spostare una partita ad altra settimana;
+   - MAI inventare giorno, ora o campo;
+   - la squadra ospite è passiva;
    - derby valido;
-   - ritorno speculare;
-   - date escluse rispettate;
-   - propone SOLO soluzioni già verificate sull'intero payload.
+   - ritorno speculare sempre aggiornato;
+   - sospensioni/date escluse rispettate;
+   - nessun nuovo conflitto con altre competizioni;
+   - mostra SOLO soluzioni già verificate integralmente.
    ========================================================= */
 
 function v9ClonePayload(payload){
@@ -745,11 +748,34 @@ function v9FindFixtureIndexBySignature(payload,fixture){
   return payload.findIndex(f=>v9FixtureSignature(f)===sig);
 }
 
-/* Inverte UNA partita mantenendola nella stessa giornata/blocco.
-   Se esiste il ritorno speculare, inverte automaticamente anche quello.
+function v9MondayKey(iso){
+  const d=new Date(iso);
+  const delta=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-delta);
+  return dateKeyLocal(d);
+}
+
+function v9SameWeek(a,b){
+  return !!a?.scheduled_at && !!b?.scheduled_at &&
+    v9MondayKey(a.scheduled_at)===v9MondayKey(b.scheduled_at);
+}
+
+/* restituisce il ritorno speculare di una gara, se presente */
+function v9FindMirrorIndex(payload,fixture,indexToIgnore=-1){
+  return payload.findIndex((f,j)=>
+    j!==indexToIgnore &&
+    String(f.group_id)===String(fixture.group_id) &&
+    String(f.home_team_id)===String(fixture.away_team_id) &&
+    String(f.away_team_id)===String(fixture.home_team_id)
+  );
+}
+
+/* Inverte una gara SENZA cambiare settimana.
+   Il nuovo giorno/ora/campo derivano esclusivamente dalla nuova squadra di casa.
+   Anche il ritorno viene invertito automaticamente.
 */
-function v9SwapFixtureAndMirror(payload,originalFixture){
-  const idx=v9FindFixtureIndexBySignature(payload,originalFixture);
+function v9SwapFixtureAndMirror(payload,fixture){
+  const idx=v9FindFixtureIndexBySignature(payload,fixture);
   if(idx<0) return false;
 
   const current=payload[idx];
@@ -757,20 +783,14 @@ function v9SwapFixtureAndMirror(payload,originalFixture){
   const oldHome=v9FindTeam(current.home_team_id);
   const oldAway=v9FindTeam(current.away_team_id);
 
-  if(!group||!oldHome||!oldAway||!current._round_anchor) return false;
+  if(!group||!oldHome||!oldAway||!current._round_anchor){
+    return false;
+  }
 
-  const pairA=String(current.home_team_id);
-  const pairB=String(current.away_team_id);
+  const originalWeek=v9MondayKey(current.scheduled_at);
+  const mirrorIndex=v9FindMirrorIndex(payload,current,idx);
 
-  /* Trova il ritorno PRIMA di modificare l'andata */
-  const mirrorIndex=payload.findIndex((f,j)=>
-    j!==idx &&
-    String(f.group_id)===String(current.group_id) &&
-    String(f.home_team_id)===pairB &&
-    String(f.away_team_id)===pairA
-  );
-
-  payload[idx]=makeFixture(
+  const swapped=makeFixture(
     group,
     current.round_number,
     oldAway,
@@ -779,7 +799,13 @@ function v9SwapFixtureAndMirror(payload,originalFixture){
     current.competition_code
   );
 
-  payload[idx]._resolution='Inversione casa/trasferta scelta manualmente';
+  /* VINCOLO: non deve uscire dalla settimana originale */
+  if(v9MondayKey(swapped.scheduled_at)!==originalWeek){
+    return false;
+  }
+
+  payload[idx]=swapped;
+  payload[idx]._resolution='Inversione casa/trasferta';
 
   if(mirrorIndex>=0){
     const mirror=payload[mirrorIndex];
@@ -791,7 +817,9 @@ function v9SwapFixtureAndMirror(payload,originalFixture){
       return false;
     }
 
-    payload[mirrorIndex]=makeFixture(
+    const mirrorWeek=v9MondayKey(mirror.scheduled_at);
+
+    const swappedMirror=makeFixture(
       mirrorGroup,
       mirror.round_number,
       mirrorAway,
@@ -800,13 +828,36 @@ function v9SwapFixtureAndMirror(payload,originalFixture){
       mirror.competition_code
     );
 
-    payload[mirrorIndex]._resolution='Ritorno speculare aggiornato automaticamente';
+    if(v9MondayKey(swappedMirror.scheduled_at)!==mirrorWeek){
+      return false;
+    }
+
+    payload[mirrorIndex]=swappedMirror;
+    payload[mirrorIndex]._resolution='Ritorno speculare aggiornato';
   }
 
   return true;
 }
 
-/* Nessuna soluzione viene mostrata se viola anche UN SOLO vincolo. */
+/* Elenca TUTTI i conflitti reali interni */
+function v9InternalConflicts(payload){
+  const out=[];
+
+  for(let i=0;i<payload.length;i++){
+    for(let j=i+1;j<payload.length;j++){
+      if(realFacilityConflict(payload[i],payload[j])){
+        out.push({
+          i,j,
+          a:payload[i],
+          b:payload[j]
+        });
+      }
+    }
+  }
+
+  return out;
+}
+
 function v9ValidateCandidate(payload,code,external){
   for(const f of payload){
     if(fixtureFallsOnExcludedDate(f,code)){
@@ -817,82 +868,177 @@ function v9ValidateCandidate(payload,code,external){
     }
   }
 
-  for(let i=0;i<payload.length;i++){
-    for(let j=i+1;j<payload.length;j++){
-      if(realFacilityConflict(payload[i],payload[j])){
-        return {
-          ok:false,
-          reason:`Rimarrebbe il conflitto ${payload[i]._home_name} – ${payload[i]._away_name} / ${payload[j]._home_name} – ${payload[j]._away_name}.`
-        };
-      }
-    }
+  const internal=v9InternalConflicts(payload);
 
-    if(conflictsAny(payload[i],external||[])){
+  if(internal.length){
+    return {
+      ok:false,
+      reason:`Rimarrebbero ${internal.length} conflitti interni.`,
+      conflicts:internal
+    };
+  }
+
+  for(const f of payload){
+    if(conflictsAny(f,external||[])){
       return {
         ok:false,
-        reason:`${payload[i]._home_name} – ${payload[i]._away_name} entrerebbe in conflitto con un'altra competizione.`
+        reason:`${f._home_name} – ${f._away_name} entrerebbe in conflitto con un'altra competizione.`
       };
     }
   }
 
-  return {ok:true,reason:'Calendario verificato: nessun conflitto residuo.'};
+  return {
+    ok:true,
+    reason:'Calendario verificato: nessun conflitto residuo.'
+  };
 }
 
-function v9BuildConflictSolutions(ctx){
-  const solutions=[];
+/* Candidati alla catena:
+   tutte le gare della STESSA SETTIMANA delle due gare in conflitto.
+   Questo permette A->trasferta, che crea un problema su B,
+   quindi B->trasferta, ecc. senza mai uscire dal turno.
+*/
+function v9ChainCandidateFixtures(ctx){
+  const weeks=new Set([
+    v9MondayKey(ctx.fixture1.scheduled_at),
+    v9MondayKey(ctx.fixture2.scheduled_at)
+  ]);
 
-  function addSolution(id,title,description,fixturesToSwap){
+  const seen=new Set();
+  const list=[];
+
+  for(const f of ctx.payload){
+    if(!weeks.has(v9MondayKey(f.scheduled_at))) continue;
+
+    const sig=v9FixtureSignature(f);
+    if(seen.has(sig)) continue;
+
+    /* non includere nello stesso set il ritorno di questa gara:
+       viene gestito automaticamente da v9SwapFixtureAndMirror */
+    const reverseSig=[
+      String(f.group_id||''),
+      '',
+      String(f.away_team_id||''),
+      String(f.home_team_id||'')
+    ].join('|');
+
+    seen.add(sig);
+    list.push({...f});
+  }
+
+  /* Metti davanti le due gare originariamente in conflitto */
+  list.sort((a,b)=>{
+    const aHit=sameLogicalMatch(a,ctx.fixture1)||sameLogicalMatch(a,ctx.fixture2);
+    const bHit=sameLogicalMatch(b,ctx.fixture1)||sameLogicalMatch(b,ctx.fixture2);
+    return Number(bHit)-Number(aHit);
+  });
+
+  return list;
+}
+
+function v9StateKey(swappedIndexes){
+  return [...swappedIndexes].sort((a,b)=>a-b).join(',');
+}
+
+/* BFS:
+   cerca le soluzioni con MENO inversioni possibili.
+   Ogni stato è un insieme di gare invertite.
+*/
+function v9SearchChainSolutions(ctx,maxSolutions=6){
+  const candidates=v9ChainCandidateFixtures(ctx);
+  const external=ctx.external||[];
+
+  /* Sicurezza prestazioni: in una giornata reale dovrebbero essere poche.
+     Se fossero molte, lavoriamo sulle prime 16, privilegiando quelle
+     che appartengono alla componente di conflitto. */
+  const usable=candidates.slice(0,16);
+
+  const queue=[[]];
+  const visited=new Set(['']);
+  const solutions=[];
+  let explored=0;
+  const MAX_STATES=12000;
+
+  while(queue.length && explored<MAX_STATES && solutions.length<maxSolutions){
+    const state=queue.shift();
+    explored++;
+
     const candidate=v9ClonePayload(ctx.payload);
     let applied=true;
 
-    for(const fixture of fixturesToSwap){
-      if(!v9SwapFixtureAndMirror(candidate,fixture)){
+    for(const idx of state){
+      if(!v9SwapFixtureAndMirror(candidate,usable[idx])){
         applied=false;
         break;
       }
     }
 
-    if(!applied) return;
+    if(!applied) continue;
 
     const check=v9ValidateCandidate(
       candidate,
       ctx.competition_code,
-      ctx.external||[]
+      external
     );
 
-    if(check.ok){
+    if(check.ok && state.length>0){
       solutions.push({
-        id,
-        title,
-        description,
+        swappedIndexes:[...state],
+        payload:candidate,
         reason:check.reason,
-        payload:candidate
+        title:
+          state.length===1
+            ? 'Risolvi con 1 inversione'
+            : `Risolvi con ${state.length} inversioni`,
+        description:state.map(idx=>{
+          const f=usable[idx];
+          return `${f._home_name} – ${f._away_name}`;
+        }).join('  +  ')
       });
+
+      /* BFS garantisce che le prime siano le più semplici */
+      continue;
+    }
+
+    /* Espandi solo se ha ancora senso.
+       Aggiunge un'altra inversione successiva all'ultima,
+       evitando duplicati di stato. */
+    const startAt=state.length ? state[state.length-1]+1 : 0;
+
+    for(let i=startAt;i<usable.length;i++){
+      const next=[...state,i];
+      const key=v9StateKey(next);
+
+      if(visited.has(key)) continue;
+      visited.add(key);
+
+      /* Limite ragionevole: oltre 6 inversioni la soluzione
+         diventa poco comprensibile per l'utente. */
+      if(next.length<=6){
+        queue.push(next);
+      }
     }
   }
 
-  addSolution(
-    'swap1',
-    `Metti ${ctx.fixture1._home_name} in trasferta`,
-    `Inverte CASA ↔ TRASFERTA di ${ctx.fixture1._home_name} – ${ctx.fixture1._away_name} e aggiorna automaticamente il ritorno speculare.`,
-    [ctx.fixture1]
-  );
+  /* deduplica soluzioni equivalenti */
+  const unique=[];
+  const solutionKeys=new Set();
 
-  addSolution(
-    'swap2',
-    `Metti ${ctx.fixture2._home_name} in trasferta`,
-    `Inverte CASA ↔ TRASFERTA di ${ctx.fixture2._home_name} – ${ctx.fixture2._away_name} e aggiorna automaticamente il ritorno speculare.`,
-    [ctx.fixture2]
-  );
+  for(const s of solutions){
+    const key=s.payload.map(f=>
+      `${f.group_id}|${f.round_number}|${f.home_team_id}|${f.away_team_id}`
+    ).join('§');
 
-  addSolution(
-    'swapboth',
-    'Inverti entrambe le gare',
-    'Inverte entrambe le partite coinvolte, mantenendo le rispettive giornate e aggiornando i ritorni.',
-    [ctx.fixture1,ctx.fixture2]
-  );
+    if(solutionKeys.has(key)) continue;
+    solutionKeys.add(key);
+    unique.push(s);
+  }
 
-  return solutions;
+  return {
+    solutions:unique,
+    candidates:usable,
+    explored
+  };
 }
 
 function closeSimpleConflictResolver(){
@@ -903,32 +1049,37 @@ function applySimpleConflictSolution(index){
   const ctx=window.__v9LastConflict;
   if(!ctx) return;
 
-  const solutions=v9BuildConflictSolutions(ctx);
-  const selected=solutions[index];
+  const result=v9SearchChainSolutions(ctx);
+  const selected=result.solutions[index];
+
   if(!selected) return;
 
-  /* La soluzione entra SOLO in anteprima.
-     L'utente deve ancora premere "Conferma e salva calendario". */
   pendingCalendar=selected.payload.map(f=>({...f}));
 
   closeSimpleConflictResolver();
 
   if(typeof renderPendingCalendar==='function'){
     renderPendingCalendar();
-  }else{
-    $('calendarPreview').innerHTML=groupedFixturesHtml(
-      pendingCalendar,
-      renderPreviewMatch
-    );
-    $('calendarPreviewCard').classList.remove('hidden');
-    $('confirmCalendarBtn').classList.remove('hidden');
+  }else if(
+    typeof groupedFixturesHtml==='function' &&
+    typeof renderPreviewMatch==='function' &&
+    document.getElementById('calendarPreview')
+  ){
+    document.getElementById('calendarPreview').innerHTML=
+      groupedFixturesHtml(pendingCalendar,renderPreviewMatch);
+
+    document.getElementById('calendarPreviewCard')?.classList.remove('hidden');
+    document.getElementById('confirmCalendarBtn')?.classList.remove('hidden');
   }
 
-  msg(
-    `✅ Soluzione applicata in anteprima: ${selected.title}. `+
-    `Nessuna settimana, data esclusa, orario o campo è stato modificato arbitrariamente. `+
-    `Controlla l'anteprima e poi premi “Conferma e salva calendario”.`
-  );
+  if(typeof msg==='function'){
+    msg(
+      `✅ Soluzione applicata in anteprima: ${selected.title}. `+
+      `Inversioni: ${selected.description}. `+
+      `Settimane, sospensioni, orari e campi restano conformi alle regole. `+
+      `Controlla l'anteprima e poi conferma il salvataggio.`
+    );
+  }
 }
 
 function openSimpleConflictResolver(){
@@ -937,7 +1088,8 @@ function openSimpleConflictResolver(){
   const ctx=window.__v9LastConflict;
   if(!ctx) return;
 
-  const solutions=v9BuildConflictSolutions(ctx);
+  const search=v9SearchChainSolutions(ctx,6);
+  const solutions=search.solutions;
 
   const overlay=document.createElement('div');
   overlay.id='v9SimpleConflictResolver';
@@ -947,8 +1099,12 @@ function openSimpleConflictResolver(){
     ? solutions.map((s,i)=>`
       <div class="solution-card ok">
         <h3>✅ ${esc(s.title)}</h3>
-        <div>${esc(s.description)}</div>
-        <div class="reason">${esc(s.reason)}</div>
+        <div>
+          <b>Catena:</b> ${esc(s.description)}
+        </div>
+        <div class="reason">
+          ${esc(s.reason)}
+        </div>
         <div class="solution-actions">
           <button class="btn primary btn-mini"
             onclick="applySimpleConflictSolution(${i})">
@@ -959,10 +1115,11 @@ function openSimpleConflictResolver(){
     `).join('')
     : `
       <div class="solution-card no">
-        <h3>❌ Nessuna inversione valida</h3>
+        <h3>❌ Nessuna catena valida trovata</h3>
         <div class="reason">
-          Con i limiti stabiliti non esiste un'inversione CASA ↔ TRASFERTA
-          che risolva questo caso senza creare un altro conflitto.
+          Sono state provate combinazioni di inversioni CASA ↔ TRASFERTA
+          sulle gare della stessa settimana, fino a 6 inversioni concatenate,
+          senza spostare partite, cambiare orari/campi o violare sospensioni.
           Nessuna partita è stata modificata.
         </div>
       </div>
@@ -974,10 +1131,12 @@ function openSimpleConflictResolver(){
         <div>
           <h2 style="margin:0 0 5px">Risolvi conflitto</h2>
           <div style="color:#627b97">
-            Vengono mostrate soltanto soluzioni che rispettano tutte le regole.
+            Ricerca a catena nella stessa settimana.
+            ${search.explored} combinazioni analizzate.
           </div>
         </div>
-        <button class="btn secondary" onclick="closeSimpleConflictResolver()">
+        <button class="btn secondary"
+          onclick="closeSimpleConflictResolver()">
           Chiudi
         </button>
       </div>
@@ -985,16 +1144,18 @@ function openSimpleConflictResolver(){
       <div class="conflict-match" style="margin-top:14px">
         ${esc(ctx.fixture1._home_name)} – ${esc(ctx.fixture1._away_name)}
         <br>
-        <span style="font-weight:600">contro conflitto campo con</span>
+        <span style="font-weight:600">conflitto campo con</span>
         <br>
         ${esc(ctx.fixture2._home_name)} – ${esc(ctx.fixture2._away_name)}
       </div>
 
       <div class="notice" style="margin-top:12px">
-        <b>Limiti obbligatori:</b>
-        stessa giornata, nessuno spostamento di settimana,
-        nessun orario/campo inventato, ospite passivo,
-        ritorno speculare e sospensioni rispettate.
+        <b>Regole bloccate:</b>
+        stessa settimana, nessun anticipo/posticipo,
+        giorno/ora/campo solo della squadra di casa,
+        ospite passivo, derby valido,
+        ritorno speculare, sospensioni rispettate
+        e nessun nuovo conflitto con altre competizioni.
       </div>
 
       <div class="conflict-grid">
@@ -1151,7 +1312,7 @@ if(!installDeleteAllButton()){
 }
 
 console.info(
-  '[V9 calendario] Motore 10.8 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
+  '[V9 calendario] Motore 10.9 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
 );
 
 })();
