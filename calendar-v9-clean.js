@@ -166,6 +166,7 @@ function makeFixture(group,roundNumber,home,away,anchor,competitionCode){
     _local_date:local.date,
     _local_time:local.time,
     _local_weekday:local.weekday,
+    _round_anchor:dateKeyLocal(anchor),
     _facility_key:sharedFacilityKey(home,home.home_court),
     _duration_minutes:durationMinutes(home)
   };
@@ -613,11 +614,23 @@ window.buildCalendarPayload=async function(){
   for(let i=0;i<payload.length;i++){
     for(let j=i+1;j<payload.length;j++){
       if(realFacilityConflict(payload[i],payload[j])){
-        throw new Error(
-          `Conflitto reale residuo: `+
-          `${payload[i]._home_name} – ${payload[i]._away_name} e `+
-          `${payload[j]._home_name} – ${payload[j]._away_name}.`
-        );
+        window.__v9LastConflict={
+          payload:payload.map(f=>({...f})),
+          fixture1:{...payload[i]},
+          fixture2:{...payload[j]},
+          index1:i,
+          index2:j,
+          competition_code:code,
+          external:external.map(f=>({...f}))
+        };
+
+        setTimeout(()=>{
+          try{ openSimpleConflictResolver(); }catch(_){}
+        },0);
+
+        const err=new Error('CONFLICT_ASSISTANT_OPENED');
+        err.isConflictAssistant=true;
+        throw err;
       }
     }
 
@@ -693,111 +706,434 @@ try{
 });
 
 
-/* =========================
-   RIPRISTINO "ELIMINA TUTTE LE PARTITE"
-   =========================
-   NON modifica il GLOBAL SORT.
-   NON modifica sospensioni/derby/ritorno.
-   Cancella solo la competizione selezionata.
+
+/* =========================================================
+   ASSISTENTE RISOLVI CONFLITTO - 10.8
+   VINCOLI INVIOLABILI:
+   - MAI spostare settimana/giornata;
+   - MAI inventare ora o campo;
+   - ospite passivo;
+   - derby valido;
+   - ritorno speculare;
+   - date escluse rispettate;
+   - propone SOLO soluzioni già verificate sull'intero payload.
+   ========================================================= */
+
+function v9ClonePayload(payload){
+  return (payload||[]).map(f=>({...f}));
+}
+
+function v9FindGroup(id){
+  return groups.find(g=>String(g.id)===String(id));
+}
+
+function v9FindTeam(id){
+  return teams.find(t=>String(t.id)===String(id));
+}
+
+function v9FixtureSignature(f){
+  return [
+    String(f.group_id||''),
+    String(f.round_number||''),
+    String(f.home_team_id||''),
+    String(f.away_team_id||'')
+  ].join('|');
+}
+
+function v9FindFixtureIndexBySignature(payload,fixture){
+  const sig=v9FixtureSignature(fixture);
+  return payload.findIndex(f=>v9FixtureSignature(f)===sig);
+}
+
+/* Inverte UNA partita mantenendola nella stessa giornata/blocco.
+   Se esiste il ritorno speculare, inverte automaticamente anche quello.
 */
-function installDeleteAllButton(){
-  if(document.getElementById('deleteAllFixturesBtn')) return true;
+function v9SwapFixtureAndMirror(payload,originalFixture){
+  const idx=v9FindFixtureIndexBySignature(payload,originalFixture);
+  if(idx<0) return false;
 
-  const buttons=[...document.querySelectorAll('button')];
-  const previewBtn=buttons.find(b=>/anteprima calendario/i.test((b.textContent||'').trim()));
-  const refreshBtn=buttons.find(b=>/aggiorna elenco/i.test((b.textContent||'').trim()));
-  const anchor=previewBtn||refreshBtn;
+  const current=payload[idx];
+  const group=v9FindGroup(current.group_id);
+  const oldHome=v9FindTeam(current.home_team_id);
+  const oldAway=v9FindTeam(current.away_team_id);
 
-  if(!anchor) return false;
+  if(!group||!oldHome||!oldAway||!current._round_anchor) return false;
 
-  const actions=anchor.closest('.actions')||anchor.parentElement;
-  if(!actions) return false;
+  const pairA=String(current.home_team_id);
+  const pairB=String(current.away_team_id);
 
-  const btn=document.createElement('button');
-  btn.id='deleteAllFixturesBtn';
-  btn.className='btn danger';
-  btn.type='button';
-  btn.textContent='🗑 Elimina tutte le partite';
+  /* Trova il ritorno PRIMA di modificare l'andata */
+  const mirrorIndex=payload.findIndex((f,j)=>
+    j!==idx &&
+    String(f.group_id)===String(current.group_id) &&
+    String(f.home_team_id)===pairB &&
+    String(f.away_team_id)===pairA
+  );
 
-  if(refreshBtn && refreshBtn.parentElement===actions){
-    refreshBtn.insertAdjacentElement('afterend',btn);
-  }else{
-    actions.appendChild(btn);
+  payload[idx]=makeFixture(
+    group,
+    current.round_number,
+    oldAway,
+    oldHome,
+    fromDateKey(current._round_anchor),
+    current.competition_code
+  );
+
+  payload[idx]._resolution='Inversione casa/trasferta scelta manualmente';
+
+  if(mirrorIndex>=0){
+    const mirror=payload[mirrorIndex];
+    const mirrorGroup=v9FindGroup(mirror.group_id);
+    const mirrorHome=v9FindTeam(mirror.home_team_id);
+    const mirrorAway=v9FindTeam(mirror.away_team_id);
+
+    if(!mirrorGroup||!mirrorHome||!mirrorAway||!mirror._round_anchor){
+      return false;
+    }
+
+    payload[mirrorIndex]=makeFixture(
+      mirrorGroup,
+      mirror.round_number,
+      mirrorAway,
+      mirrorHome,
+      fromDateKey(mirror._round_anchor),
+      mirror.competition_code
+    );
+
+    payload[mirrorIndex]._resolution='Ritorno speculare aggiornato automaticamente';
   }
+
+  return true;
+}
+
+/* Nessuna soluzione viene mostrata se viola anche UN SOLO vincolo. */
+function v9ValidateCandidate(payload,code,external){
+  for(const f of payload){
+    if(fixtureFallsOnExcludedDate(f,code)){
+      return {
+        ok:false,
+        reason:`${f._home_name} – ${f._away_name} finirebbe su una data esclusa (${f._local_date}).`
+      };
+    }
+  }
+
+  for(let i=0;i<payload.length;i++){
+    for(let j=i+1;j<payload.length;j++){
+      if(realFacilityConflict(payload[i],payload[j])){
+        return {
+          ok:false,
+          reason:`Rimarrebbe il conflitto ${payload[i]._home_name} – ${payload[i]._away_name} / ${payload[j]._home_name} – ${payload[j]._away_name}.`
+        };
+      }
+    }
+
+    if(conflictsAny(payload[i],external||[])){
+      return {
+        ok:false,
+        reason:`${payload[i]._home_name} – ${payload[i]._away_name} entrerebbe in conflitto con un'altra competizione.`
+      };
+    }
+  }
+
+  return {ok:true,reason:'Calendario verificato: nessun conflitto residuo.'};
+}
+
+function v9BuildConflictSolutions(ctx){
+  const solutions=[];
+
+  function addSolution(id,title,description,fixturesToSwap){
+    const candidate=v9ClonePayload(ctx.payload);
+    let applied=true;
+
+    for(const fixture of fixturesToSwap){
+      if(!v9SwapFixtureAndMirror(candidate,fixture)){
+        applied=false;
+        break;
+      }
+    }
+
+    if(!applied) return;
+
+    const check=v9ValidateCandidate(
+      candidate,
+      ctx.competition_code,
+      ctx.external||[]
+    );
+
+    if(check.ok){
+      solutions.push({
+        id,
+        title,
+        description,
+        reason:check.reason,
+        payload:candidate
+      });
+    }
+  }
+
+  addSolution(
+    'swap1',
+    `Metti ${ctx.fixture1._home_name} in trasferta`,
+    `Inverte CASA ↔ TRASFERTA di ${ctx.fixture1._home_name} – ${ctx.fixture1._away_name} e aggiorna automaticamente il ritorno speculare.`,
+    [ctx.fixture1]
+  );
+
+  addSolution(
+    'swap2',
+    `Metti ${ctx.fixture2._home_name} in trasferta`,
+    `Inverte CASA ↔ TRASFERTA di ${ctx.fixture2._home_name} – ${ctx.fixture2._away_name} e aggiorna automaticamente il ritorno speculare.`,
+    [ctx.fixture2]
+  );
+
+  addSolution(
+    'swapboth',
+    'Inverti entrambe le gare',
+    'Inverte entrambe le partite coinvolte, mantenendo le rispettive giornate e aggiornando i ritorni.',
+    [ctx.fixture1,ctx.fixture2]
+  );
+
+  return solutions;
+}
+
+function closeSimpleConflictResolver(){
+  document.getElementById('v9SimpleConflictResolver')?.remove();
+}
+
+function applySimpleConflictSolution(index){
+  const ctx=window.__v9LastConflict;
+  if(!ctx) return;
+
+  const solutions=v9BuildConflictSolutions(ctx);
+  const selected=solutions[index];
+  if(!selected) return;
+
+  /* La soluzione entra SOLO in anteprima.
+     L'utente deve ancora premere "Conferma e salva calendario". */
+  pendingCalendar=selected.payload.map(f=>({...f}));
+
+  closeSimpleConflictResolver();
+
+  if(typeof renderPendingCalendar==='function'){
+    renderPendingCalendar();
+  }else{
+    $('calendarPreview').innerHTML=groupedFixturesHtml(
+      pendingCalendar,
+      renderPreviewMatch
+    );
+    $('calendarPreviewCard').classList.remove('hidden');
+    $('confirmCalendarBtn').classList.remove('hidden');
+  }
+
+  msg(
+    `✅ Soluzione applicata in anteprima: ${selected.title}. `+
+    `Nessuna settimana, data esclusa, orario o campo è stato modificato arbitrariamente. `+
+    `Controlla l'anteprima e poi premi “Conferma e salva calendario”.`
+  );
+}
+
+function openSimpleConflictResolver(){
+  closeSimpleConflictResolver();
+
+  const ctx=window.__v9LastConflict;
+  if(!ctx) return;
+
+  const solutions=v9BuildConflictSolutions(ctx);
+
+  const overlay=document.createElement('div');
+  overlay.id='v9SimpleConflictResolver';
+  overlay.className='conflict-overlay';
+
+  const cards=solutions.length
+    ? solutions.map((s,i)=>`
+      <div class="solution-card ok">
+        <h3>✅ ${esc(s.title)}</h3>
+        <div>${esc(s.description)}</div>
+        <div class="reason">${esc(s.reason)}</div>
+        <div class="solution-actions">
+          <button class="btn primary btn-mini"
+            onclick="applySimpleConflictSolution(${i})">
+            Applica questa soluzione
+          </button>
+        </div>
+      </div>
+    `).join('')
+    : `
+      <div class="solution-card no">
+        <h3>❌ Nessuna inversione valida</h3>
+        <div class="reason">
+          Con i limiti stabiliti non esiste un'inversione CASA ↔ TRASFERTA
+          che risolva questo caso senza creare un altro conflitto.
+          Nessuna partita è stata modificata.
+        </div>
+      </div>
+    `;
+
+  overlay.innerHTML=`
+    <div class="conflict-card">
+      <div class="conflict-head">
+        <div>
+          <h2 style="margin:0 0 5px">Risolvi conflitto</h2>
+          <div style="color:#627b97">
+            Vengono mostrate soltanto soluzioni che rispettano tutte le regole.
+          </div>
+        </div>
+        <button class="btn secondary" onclick="closeSimpleConflictResolver()">
+          Chiudi
+        </button>
+      </div>
+
+      <div class="conflict-match" style="margin-top:14px">
+        ${esc(ctx.fixture1._home_name)} – ${esc(ctx.fixture1._away_name)}
+        <br>
+        <span style="font-weight:600">contro conflitto campo con</span>
+        <br>
+        ${esc(ctx.fixture2._home_name)} – ${esc(ctx.fixture2._away_name)}
+      </div>
+
+      <div class="notice" style="margin-top:12px">
+        <b>Limiti obbligatori:</b>
+        stessa giornata, nessuno spostamento di settimana,
+        nessun orario/campo inventato, ospite passivo,
+        ritorno speculare e sospensioni rispettate.
+      </div>
+
+      <div class="conflict-grid">
+        ${cards}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+window.openSimpleConflictResolver=openSimpleConflictResolver;
+window.closeSimpleConflictResolver=closeSimpleConflictResolver;
+window.applySimpleConflictSolution=applySimpleConflictSolution;
+
+
+
+/* =========================
+   ELIMINA TUTTE - 10.7.2
+   SOLO questa funzione.
+   ========================= */
+function installDeleteAllButton(){
+  let btn=document.getElementById('deleteAllFixturesBtn');
+
+  if(!btn){
+    const buttons=[...document.querySelectorAll('button')];
+    const previewBtn=buttons.find(b=>/anteprima calendario/i.test((b.textContent||'').trim()));
+    const refreshBtn=buttons.find(b=>/aggiorna elenco/i.test((b.textContent||'').trim()));
+    const anchor=refreshBtn||previewBtn;
+    if(!anchor) return false;
+
+    btn=document.createElement('button');
+    btn.id='deleteAllFixturesBtn';
+    btn.type='button';
+    btn.className='btn danger';
+    btn.textContent='🗑 Elimina tutte le partite';
+    anchor.insertAdjacentElement('afterend',btn);
+  }
+
+  /* sostituisce eventuali listener vecchi */
+  const clean=btn.cloneNode(true);
+  btn.replaceWith(clean);
+  btn=clean;
 
   btn.addEventListener('click',async function(ev){
     ev.preventDefault();
     ev.stopPropagation();
 
     const code=$id('competition')?.value;
+    const label=$id('competition')?.selectedOptions?.[0]?.textContent?.trim()||code;
     if(!code) return;
 
-    const label=$id('competition')?.selectedOptions?.[0]?.textContent||code;
-
-    if(!confirm(
-      `ATTENZIONE\n\nStai per eliminare TUTTE le partite di ${label}.\n\nVuoi continuare?`
-    )) return;
-
-    if(prompt(
-      `Seconda conferma: scrivi ELIMINA per cancellare tutte le partite di ${label}.`
-    )!=='ELIMINA') return;
+    if(!confirm(`Eliminare TUTTE le partite di ${label}?`)) return;
 
     try{
       btn.disabled=true;
-      btn.textContent='Eliminazione in corso…';
+      btn.textContent='Eliminazione…';
 
       const client=(typeof sb!=='undefined'&&sb)||(typeof s!=='undefined'&&s);
       if(!client) throw new Error('Client database non disponibile.');
 
+      /* Conta PRIMA */
       const beforeRes=await client
         .from('fixtures')
         .select('id',{count:'exact',head:true})
         .eq('competition_code',code);
-
       if(beforeRes.error) throw beforeRes.error;
       const before=beforeRes.count||0;
 
+      /* Cancella SOLO la competizione selezionata */
       const delRes=await client
         .from('fixtures')
         .delete()
         .eq('competition_code',code);
-
       if(delRes.error) throw delRes.error;
 
-      const afterRes=await client
+      /* Verifica DIRETTAMENTE il DB */
+      const verifyRes=await client
         .from('fixtures')
         .select('id',{count:'exact',head:true})
         .eq('competition_code',code);
+      if(verifyRes.error) throw verifyRes.error;
 
-      if(afterRes.error) throw afterRes.error;
-      const after=afterRes.count||0;
-
-      if(after!==0){
-        throw new Error(
-          `Cancellazione incompleta: risultano ancora ${after} partite di ${label}.`
-        );
+      const remaining=verifyRes.count||0;
+      if(remaining!==0){
+        throw new Error(`Il database contiene ancora ${remaining} partite di ${label}.`);
       }
 
+      /* Svuota anche ogni cache locale della competizione eliminata */
       if(typeof pendingCalendar!=='undefined') pendingCalendar=[];
-      if(typeof fixtures!=='undefined') fixtures=[];
-      if(typeof allFixtures!=='undefined'){
-        allFixtures=(allFixtures||[]).filter(f=>f.competition_code!==code);
+
+      if(typeof allFixtures!=='undefined' && Array.isArray(allFixtures)){
+        allFixtures=allFixtures.filter(f=>String(f.competition_code)!==String(code));
       }
 
-      if(typeof clearCalendarPreview==='function') clearCalendarPreview();
-      if(typeof fetchData==='function') await fetchData();
+      if(typeof fixtures!=='undefined' && Array.isArray(fixtures)){
+        fixtures=fixtures.filter(f=>String(f.competition_code)!==String(code));
+      }
+
+      /* Ricarica la fonte dati reale */
+      if(typeof fetchData==='function'){
+        await fetchData();
+      }
+
+      /* Ricostruisce la lista, senza riusare HTML precedente */
+      const likelyContainers=[
+        'fixturesList','fixtureList','calendarList','matchesList',
+        'savedFixtures','savedMatches','fixturesContainer'
+      ];
+      for(const id of likelyContainers){
+        const el=document.getElementById(id);
+        if(el) el.innerHTML='';
+      }
+
       if(typeof renderFixtures==='function') renderFixtures();
+      else if(typeof renderCalendar==='function') renderCalendar();
+      else if(typeof renderMatches==='function') renderMatches();
 
-      if(typeof msg==='function'){
-        msg(`✅ Eliminate ${before} partite di ${label}.`);
-      }
+      /* Se il progetto usa un renderer non intercettato,
+         il reload garantisce comunque la sincronizzazione DB/UI. */
+      const success=`✅ Eliminate ${before} partite di ${label}.`;
+
+      try{
+        if(typeof msg==='function') msg(success);
+      }catch(_){}
+
+      setTimeout(()=>{
+        window.location.reload();
+      },350);
+
     }catch(e){
-      if(typeof msg==='function'){
-        msg(`Errore eliminazione: ${e?.message||String(e)}`,true);
-      }else{
-        alert(`Errore eliminazione: ${e?.message||String(e)}`);
+      const text=`Errore eliminazione: ${e?.message||String(e)}`;
+      try{
+        if(typeof msg==='function') msg(text,true);
+        else alert(text);
+      }catch(_){
+        alert(text);
       }
-    }finally{
+
       btn.disabled=false;
       btn.textContent='🗑 Elimina tutte le partite';
     }
@@ -807,18 +1143,15 @@ function installDeleteAllButton(){
 }
 
 if(!installDeleteAllButton()){
-  let deleteButtonTries=0;
-  const deleteButtonTimer=setInterval(()=>{
-    deleteButtonTries++;
-    if(installDeleteAllButton()||deleteButtonTries>=40){
-      clearInterval(deleteButtonTimer);
-    }
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    if(installDeleteAllButton()||tries>=40) clearInterval(timer);
   },250);
 }
 
-
 console.info(
-  '[V9 calendario] Motore 10.7.1 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
+  '[V9 calendario] Motore 10.8 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
 );
 
 })();
