@@ -1,0 +1,14 @@
+PATCH V9 9.3.3
+
+Questa patch NON modifica il tasto "Elimina tutte le partite".
+
+Protegge il pulsante "Elimina" della singola partita:
+- intercetta il click prima del vecchio codice;
+- recupera l'ID UUID della partita;
+- esegue DELETE esclusivamente con .eq('id', fixtureId);
+- impedisce che il click possa richiamare la cancellazione per competition_code.
+
+Per usarla:
+1. carica calendar-single-delete-safety.js nella root;
+2. aggiungi in fondo a calendar.html, subito prima di </body>:
+   <script src="calendar-single-delete-safety.js?v=933"></script>
