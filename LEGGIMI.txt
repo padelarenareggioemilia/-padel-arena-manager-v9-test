@@ -1,18 +1,15 @@
-V9 SIMPLE CALENDAR ENGINE 10.0
+V9 SIMPLE CALENDAR ENGINE 10.1
 
-REGOLA CENTRALE:
-Un conflitto esiste SOLO se due squadre DI CASA condividono realmente lo stesso impianto e le fasce orarie si sovrappongono.
+CORREZIONE PRINCIPALE:
+Una partita NON può mai essere considerata in conflitto:
+- con sé stessa;
+- con la stessa coppia di squadre, anche se casa/trasferta sono invertite.
 
-Il motore:
-- non controlla MAI disponibilità/giorno/orario della squadra ospite;
-- ogni squadra gioca una volta per giornata grazie al round-robin;
-- prova SOLO inversioni casa/trasferta;
-- NON sposta partite ad altre settimane;
-- NON inventa orari;
-- NON inventa campi;
-- crea il ritorno speculare;
-- ignora le vecchie partite della competizione che si sta rigenerando;
-- considera le altre competizioni solo per reali sovrapposizioni dello stesso impianto.
+Un conflitto reale esiste SOLO tra DUE PARTITE DISTINTE che:
+1. usano lo stesso impianto reale;
+2. hanno fasce orarie sovrapposte.
 
-Per squadre che condividono lo stesso impianto è preferibile assegnare lo stesso facility_id.
-In assenza di facility_id il confronto usa campo + indirizzo + città.
+La squadra ospite non impone mai giorno, ora o campo.
+Il motore prova solo CASA <-> TRASFERTA.
+Nessuno spostamento automatico di settimana.
+Ritorno speculare.
