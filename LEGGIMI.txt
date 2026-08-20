@@ -1,27 +1,18 @@
-V9 - CALENDARIO + DIAGNOSTICA RIFATTI DA ZERO
+V9 SIMPLE CALENDAR ENGINE 10.0
 
-QUESTI FILE SONO PARALLELI E NON SOSTITUISCONO ANCORA LA V9:
-- calendar-clean.html
-- diagnostics-clean.html
+REGOLA CENTRALE:
+Un conflitto esiste SOLO se due squadre DI CASA condividono realmente lo stesso impianto e le fasce orarie si sovrappongono.
 
-Caricali nella root del repository insieme agli altri file.
+Il motore:
+- non controlla MAI disponibilità/giorno/orario della squadra ospite;
+- ogni squadra gioca una volta per giornata grazie al round-robin;
+- prova SOLO inversioni casa/trasferta;
+- NON sposta partite ad altre settimane;
+- NON inventa orari;
+- NON inventa campi;
+- crea il ritorno speculare;
+- ignora le vecchie partite della competizione che si sta rigenerando;
+- considera le altre competizioni solo per reali sovrapposizioni dello stesso impianto.
 
-TEST:
-1. Apri calendar-clean.html.
-2. Scegli Serie A, data iniziale, intervallo e formula.
-3. Fai Anteprima. Il motore NON sposta mai una singola partita di settimana.
-4. Se l'anteprima è corretta, salva.
-5. Apri diagnostics-clean.html e premi Esegui controllo.
-6. Il risultato deve essere:
-   ✅ CALENDARIO REGOLARE
-   oppure un elenco preciso di errori reali.
-
-REGOLE IMPLEMENTATE:
-- solo la squadra di casa determina giorno/ora/campo;
-- ospite completamente passivo sullo slot;
-- unica correzione automatica: inversione CASA/TRASFERTA;
-- ritorno speculare;
-- conflitto campo solo con reale sovrapposizione oraria sullo stesso campo;
-- cancellazione singola solo per fixture.id e verifica conteggio;
-- cancellazione totale separata con doppia conferma e verifica finale;
-- diagnostica legge solo dati salvati, non applica correzioni.
+Per squadre che condividono lo stesso impianto è preferibile assegnare lo stesso facility_id.
+In assenza di facility_id il confronto usa campo + indirizzo + città.
