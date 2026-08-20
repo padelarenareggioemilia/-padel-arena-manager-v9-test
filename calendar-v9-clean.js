@@ -692,8 +692,133 @@ try{
   }
 });
 
+
+/* =========================
+   RIPRISTINO "ELIMINA TUTTE LE PARTITE"
+   =========================
+   NON modifica il GLOBAL SORT.
+   NON modifica sospensioni/derby/ritorno.
+   Cancella solo la competizione selezionata.
+*/
+function installDeleteAllButton(){
+  if(document.getElementById('deleteAllFixturesBtn')) return true;
+
+  const buttons=[...document.querySelectorAll('button')];
+  const previewBtn=buttons.find(b=>/anteprima calendario/i.test((b.textContent||'').trim()));
+  const refreshBtn=buttons.find(b=>/aggiorna elenco/i.test((b.textContent||'').trim()));
+  const anchor=previewBtn||refreshBtn;
+
+  if(!anchor) return false;
+
+  const actions=anchor.closest('.actions')||anchor.parentElement;
+  if(!actions) return false;
+
+  const btn=document.createElement('button');
+  btn.id='deleteAllFixturesBtn';
+  btn.className='btn danger';
+  btn.type='button';
+  btn.textContent='🗑 Elimina tutte le partite';
+
+  if(refreshBtn && refreshBtn.parentElement===actions){
+    refreshBtn.insertAdjacentElement('afterend',btn);
+  }else{
+    actions.appendChild(btn);
+  }
+
+  btn.addEventListener('click',async function(ev){
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const code=$id('competition')?.value;
+    if(!code) return;
+
+    const label=$id('competition')?.selectedOptions?.[0]?.textContent||code;
+
+    if(!confirm(
+      `ATTENZIONE\n\nStai per eliminare TUTTE le partite di ${label}.\n\nVuoi continuare?`
+    )) return;
+
+    if(prompt(
+      `Seconda conferma: scrivi ELIMINA per cancellare tutte le partite di ${label}.`
+    )!=='ELIMINA') return;
+
+    try{
+      btn.disabled=true;
+      btn.textContent='Eliminazione in corso…';
+
+      const client=(typeof sb!=='undefined'&&sb)||(typeof s!=='undefined'&&s);
+      if(!client) throw new Error('Client database non disponibile.');
+
+      const beforeRes=await client
+        .from('fixtures')
+        .select('id',{count:'exact',head:true})
+        .eq('competition_code',code);
+
+      if(beforeRes.error) throw beforeRes.error;
+      const before=beforeRes.count||0;
+
+      const delRes=await client
+        .from('fixtures')
+        .delete()
+        .eq('competition_code',code);
+
+      if(delRes.error) throw delRes.error;
+
+      const afterRes=await client
+        .from('fixtures')
+        .select('id',{count:'exact',head:true})
+        .eq('competition_code',code);
+
+      if(afterRes.error) throw afterRes.error;
+      const after=afterRes.count||0;
+
+      if(after!==0){
+        throw new Error(
+          `Cancellazione incompleta: risultano ancora ${after} partite di ${label}.`
+        );
+      }
+
+      if(typeof pendingCalendar!=='undefined') pendingCalendar=[];
+      if(typeof fixtures!=='undefined') fixtures=[];
+      if(typeof allFixtures!=='undefined'){
+        allFixtures=(allFixtures||[]).filter(f=>f.competition_code!==code);
+      }
+
+      if(typeof clearCalendarPreview==='function') clearCalendarPreview();
+      if(typeof fetchData==='function') await fetchData();
+      if(typeof renderFixtures==='function') renderFixtures();
+
+      if(typeof msg==='function'){
+        msg(`✅ Eliminate ${before} partite di ${label}.`);
+      }
+    }catch(e){
+      if(typeof msg==='function'){
+        msg(`Errore eliminazione: ${e?.message||String(e)}`,true);
+      }else{
+        alert(`Errore eliminazione: ${e?.message||String(e)}`);
+      }
+    }finally{
+      btn.disabled=false;
+      btn.textContent='🗑 Elimina tutte le partite';
+    }
+  });
+
+  return true;
+}
+
+if(!installDeleteAllButton()){
+  let deleteButtonTries=0;
+  const deleteButtonTimer=setInterval(()=>{
+    deleteButtonTries++;
+    if(installDeleteAllButton()||deleteButtonTries>=40){
+      clearInterval(deleteButtonTimer);
+    }
+  },250);
+}
+
+
 console.info(
-  '[V9 calendario] Motore 10.7 GLOBAL SORT + SOSPENSIONI ORIGINALI attivo'
+  '[V9 calendario] Motore 10.7.1 GLOBAL SORT + SOSPENSIONI + DELETE ALL attivo'
 );
 
 })();
