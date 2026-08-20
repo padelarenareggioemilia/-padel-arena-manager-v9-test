@@ -1,6 +1,6 @@
 /*
  AICS PADEL CHAMPIONSHIP MANAGER V9
- CALENDARIO SEMPLICE 9.3.1
+ CALENDARIO SEMPLICE 9.3.2
 
  - giornate fisse
  - solo inversione casa/trasferta
@@ -269,15 +269,30 @@
     }
   });
 
-  // RIPRISTINO TASTO ELIMINA TUTTE LE PARTITE
-  const actions=document.querySelector('section.card .actions');
-  if(actions && !document.getElementById('deleteAllFixturesBtn')){
+  // TASTO ELIMINA TUTTE: inserito accanto ai comandi reali "Anteprima calendario / Aggiorna elenco"
+  function installDeleteAllButton(){
+    if(document.getElementById('deleteAllFixturesBtn')) return true;
+
+    const buttons=[...document.querySelectorAll('button')];
+    const previewBtn=buttons.find(b=>/anteprima calendario/i.test((b.textContent||'').trim()));
+    const refreshBtn=buttons.find(b=>/aggiorna elenco/i.test((b.textContent||'').trim()));
+    const anchor=previewBtn||refreshBtn;
+    if(!anchor) return false;
+
+    const actions=anchor.closest('.actions')||anchor.parentElement;
+    if(!actions) return false;
+
     const btn=document.createElement('button');
     btn.id='deleteAllFixturesBtn';
     btn.className='btn danger';
     btn.type='button';
     btn.textContent='🗑 Elimina tutte le partite';
-    actions.appendChild(btn);
+
+    if(refreshBtn && refreshBtn.parentElement===actions){
+      refreshBtn.insertAdjacentElement('afterend',btn);
+    }else{
+      actions.appendChild(btn);
+    }
 
     btn.addEventListener('click',async function(){
       const code=$id('competition')?.value;
@@ -297,12 +312,16 @@
         btn.disabled=true;
         btn.textContent='Eliminazione in corso…';
 
-        const res=await s.from('fixtures').delete().eq('competition_code',code);
+        // usa il client Supabase già presente nella pagina
+        const client=(typeof sb!=='undefined'&&sb)||(typeof s!=='undefined'&&s);
+        if(!client) throw new Error('Client database non disponibile.');
+
+        const res=await client.from('fixtures').delete().eq('competition_code',code);
         if(res.error) throw res.error;
 
-        pendingCalendar=[];
-        fixtures=[];
-        allFixtures=(allFixtures||[]).filter(f=>f.competition_code!==code);
+        if(typeof pendingCalendar!=='undefined') pendingCalendar=[];
+        if(typeof fixtures!=='undefined') fixtures=[];
+        if(typeof allFixtures!=='undefined') allFixtures=(allFixtures||[]).filter(f=>f.competition_code!==code);
 
         if(typeof clearCalendarPreview==='function') clearCalendarPreview();
         if(typeof fetchData==='function') await fetchData();
@@ -316,7 +335,17 @@
         btn.textContent='🗑 Elimina tutte le partite';
       }
     });
+
+    return true;
   }
 
-  console.info('[V9 calendario] Motore semplice 9.3.1 attivo');
+  if(!installDeleteAllButton()){
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries++;
+      if(installDeleteAllButton()||tries>=40) clearInterval(timer);
+    },250);
+  }
+
+  console.info('[V9 calendario] Motore semplice 9.3.2 attivo');
 })();
