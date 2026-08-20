@@ -1,13 +1,13 @@
 /*
  AICS PADEL CHAMPIONSHIP MANAGER V9
- CALENDARIO SEMPLICE 9.3.0
+ CALENDARIO SEMPLICE 9.3.1
 
- PRINCIPIO:
- - le giornate NON si spostano;
- - il giorno/ora/campo dipendono SOLO dalla squadra di casa;
- - per evitare conflitti si prova SOLO CASA <-> TRASFERTA;
- - il ritorno è sempre lo specchio esatto dell'andata;
- - se nessuna inversione risolve, il calendario NON viene salvato e segnala il caso.
+ - giornate fisse
+ - solo inversione casa/trasferta
+ - ritorno speculare
+ - ignora TUTTE le vecchie partite della competizione che si sta rigenerando
+ - mantiene il controllo sulle altre competizioni
+ - ripristina "Elimina tutte le partite" con doppia conferma
 */
 (function(){
   'use strict';
@@ -15,59 +15,27 @@
   const $id = id => document.getElementById(id);
 
   function pad(n){ return String(n).padStart(2,'0'); }
-
-  function dateKeyLocal(d){
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  }
-
-  function fromDateKey(key){
-    const [y,m,d]=String(key).split('-').map(Number);
-    return new Date(y,m-1,d,12,0,0,0);
-  }
-
-  function addDays(d,days){
-    const x=new Date(d.getFullYear(),d.getMonth(),d.getDate(),12,0,0,0);
-    x.setDate(x.getDate()+days);
-    return x;
-  }
-
+  function dateKeyLocal(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function fromDateKey(key){ const [y,m,d]=String(key).split('-').map(Number); return new Date(y,m-1,d,12,0,0,0); }
+  function addDays(d,days){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate(),12,0,0,0); x.setDate(x.getDate()+days); return x; }
   function normalizeText(v){
-    return String(v??'')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g,' ')
-      .replace(/\s+/g,' ')
-      .trim();
+    return String(v??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
   }
 
   function homeSlot(team){
     if(!team) throw new Error('Squadra non valida.');
-
     const targetDay=dayIndex(team.home_match_day);
     const time=normalizeTime(team.home_match_time);
-
-    if(targetDay===undefined || !time){
-      throw new Error(`Giorno/orario casalingo incompleto per ${team.name}.`);
-    }
+    if(targetDay===undefined || !time) throw new Error(`Giorno/orario casalingo incompleto per ${team.name}.`);
 
     let facility='';
-    if(typeof facilityKey==='function'){
-      facility=facilityKey(team,team.home_court)||'';
-    }
+    if(typeof facilityKey==='function') facility=facilityKey(team,team.home_court)||'';
     if(!facility){
-      facility=[
-        team.home_court,
-        team.club_address,
-        team.club_city
-      ].map(normalizeText).filter(Boolean).join('|');
+      facility=[team.home_court,team.club_address,team.club_city].map(normalizeText).filter(Boolean).join('|');
     }
 
-    return {
-      dayIndex:targetDay,
-      time,
-      facility,
-      venue:team.home_court||''
-    };
+    return {dayIndex:targetDay,time,facility,venue:team.home_court||''};
   }
 
   function occurrenceInRound(anchor,team){
@@ -75,43 +43,30 @@
     const d=new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate(),12,0,0,0);
     let guard=0;
     while(d.getDay()!==slot.dayIndex && guard++<7) d.setDate(d.getDate()+1);
-
     const dateKey=dateKeyLocal(d);
-    const iso=localDateTimeToISO(dateKey,slot.time);
-
     return {
-      scheduled_at:iso,
-      dateKey,
-      time:slot.time,
-      facility:slot.facility,
-      venue:slot.venue
+      scheduled_at:localDateTimeToISO(dateKey,slot.time),
+      dateKey,time:slot.time,facility:slot.facility,venue:slot.venue
     };
   }
 
-  function conflictKey(occ){
-    return `${new Date(occ.scheduled_at).toISOString()}||${occ.facility}`;
-  }
+  function conflictKey(occ){ return `${new Date(occ.scheduled_at).toISOString()}||${occ.facility}`; }
 
   function existingHomeOccupancy(competitionCode){
     const map=new Map();
 
     for(const f of (allFixtures||[])){
-      // Ignora le partite della competizione che stiamo rigenerando.
-      if(f.competition_code===competitionCode && f.phase==='Girone') continue;
+      // IMPORTANTE: ignora QUALSIASI vecchia partita della competizione che stiamo rigenerando.
+      if(f.competition_code===competitionCode) continue;
 
       const home=teams.find(t=>t.id===f.home_team_id);
       if(!home || !f.scheduled_at) continue;
 
       let facility='';
-      if(typeof facilityKey==='function'){
-        facility=facilityKey(home,f.venue||home.home_court)||'';
-      }
+      if(typeof facilityKey==='function') facility=facilityKey(home,f.venue||home.home_court)||'';
       if(!facility){
-        facility=[
-          f.venue||home.home_court,
-          home.club_address,
-          home.club_city
-        ].map(normalizeText).filter(Boolean).join('|');
+        facility=[f.venue||home.home_court,home.club_address,home.club_city]
+          .map(normalizeText).filter(Boolean).join('|');
       }
 
       const key=`${new Date(f.scheduled_at).toISOString()}||${facility}`;
@@ -132,30 +87,21 @@
   function validateOrientation(orientedPairs,anchor,competitionCode,occupiedExternal){
     const used=new Map();
 
-    for(const [home,away] of orientedPairs){
+    for(const [home] of orientedPairs){
       const occ=occurrenceInRound(anchor,home);
 
       if(isBlackout(occ,competitionCode)){
-        return {
-          ok:false,
-          reason:`${home.name} giocherebbe in una data esclusa (${occ.dateKey}).`
-        };
+        return {ok:false,reason:`${home.name} giocherebbe in una data esclusa (${occ.dateKey}).`};
       }
 
       const key=conflictKey(occ);
 
       if(used.has(key)){
-        return {
-          ok:false,
-          reason:`${home.name} e ${used.get(key).name} sarebbero entrambe in casa sullo stesso campo, giorno e ora.`
-        };
+        return {ok:false,reason:`${home.name} e ${used.get(key).name} sarebbero entrambe in casa sullo stesso campo, giorno e ora.`};
       }
 
       if(occupiedExternal.has(key)){
-        return {
-          ok:false,
-          reason:`${home.name} entrerebbe in conflitto con una partita già salvata sullo stesso campo, giorno e ora.`
-        };
+        return {ok:false,reason:`${home.name} entrerebbe in conflitto con una partita di un'altra competizione già salvata sullo stesso campo, giorno e ora.`};
       }
 
       used.set(key,home);
@@ -164,57 +110,27 @@
     return {ok:true};
   }
 
-  /*
-   * Prova soltanto le inversioni casa/trasferta.
-   * Con 3 partite in una giornata sono appena 8 combinazioni.
-   *
-   * Se c'è andata+ritorno, la combinazione viene accettata SOLO se
-   * funziona sia all'andata sia nel ritorno speculare.
-   */
   function chooseOrientation(rawPairs,firstAnchor,returnAnchor,competitionCode,occupiedExternal,isDouble){
     const count=rawPairs.length;
     const possibilities=1<<count;
     let lastReason='';
 
     for(let mask=0;mask<possibilities;mask++){
-      const first=rawPairs.map(([a,b],i)=>
-        (mask&(1<<i)) ? [b,a] : [a,b]
-      );
+      const first=rawPairs.map(([a,b],i)=>(mask&(1<<i)) ? [b,a] : [a,b]);
 
-      const checkFirst=validateOrientation(
-        first,
-        firstAnchor,
-        competitionCode,
-        occupiedExternal
-      );
-
-      if(!checkFirst.ok){
-        lastReason=checkFirst.reason;
-        continue;
-      }
+      const checkFirst=validateOrientation(first,firstAnchor,competitionCode,occupiedExternal);
+      if(!checkFirst.ok){ lastReason=checkFirst.reason; continue; }
 
       if(isDouble){
         const second=first.map(([home,away])=>[away,home]);
-
-        const checkReturn=validateOrientation(
-          second,
-          returnAnchor,
-          competitionCode,
-          occupiedExternal
-        );
-
-        if(!checkReturn.ok){
-          lastReason=checkReturn.reason;
-          continue;
-        }
+        const checkReturn=validateOrientation(second,returnAnchor,competitionCode,occupiedExternal);
+        if(!checkReturn.ok){ lastReason=checkReturn.reason; continue; }
       }
 
       return first;
     }
 
-    throw new Error(
-      `Nessuna inversione casa/trasferta risolve questa giornata. ${lastReason||''}`
-    );
+    throw new Error(`Nessuna inversione casa/trasferta risolve questa giornata. ${lastReason||''}`);
   }
 
   function makeFixture(group,roundNumber,home,away,anchor,competitionCode){
@@ -238,11 +154,7 @@
       _local_time:local.time,
       _local_weekday:local.weekday,
       _facility_key:occ.facility,
-      _facility_label:[
-        home.home_court,
-        home.club_address,
-        home.club_city
-      ].filter(Boolean).join(' · '),
+      _facility_label:[home.home_court,home.club_address,home.club_city].filter(Boolean).join(' · '),
       _duration_minutes:matchDurationMinutes(home)
     };
 
@@ -251,19 +163,12 @@
   }
 
   window.buildCalendarPayload=async function(){
-    if(!$id('startDate')?.value){
-      throw new Error('Inserisci la data di partenza.');
-    }
+    if(!$id('startDate')?.value) throw new Error('Inserisci la data di partenza.');
 
     await fetchData();
 
-    if(!groups.length){
-      throw new Error('Prima devi creare i gironi.');
-    }
-
-    if(!validateTeams(false)){
-      throw new Error('Correggi prima i dati delle squadre indicati sopra.');
-    }
+    if(!groups.length) throw new Error('Prima devi creare i gironi.');
+    if(!validateTeams(false)) throw new Error('Correggi prima i dati delle squadre indicati sopra.');
 
     const code=$id('competition').value;
     const formula=$id('formula').value;
@@ -284,63 +189,34 @@
       const firstLegCount=rawRounds.length;
       const chosenFirstLeg=[];
 
-      /*
-       * Le date sono matematiche e NON cambiano:
-       * G1 = start
-       * G2 = start + intervallo
-       * G3 = start + 2*intervallo
-       * ...
-       */
       for(let i=0;i<firstLegCount;i++){
         const firstAnchor=addDays(start,i*intervalWeeks*7);
-        const returnAnchor=isDouble
-          ? addDays(start,(i+firstLegCount)*intervalWeeks*7)
-          : null;
+        const returnAnchor=isDouble ? addDays(start,(i+firstLegCount)*intervalWeeks*7) : null;
 
-        const chosen=chooseOrientation(
-          rawRounds[i],
-          firstAnchor,
-          returnAnchor,
-          code,
-          occupiedExternal,
-          isDouble
+        chosenFirstLeg.push(
+          chooseOrientation(rawRounds[i],firstAnchor,returnAnchor,code,occupiedExternal,isDouble)
         );
-
-        chosenFirstLeg.push(chosen);
       }
 
-      // ANDATA
       for(let i=0;i<chosenFirstLeg.length;i++){
         const roundNumber=i+1;
         const anchor=addDays(start,i*intervalWeeks*7);
-
         for(const [home,away] of chosenFirstLeg[i]){
-          payload.push(
-            makeFixture(group,roundNumber,home,away,anchor,code)
-          );
+          payload.push(makeFixture(group,roundNumber,home,away,anchor,code));
         }
       }
 
-      // RITORNO = specchio esatto dell'andata
       if(isDouble){
         for(let i=0;i<chosenFirstLeg.length;i++){
           const roundNumber=i+1+firstLegCount;
           const anchor=addDays(start,(i+firstLegCount)*intervalWeeks*7);
-
           for(const [home,away] of chosenFirstLeg[i]){
-            payload.push(
-              makeFixture(group,roundNumber,away,home,anchor,code)
-            );
+            payload.push(makeFixture(group,roundNumber,away,home,anchor,code));
           }
         }
       }
     }
 
-    /*
-     * Controllo finale semplicissimo:
-     * nello stesso istante e stesso impianto non possono esserci
-     * due squadre di casa diverse.
-     */
     const seen=new Map();
 
     for(const f of payload){
@@ -348,15 +224,11 @@
 
       if(seen.has(key)){
         const other=seen.get(key);
-        throw new Error(
-          `Calendario non salvato: ${other._home_name} e ${f._home_name} risultano entrambe in casa sullo stesso campo, giorno e ora.`
-        );
+        throw new Error(`Calendario non salvato: ${other._home_name} e ${f._home_name} risultano entrambe in casa sullo stesso campo, giorno e ora.`);
       }
 
       if(occupiedExternal.has(key)){
-        throw new Error(
-          `Calendario non salvato: ${f._home_name} entra in conflitto con una partita già salvata sullo stesso campo, giorno e ora.`
-        );
+        throw new Error(`Calendario non salvato: ${f._home_name} entra in conflitto con una partita di un'altra competizione già salvata sullo stesso campo, giorno e ora.`);
       }
 
       seen.set(key,f);
@@ -374,40 +246,17 @@
     return payload;
   };
 
-  // Nessuna correzione successiva: il calendario deve nascere già corretto.
-  window.autoResolveConflicts=function(payload,competitionCode){
-    return {
-      resolved:[],
-      changed:[],
-      unresolved:[],
-      remainingFacilityConflicts:[],
-      remainingTeamConflicts:[],
-      existing:[]
-    };
+  window.autoResolveConflicts=function(){
+    return {resolved:[],changed:[],unresolved:[],remainingFacilityConflicts:[],remainingTeamConflicts:[],existing:[]};
   };
-
-  window.autoFixAllCalendarConflicts=function(){
-    return {
-      resolved:[],
-      changed:[],
-      unresolved:[],
-      remainingFacilityConflicts:[],
-      remainingTeamConflicts:[],
-      existing:[]
-    };
-  };
-
+  window.autoFixAllCalendarConflicts=window.autoResolveConflicts;
   window.collectCalendarConflicts=function(){ return []; };
   window.createSuggestionAttempts=function(){ return []; };
 
-  try{
-    if(typeof closeConflictAssistant==='function') closeConflictAssistant();
-  }catch(_){}
+  try{ if(typeof closeConflictAssistant==='function') closeConflictAssistant(); }catch(_){}
 
   [...document.querySelectorAll('button')].forEach(btn=>{
-    if(/Risolvi automaticamente anomalie/i.test(btn.textContent||'')){
-      btn.style.display='none';
-    }
+    if(/Risolvi automaticamente anomalie/i.test(btn.textContent||'')) btn.style.display='none';
   });
 
   [...document.querySelectorAll('.notice')].forEach(box=>{
@@ -420,5 +269,54 @@
     }
   });
 
-  console.info('[V9 calendario] Motore semplice 9.3.0 attivo');
+  // RIPRISTINO TASTO ELIMINA TUTTE LE PARTITE
+  const actions=document.querySelector('section.card .actions');
+  if(actions && !document.getElementById('deleteAllFixturesBtn')){
+    const btn=document.createElement('button');
+    btn.id='deleteAllFixturesBtn';
+    btn.className='btn danger';
+    btn.type='button';
+    btn.textContent='🗑 Elimina tutte le partite';
+    actions.appendChild(btn);
+
+    btn.addEventListener('click',async function(){
+      const code=$id('competition')?.value;
+      if(!code) return;
+
+      const label=$id('competition')?.selectedOptions?.[0]?.textContent||code;
+
+      if(!confirm(
+        `ATTENZIONE\n\nStai per eliminare TUTTE le partite di ${label}.\n\nVuoi continuare?`
+      )) return;
+
+      if(prompt(
+        `Seconda conferma: scrivi ELIMINA per cancellare tutte le partite di ${label}.`
+      )!=='ELIMINA') return;
+
+      try{
+        btn.disabled=true;
+        btn.textContent='Eliminazione in corso…';
+
+        const res=await s.from('fixtures').delete().eq('competition_code',code);
+        if(res.error) throw res.error;
+
+        pendingCalendar=[];
+        fixtures=[];
+        allFixtures=(allFixtures||[]).filter(f=>f.competition_code!==code);
+
+        if(typeof clearCalendarPreview==='function') clearCalendarPreview();
+        if(typeof fetchData==='function') await fetchData();
+        if(typeof renderFixtures==='function') renderFixtures();
+
+        msg(`✅ Tutte le partite di ${label} sono state eliminate.`);
+      }catch(e){
+        msg(`Errore eliminazione: ${e?.message||String(e)}`,true);
+      }finally{
+        btn.disabled=false;
+        btn.textContent='🗑 Elimina tutte le partite';
+      }
+    });
+  }
+
+  console.info('[V9 calendario] Motore semplice 9.3.1 attivo');
 })();
