@@ -1,22 +1,11 @@
-/* calendar-v9-clean.js - V9 SIMPLE 10.4 GLOBAL SORT
+/* calendar-v9-clean.js - V9 SIMPLE 10.5 GLOBAL SORT + INTERRUZIONI
  *
- * GENERATORE GLOBALE DA ZERO
- *
- * Regole:
- * 1) una squadra gioca una sola volta per giornata;
- * 2) giorno/ora/campo dipendono SOLO dalla squadra di casa;
- * 3) la squadra ospite non impone alcuna disponibilità;
- * 4) squadre che condividono lo stesso impianto vengono coordinate come
- *    squadre di calcio che condividono lo stadio;
- * 5) se due squadre che condividono il campo giocano tra loro, è un derby:
- *    una sola partita, quindi nessun conflitto;
- * 6) il motore può cambiare ANCHE GLI ACCOPPIAMENTI DELLE GIORNATE,
- *    non soltanto casa/trasferta;
- * 7) ogni coppia si affronta una sola volta nell'andata;
- * 8) il ritorno è lo specchio esatto dell'andata;
- * 9) nessuna partita viene spostata ad altra settimana.
- *
- * Questo file sostituisce solamente la logica di generazione.
+ * BASE IDENTICA ALLA 10.4 GLOBAL SORT.
+ * UNICA AGGIUNTA:
+ * - legge le interruzioni/festività già presenti in calendar_blackouts;
+ * - se una settimana contiene una data esclusa valida per la competizione,
+ *   salta l'intera settimana e colloca la giornata nella prima settimana utile successiva;
+ * - nessun'altra logica del sorteggio viene modificata.
  */
 (function(){
 'use strict';
@@ -43,12 +32,10 @@ function dateKeyLocal(d){
 function durationMinutes(team){
   return Number(team?.match_slot_minutes||$id('defaultSlotMinutes')?.value||120);
 }
+function pairKeyIds(a,b){
+  return [String(a),String(b)].sort().join('|');
+}
 
-/* Identificatore dell'impianto condiviso.
-   Preferisce facility_id se presente.
-   Altrimenti usa l'identificatore già esistente nella V9.
-   Ultimo fallback: indirizzo + città + campo.
-*/
 function sharedFacilityKey(team,venue){
   if(team?.facility_id) return `id:${team.facility_id}`;
 
@@ -69,37 +56,100 @@ function sharedFacilityKey(team,venue){
 
 function overlap(a,b){
   if(!a?.scheduled_at||!b?.scheduled_at) return false;
-
   const a0=new Date(a.scheduled_at).getTime();
   const b0=new Date(b.scheduled_at).getTime();
   const a1=a0+(a._duration_minutes||120)*60000;
   const b1=b0+(b._duration_minutes||120)*60000;
-
   return a0<b1 && b0<a1;
-}
-
-function pairKeyIds(a,b){
-  return [String(a),String(b)].sort().join('|');
 }
 
 function sameLogicalMatch(a,b){
   if(a?.id && b?.id && String(a.id)===String(b.id)) return true;
-
   const ak=pairKeyIds(a?.home_team_id,a?.away_team_id);
   const bk=pairKeyIds(b?.home_team_id,b?.away_team_id);
-
   return ak===bk;
 }
 
-/* Due gare sono in conflitto SOLO se sono due gare diverse,
-   usano lo stesso impianto e si sovrappongono.
-*/
 function realFacilityConflict(a,b){
   if(!a||!b) return false;
   if(sameLogicalMatch(a,b)) return false;
   if(!a._facility_key||!b._facility_key) return false;
-
   return a._facility_key===b._facility_key && overlap(a,b);
+}
+
+/* =========================
+   INTERRUZIONI / FESTIVITÀ
+   ========================= */
+
+/* True se la data è esclusa per la competizione corrente */
+function isBlackoutDate(dateKey,competitionCode){
+  return (blackouts||[]).some(b=>{
+    const code=String(b.competition_code||'ALL').toUpperCase();
+    return String(b.blackout_date||'')===dateKey &&
+      (code==='ALL' || code===String(competitionCode).toUpperCase());
+  });
+}
+
+/* Restituisce lunedì della settimana della data */
+function mondayOfWeek(d){
+  const x=new Date(d);
+  const day=(x.getDay()+6)%7;
+  x.setDate(x.getDate()-day);
+  x.setHours(12,0,0,0);
+  return x;
+}
+
+/* Se QUALSIASI blackout della competizione cade nella settimana,
+   la settimana viene considerata interrotta e non ospita una giornata.
+*/
+function weekIsBlocked(anchor,competitionCode){
+  const monday=mondayOfWeek(anchor);
+  for(let i=0;i<7;i++){
+    const d=addDays(monday,i);
+    if(isBlackoutDate(dateKeyLocal(d),competitionCode)){
+      return true;
+    }
+  }
+  return false;
+}
+
+/* Calcola la settimana effettiva della giornata N:
+   avanza di intervalWeeks, ma salta tutte le settimane bloccate.
+*/
+function buildRoundAnchors(start,totalRounds,intervalWeeks,competitionCode){
+  const anchors=[];
+  let cursor=new Date(start);
+
+  while(anchors.length<totalRounds){
+    while(weekIsBlocked(cursor,competitionCode)){
+      cursor=addDays(cursor,7);
+    }
+
+    anchors.push(new Date(cursor));
+
+    cursor=addDays(cursor,intervalWeeks*7);
+  }
+
+  return anchors;
+}
+
+/* Per il ritorno continuiamo DOPO l'ultima giornata di andata,
+   saltando ancora le settimane interrotte.
+*/
+function buildReturnAnchors(afterDate,totalRounds,intervalWeeks,competitionCode){
+  const anchors=[];
+  let cursor=addDays(afterDate,intervalWeeks*7);
+
+  while(anchors.length<totalRounds){
+    while(weekIsBlocked(cursor,competitionCode)){
+      cursor=addDays(cursor,7);
+    }
+
+    anchors.push(new Date(cursor));
+    cursor=addDays(cursor,intervalWeeks*7);
+  }
+
+  return anchors;
 }
 
 function homeOccurrence(anchor,team){
@@ -187,10 +237,6 @@ function conflictsAny(f,others){
   return others.some(o=>realFacilityConflict(f,o));
 }
 
-/* Genera tutti gli abbinamenti possibili di una giornata,
-   rispettando le coppie già usate.
-   Con numero dispari di squadre viene aggiunto un BYE.
-*/
 function generateMatchings(nodes,usedPairs){
   const out=[];
 
@@ -223,9 +269,6 @@ function generateMatchings(nodes,usedPairs){
   return out;
 }
 
-/* Trasforma un matching in tutte le possibili orientazioni casa/trasferta.
-   Le coppie con BYE non generano partite.
-*/
 function orientationOptions(matching,group,roundNo,anchor,code){
   const realPairs=matching.filter(([a,b])=>!a.__bye&&!b.__bye);
   const out=[];
@@ -265,9 +308,6 @@ function mirroredFixtures(option,group,roundNo,anchor,code){
   );
 }
 
-/* Controlla se tutte le gare di un'opzione sono compatibili
-   con le gare già salvate di altre competizioni.
-*/
 function compatibleWithExternal(fixtures,external){
   for(const f of fixtures){
     if(conflictsAny(f,external)) return false;
@@ -275,15 +315,11 @@ function compatibleWithExternal(fixtures,external){
   return true;
 }
 
-/* SOLUTORE GLOBALE DEL GIRONE.
-   Non parte da un round-robin fisso: costruisce gli accoppiamenti
-   giornata per giornata e decide insieme casa/trasferta.
-*/
 function solveGroup({
   group,
   groupTeams,
-  start,
-  intervalWeeks,
+  firstAnchors,
+  returnAnchors,
   code,
   isDouble,
   external
@@ -298,10 +334,6 @@ function solveGroup({
   const chosen=[];
   const usedPairs=new Set();
 
-  /* Euristica: tenta prima i matching con più derby/condivisioni.
-     Questo aiuta a "consumare" naturalmente le coppie che condividono
-     l'impianto invece di creare due gare casalinghe concorrenti.
-  */
   function matchingScore(matching){
     let score=0;
 
@@ -323,10 +355,8 @@ function solveGroup({
     }
 
     const roundNo=roundIndex+1;
-    const firstAnchor=addDays(start,roundIndex*intervalWeeks*7);
-    const returnAnchor=isDouble
-      ? addDays(start,(roundIndex+totalRounds)*intervalWeeks*7)
-      : null;
+    const firstAnchor=firstAnchors[roundIndex];
+    const returnAnchor=isDouble ? returnAnchors[roundIndex] : null;
 
     let matchings=generateMatchings(nodes,usedPairs);
     matchings.sort((a,b)=>matchingScore(b)-matchingScore(a));
@@ -339,24 +369,6 @@ function solveGroup({
         firstAnchor,
         code
       );
-
-      /* Preferisci orientazioni che alternano le squadre su impianto condiviso */
-      options.sort((x,y)=>{
-        function balanceScore(opt){
-          let s=0;
-
-          for(const [home,away] of opt.pairs){
-            const hk=sharedFacilityKey(home,home.home_court);
-            const ak=sharedFacilityKey(away,away.home_court);
-
-            if(hk===ak) s+=20; // derby: ottimo
-          }
-
-          return s;
-        }
-
-        return balanceScore(y)-balanceScore(x);
-      });
 
       for(const option of options){
         if(!compatibleWithExternal(option.fixtures,external)){
@@ -374,7 +386,6 @@ function solveGroup({
             code
           );
 
-          /* controllo interno del ritorno */
           let returnOk=true;
 
           for(let i=0;i<returnFixtures.length;i++){
@@ -393,7 +404,6 @@ function solveGroup({
           if(!returnOk) continue;
         }
 
-        /* consuma le coppie reali */
         const added=[];
 
         for(const [a,b] of matching){
@@ -428,8 +438,7 @@ function solveGroup({
   if(!rec(0)){
     throw new Error(
       `Non riesco a costruire un calendario completo per il girone ${group.name||''} `+
-      `rispettando gli impianti condivisi. Nessuna partita è stata spostata: `+
-      `il sorteggio non è stato salvato.`
+      `rispettando impianti condivisi e interruzioni. Nessuna partita è stata spostata singolarmente.`
     );
   }
 
@@ -467,11 +476,31 @@ window.buildCalendarPayload=async function(){
 
     if(groupTeams.length<2) continue;
 
+    const nodeCount=groupTeams.length%2 ? groupTeams.length+1 : groupTeams.length;
+    const totalRounds=nodeCount-1;
+
+    /* costruzione delle settimane utili, saltando festività/interruzioni */
+    const firstAnchors=buildRoundAnchors(
+      start,
+      totalRounds,
+      intervalWeeks,
+      code
+    );
+
+    const returnAnchors=isDouble
+      ? buildReturnAnchors(
+          firstAnchors[firstAnchors.length-1],
+          totalRounds,
+          intervalWeeks,
+          code
+        )
+      : [];
+
     const solved=solveGroup({
       group,
       groupTeams,
-      start,
-      intervalWeeks,
+      firstAnchors,
+      returnAnchors,
       code,
       isDouble,
       external
@@ -488,7 +517,6 @@ window.buildCalendarPayload=async function(){
     }
   }
 
-  /* Controllo finale tra tutti i gironi della stessa competizione */
   for(let i=0;i<payload.length;i++){
     for(let j=i+1;j<payload.length;j++){
       if(realFacilityConflict(payload[i],payload[j])){
@@ -519,13 +547,12 @@ window.buildCalendarPayload=async function(){
     conflictsSolved:0,
     conflictsUnresolved:0,
     progression:'OK',
-    rule:'Sorteggio globale: accoppiamenti + casa/trasferta costruiti insieme; derby ammessi; ritorno speculare.'
+    rule:'GLOBAL SORT + interruzioni: accoppiamenti e casa/trasferta costruiti insieme, settimane festive saltate, ritorno speculare.'
   };
 
   return payload;
 };
 
-/* Le vecchie funzioni di riparazione NON devono più intervenire */
 window.autoResolveConflicts=function(){
   return {
     resolved:[],
@@ -558,10 +585,11 @@ try{
     box.innerHTML=
       '<b>Regola calendario:</b> il sorteggio costruisce insieme <b>accoppiamenti e CASA ↔ TRASFERTA</b>. '+
       'Le squadre che condividono un campo vengono alternate come negli stadi condivisi nel calcio. '+
-      'Se giocano tra loro è un derby: una sola gara, nessun conflitto. '+
-      'Il ritorno è speculare e <b>nessuna partita viene spostata di settimana</b>.';
+      'Le <b>interruzioni/festività già configurate vengono rispettate</b>: la settimana viene saltata e il campionato riprende dalla prima settimana utile. '+
+      'Il ritorno è speculare e nessuna singola partita viene spostata arbitrariamente.';
   }
 });
 
-console.info('[V9 calendario] Motore 10.4 GLOBAL SORT attivo');
+console.info('[V9 calendario] Motore 10.5 GLOBAL SORT + INTERRUZIONI attivo');
+
 })();
