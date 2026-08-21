@@ -2,24 +2,36 @@
 <html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AICS Padel Championship · Accesso</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
-<style>body{margin:0;background:#f3f7fb;font-family:system-ui;color:#092d5d}main{max-width:760px;margin:28px auto;padding:14px}.hero,.card{border:1px solid #bfd0e2;border-radius:20px;padding:18px;background:#fff;margin:12px 0}.hero{background:linear-gradient(135deg,#164a95,#082f68);color:#fff}.field{margin:10px 0}.field label{display:block;font-weight:900;margin-bottom:5px}.field input{width:100%;padding:11px;border:1px solid #bfd0e2;border-radius:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:11px 13px;font-weight:900;cursor:pointer}.primary{background:#164a95;color:#fff}.secondary{background:#fff;color:#164a95;border:1px solid #164a95}.danger{background:#ce2b37;color:#fff}.notice{padding:11px;border:1px solid #bfd0e2;border-radius:11px;background:#eaf2fb;margin:10px 0}.hidden{display:none}.err{background:#fdecef;border-color:#dd7a85}.ok{background:#ebf8f0;border-color:#79bf90}</style></head>
-<body><main><header class="hero"><h1>AICS PADEL CHAMPIONSHIP</h1><div>V9 Recovery Build 1.0</div></header>
-<section class="card"><h2>Navigazione Free</h2><p>Senza account puoi consultare Serie A, Serie B, Serie C, Coppa Italia, Supercoppa, giornate, risultati e classifiche pubblicate.</p><button class="btn secondary" onclick="location.href='public.html?v=recovery10'">Naviga come Free</button></section>
-<section class="card"><h2>Accedi al tuo account</h2><div class="field"><label>Email</label><input id="email" type="email"></div><div class="field"><label>Password</label><input id="password" type="password"></div><div class="actions"><button class="btn primary" id="loginBtn">Accedi</button><button class="btn danger" id="logoutBtn">Logout / Cambia account</button></div><div id="msg" class="notice hidden"></div></section>
-<section class="card"><h2>Sei un giocatore già approvato?</h2><p>Recupera la tua anagrafica usando la stessa email comunicata al capitano.</p><button class="btn secondary" onclick="location.href='player-account.html?v=recovery10'">Registrati / Recupera iscrizione</button></section></main>
+<style>body{margin:0;background:#f3f7fb;font-family:system-ui;color:#092d5d}main{max-width:760px;margin:28px auto;padding:14px}.hero,.card{border:1px solid #bfd0e2;border-radius:20px;padding:18px;background:#fff;margin:12px 0}.hero{background:linear-gradient(135deg,#164a95,#082f68);color:#fff}.field{margin:10px 0}.field label{display:block;font-weight:900;margin-bottom:5px}.field input{width:100%;padding:11px;border:1px solid #bfd0e2;border-radius:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:11px 13px;font-weight:900;cursor:pointer}.primary{background:#164a95;color:#fff}.secondary{background:#fff;color:#164a95;border:1px solid #164a95}.danger{background:#ce2b37;color:#fff}.notice{padding:11px;border:1px solid #bfd0e2;border-radius:11px;background:#eaf2fb;margin:10px 0}.hidden{display:none}.err{background:#fdecef;border-color:#dd7a85}.ok{background:#ebf8f0;border-color:#79bf90}.linkbtn{background:transparent;border:0;color:#164a95;font-weight:900;text-decoration:underline;cursor:pointer;padding:8px 0}</style></head>
+<body><main><header class="hero"><h1>AICS PADEL CHAMPIONSHIP</h1><div>V9 Recovery Build 1.1</div></header>
+<section class="card"><h2>Navigazione Free</h2><p>Senza account puoi consultare Serie A, Serie B, Serie C, Coppa Italia, Supercoppa, giornate, risultati e classifiche pubblicate.</p><button class="btn secondary" onclick="location.href='public.html?v=recovery11'">Naviga come Free</button></section>
+<section class="card"><h2>Accedi al tuo account</h2><div class="field"><label>Email</label><input id="email" type="email"></div><div class="field"><label>Password</label><input id="password" type="password"></div><div class="actions"><button class="btn primary" id="loginBtn">Accedi</button><button class="btn danger" id="logoutBtn">Logout / Cambia account</button></div><button class="linkbtn" id="forgotBtn" type="button">Hai dimenticato la password?</button><div id="msg" class="notice hidden"></div></section>
+<section class="card"><h2>Sei un giocatore già approvato?</h2><p>Recupera la tua anagrafica usando la stessa email comunicata al capitano.</p><button class="btn secondary" onclick="location.href='player-account.html?v=recovery11'">Registrati / Recupera iscrizione</button></section></main>
 <script>
 const cfg=window.PAM_V9_CONFIG,box=document.getElementById('msg');
 function show(text,error=false){box.textContent=text;box.className='notice '+(error?'err':'ok');box.classList.remove('hidden');}
 if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey){show('Configurazione Supabase non disponibile. Controlla config.js.',true);throw new Error('PAM_V9_CONFIG mancante');}
 const client=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const RESET_REDIRECT='https://padelarenareggioemilia.github.io/-padel-arena-manager-v9-test/reset-password.html';
 async function clearSession(){try{await client.auth.signOut({scope:'local'});}catch(e){}}
 document.getElementById('logoutBtn').onclick=async()=>{await clearSession();document.getElementById('email').value='';document.getElementById('password').value='';show('Sessione chiusa. Ora puoi usare un altro account.');};
 document.getElementById('loginBtn').onclick=async()=>{
  const email=document.getElementById('email').value.trim(),password=document.getElementById('password').value;
  if(!email||!password)return show('Inserisci email e password.',true);
  const b=document.getElementById('loginBtn');b.disabled=true;b.textContent='Accesso in corso…';show('Verifica credenziali…');
- try{await clearSession();const r=await client.auth.signInWithPassword({email,password});if(r.error)throw r.error;location.replace('account-home.html?v=recovery10');}
+ try{await clearSession();const r=await client.auth.signInWithPassword({email,password});if(r.error)throw r.error;location.replace('account-home.html?v=recovery11');}
  catch(error){show(error.message||String(error),true);b.disabled=false;b.textContent='Accedi';}
+};
+document.getElementById('forgotBtn').onclick=async()=>{
+ const email=document.getElementById('email').value.trim().toLowerCase();
+ if(!email)return show('Inserisci prima la tua email nel campo sopra.',true);
+ const b=document.getElementById('forgotBtn');b.disabled=true;b.textContent='Invio in corso…';
+ try{
+  const r=await client.auth.resetPasswordForEmail(email,{redirectTo:RESET_REDIRECT});
+  if(r.error)throw r.error;
+  show('✅ Ti abbiamo inviato un’email per creare una nuova password. Apri il messaggio e segui il link.');
+ }catch(error){show(error.message||String(error),true);}
+ finally{b.disabled=false;b.textContent='Hai dimenticato la password?';}
 };
 (async()=>{if(new URLSearchParams(location.search).has('change')){await clearSession();show('Sessione precedente chiusa. Inserisci le nuove credenziali.');return;}const current=await client.auth.getSession();if(current.data.session)show('È già attiva una sessione. Puoi continuare inserendo le credenziali oppure usare Logout / Cambia account.');})();
 </script></body></html>
