@@ -43,14 +43,7 @@ function empty(text){return `<div class="notice ok">${esc(text)}</div>`}
 function teamTable(rows,extra=''){if(!rows?.length)return empty('Nessuna anomalia.');return `<div class="table-wrap"><table><thead><tr><th>Logo</th><th>Squadra</th><th>Serie</th><th>Club / Città</th>${extra}<th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.logo_url?`<img class="logo" src="${esc(r.logo_url)}">`:'—'}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.series||'—')}</td><td>${esc(r.club_name||'')} · ${esc(r.club_city||'')}</td>${extra?`<td>${esc(r.detail||'')}</td>`:''}<td><button class="btn secondary tiny" onclick="openTeam('${r.id}')">Apri</button></td></tr>`).join('')}</tbody></table></div>`}
 function playerTable(rows){if(!rows?.length)return empty('Nessuna anomalia.');return `<div class="table-wrap"><table><thead><tr><th>Giocatore</th><th>Squadra</th><th>Problema</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc((r.first_name||'')+' '+(r.last_name||''))}</b></td><td>${esc(r.team_name||'')}</td><td>${esc(r.problem||'')}</td><td><button class="btn secondary tiny" onclick="openTeam('${r.team_id}')">Apri squadra</button></td></tr>`).join('')}</tbody></table></div>`}
 function duplicateTable(rows){if(!rows?.length)return empty('Nessun possibile duplicato.');return `<div class="table-wrap"><table><thead><tr><th>Nome normalizzato</th><th>Record</th><th>Serie</th><th>Nota</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.normalized_name)}</b></td><td>${esc(r.names)}</td><td>${esc(r.series_list||'')}</td><td>Controllare manualmente prima di eliminare o unire.</td></tr>`).join('')}</tbody></table></div>`}
-function conflictTable(rows){if(!rows?.length)return empty('Nessun conflitto reale: nessun campo è occupato contemporaneamente da due squadre di casa diverse.');return `<div class="notice err"><b>Questi sono gli unici conflitti ancora da risolvere.</b><br>Una riga = un solo campo/data/ora, senza doppioni A↔B.</div><div class="table-wrap"><table><thead><tr><th>Data e ora</th><th>Impianto/campo</th><th>Squadre di casa contemporanee</th><th>Partite coinvolte</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${new Date(r.scheduled_at).toLocaleString('it-IT')}</td><td>${esc(r.venue)}</td><td><b>${esc(r.home_teams)}</b></td><td>${esc(r.matches)}</td><td><button class="btn secondary tiny" onclick="location.href='calendar.html'">Apri calendario</button></td></tr>`).join('')}</tbody></table></div>`}
-
-/* FONTE UNICA DEI CONFLITTI:
-   NON usa report.fixture_conflicts della RPC.
-   Raggruppa direttamente fixtures per data/ora + campo.
-   Nello stesso slot, più record della STESSA squadra di casa contano una sola volta.
-   Se ci sono almeno DUE squadre di casa DIVERSE => UN SOLO conflitto per quello slot.
-*/
+function conflictTable(rows){if(!rows?.length)return empty('Conflitti REALI calendario: 0. Nessuna doppia occupazione dello stesso campo è stata rilevata.');return `<div class="notice err"><b>Questi sono gli unici conflitti ancora da risolvere.</b><br>Una riga viene mostrata solo se sono identificabili almeno due partite distinte e due squadre di casa diverse sullo stesso campo nello stesso orario.</div><div class="table-wrap"><table><thead><tr><th>Data e ora</th><th>Campo</th><th>Squadre di casa contemporanee</th><th>Partite coinvolte</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${new Date(r.scheduled_at).toLocaleString('it-IT')}</td><td>${esc(r.venue)}</td><td><b>${esc(r.home_teams)}</b></td><td>${esc(r.matches)}</td><td><button class="btn secondary tiny" onclick="location.href='calendar.html'">Apri calendario</button></td></tr>`).join('')}</tbody></table></div>`}
 async function calculateRealConflicts(){
  const [fr,tr]=await Promise.all([
    sb.from('fixtures').select('id,scheduled_at,venue,home_team_id,away_team_id'),
@@ -59,26 +52,24 @@ async function calculateRealConflicts(){
  if(fr.error)throw fr.error;if(tr.error)throw tr.error;
  const teams=new Map((tr.data||[]).map(t=>[String(t.id),t])),slots=new Map();
  for(const f of fr.data||[]){
-   if(!f.scheduled_at||!f.home_team_id)continue;
-   const h=teams.get(String(f.home_team_id)),a=teams.get(String(f.away_team_id));if(!h)continue;
-   const venue=String(f.venue||h.home_court||'').trim();if(!venue)continue;
+   if(!f.id||!f.scheduled_at||!f.home_team_id||!f.away_team_id)continue;
+   const h=teams.get(String(f.home_team_id)),a=teams.get(String(f.away_team_id));
+   if(!h||!a)continue;
+   const venue=String(h.home_court||f.venue||'').trim();
+   if(!venue)continue;
    const d=new Date(f.scheduled_at);if(Number.isNaN(d.getTime()))continue;
    const key=d.toISOString()+'||'+norm(venue);
-   if(!slots.has(key))slots.set(key,{scheduled_at:f.scheduled_at,venue,byHome:new Map()});
-   const slot=slots.get(key),hid=String(f.home_team_id);
-   if(!slot.byHome.has(hid))slot.byHome.set(hid,{home:h.name||'Squadra casa',matches:new Map()});
-   const item=slot.byHome.get(hid);
-   item.matches.set(String(f.id),`${h.name||'Squadra casa'} – ${a?.name||'Squadra ospite'}`);
+   if(!slots.has(key))slots.set(key,{scheduled_at:f.scheduled_at,venue,rows:new Map()});
+   slots.get(key).rows.set(String(f.id),{id:String(f.id),home_id:String(f.home_team_id),home:h.name||'Squadra casa',match:`${h.name||'Squadra casa'} – ${a.name||'Squadra ospite'}`});
  }
  const out=[];
  for(const slot of slots.values()){
-   const homes=[...slot.byHome.values()];
-   if(homes.length<2)continue;
-   out.push({
-     scheduled_at:slot.scheduled_at,venue:slot.venue,
-     home_teams:homes.map(x=>x.home).join(' + '),
-     matches:homes.flatMap(x=>[...x.matches.values()]).join(' | ')
-   });
+   const rows=[...slot.rows.values()];
+   const homeIds=[...new Set(rows.map(x=>x.home_id))],matchIds=[...new Set(rows.map(x=>x.id))];
+   if(homeIds.length<2||matchIds.length<2)continue;
+   const homes=[...new Set(rows.map(x=>x.home).filter(Boolean))],matches=[...new Set(rows.map(x=>x.match).filter(Boolean))];
+   if(homes.length<2||matches.length<2)continue;
+   out.push({scheduled_at:slot.scheduled_at,venue:slot.venue,home_teams:homes.join(' + '),matches:matches.join(' | ')});
  }
  return out.sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
 }
