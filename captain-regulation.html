@@ -63,9 +63,17 @@ async function askRule(){
  const text=$('question').value.trim();if(text.length<8){$('result').innerHTML='<div class="notice err">Descrivi la domanda in modo più completo.</div>';return}
  $('ask').disabled=true;$('result').innerHTML='<div class="notice">Consultazione in corso…</div>';
  try{
+  // Prima controlla le risposte ufficiali già date dall'amministrazione.
+  const known=await sb.rpc('regulation_find_official_answer',{p_question:text});
+  const k=Array.isArray(known.data)?known.data[0]:known.data;
+  if(!known.error && k?.found){
+    $('result').innerHTML=`<div class="notice answer"><b>Risposta da chiarimento ufficiale</b><p>${esc(k.answer)}</p><div>${(k.article_refs||[]).map(x=>`<span class="ref">${esc(x)}</span>`).join('')}</div></div>`;
+    $('question').value='';return;
+  }
+
   const {data,error}=await sb.functions.invoke('regulation-assistant',{body:{question:text}});if(error)throw error;
   if(data?.status==='answered') $('result').innerHTML=`<div class="notice answer"><b>Risposta dal regolamento</b><p>${esc(data.answer)}</p><div>${(data.article_refs||[]).map(x=>`<span class="ref">${esc(x)}</span>`).join('')}</div></div>`;
-  else $('result').innerHTML='<div class="notice pending"><b>Domanda in esame.</b><br>Il regolamento non contiene ancora una risposta sufficientemente certa. La richiesta resta disponibile per una risposta ufficiale dell’amministrazione.</div>';
+  else $('result').innerHTML='<div class="notice pending"><b>Domanda in esame.</b><br>La richiesta è stata inviata automaticamente all’amministrazione. Quando verrà pubblicata la risposta ufficiale, potrà essere riutilizzata anche per domande future sullo stesso argomento.</div>';
   $('question').value='';await loadHistory();
  }catch(e){$('result').innerHTML=`<div class="notice err">Assistente non disponibile: ${esc(e.message||e)}</div>`}finally{$('ask').disabled=false}
 }

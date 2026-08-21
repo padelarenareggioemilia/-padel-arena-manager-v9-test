@@ -1,9 +1,120 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Admin · Domande regolamento</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>
-:root{--bg:#06111f;--card:#10233b;--line:#315676;--text:#f8fafc;--muted:#a9bacd;--lime:#9dff25;--red:#ef4444}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui}.shell{width:min(1050px,calc(100% - 20px));margin:auto;padding:18px 0 90px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}.q{border:1px solid var(--line);border-left:6px solid #f5b82e;border-radius:14px;padding:13px;margin:10px 0}.closed{border-left-color:#4ade80}.muted{color:var(--muted)}textarea{width:100%;min-height:100px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#071523;color:#fff;font:inherit}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--lime);color:#07111f}.secondary{background:#17304e;color:#fff;border:1px solid var(--line)}.danger{background:#7f1d1d;color:#fff}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#17304e;font-size:12px;font-weight:900}@media(max-width:650px){.actions{display:grid}.btn{width:100%}}
-</style></head><body><main class="shell"><section class="card"><h1>Domande sul regolamento</h1><p class="muted">Richieste che l’assistente non ha potuto risolvere con certezza.</p><div class="actions"><button class="btn secondary" onclick="location.href='index.html?v=9916'">Torna all’amministrazione</button><button class="btn primary" onclick="loadAll()">Aggiorna</button></div></section><section class="card"><div id="status">Caricamento…</div><div id="list"></div></section></main><script>
-const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
-async function loadAll(){const session=(await sb.auth.getSession()).data.session;if(!session){location.replace('login.html');return}const p=await sb.from('profiles').select('role').eq('id',session.user.id).maybeSingle();if(p.data?.role!=='admin'){location.replace('account-home.html');return}const {data,error}=await sb.from('regulation_questions').select('*').order('created_at',{ascending:false});if(error){$('status').textContent='Errore: '+error.message;return}$('status').textContent=`${(data||[]).filter(x=>x.status==='pending_admin').length} richieste da esaminare`;$('list').innerHTML=(data||[]).map(card).join('')||'<div class="muted">Nessuna domanda ricevuta.</div>'}
-function card(x){return `<article class="q ${x.status==='closed'?'closed':''}"><span class="badge">${esc(x.status)}</span><h3>${esc(x.question)}</h3><div class="muted">${new Date(x.created_at).toLocaleString('it-IT')} · Squadra: ${esc(x.team_name||x.team_id||'non disponibile')}</div>${x.automatic_answer?`<p><b>Valutazione automatica:</b> ${esc(x.automatic_answer)}</p>`:''}<textarea id="a-${x.id}" placeholder="Scrivi la risposta ufficiale…">${esc(x.admin_answer||'')}</textarea><label style="display:block;margin:10px 0"><input id="c-${x.id}" type="checkbox" ${x.added_as_clarification?'checked':''}> Usa questa risposta anche come chiarimento futuro</label><div class="actions"><button class="btn primary" onclick="answer('${x.id}')">Salva e invia risposta</button></div></article>`}
-async function answer(id){const answer=$('a-'+id).value.trim(),clarification=$('c-'+id).checked;if(!answer)return alert('Inserisci la risposta.');const {error}=await sb.rpc('admin_answer_regulation_question',{p_question_id:id,p_answer:answer,p_add_as_clarification:clarification});if(error)return alert(error.message);await loadAll()}
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Admin · Regolamento</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--bg:#06111f;--card:#10233b;--line:#315676;--text:#f8fafc;--muted:#a9bacd;--lime:#9dff25;--red:#ef4444;--yellow:#f5b82e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui}.shell{width:min(1080px,calc(100% - 20px));margin:auto;padding:18px 0 90px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}.q{border:1px solid var(--line);border-left:6px solid var(--yellow);border-radius:14px;padding:14px;margin:10px 0}.closed{border-left-color:#4ade80}
+.muted{color:var(--muted)}textarea{width:100%;min-height:115px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#071523;color:#fff;font:inherit}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:10px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--lime);color:#07111f}.secondary{background:#17304e;color:#fff;border:1px solid var(--line)}.danger{background:#7f1d1d;color:#fff}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#17304e;font-size:12px;font-weight:900}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.kpi{padding:15px;border:1px solid var(--line);border-radius:14px;text-align:center}.kpi strong{display:block;font-size:30px;color:var(--lime)}
+.notice{padding:11px;border:1px solid var(--line);border-radius:11px;background:#071523;margin:8px 0}.ok{border-color:#4ade80}.err{border-color:#ef4444}
+@media(max-width:650px){.actions,.kpis{display:grid}.btn{width:100%}}
+</style>
+</head>
+<body><main class="shell">
+<section class="card">
+<h1 style="margin-top:0">📘 Domande sul regolamento</h1>
+<p class="muted">Qui arrivano automaticamente le domande che l'Assistente non riesce a risolvere con certezza.</p>
+<div class="actions">
+<button class="btn secondary" onclick="location.href='admin-control.html?v=reg-admin-2'">← Torna all'Admin</button>
+<button class="btn primary" onclick="loadAll()">Aggiorna</button>
+</div>
+</section>
+
+<section class="card">
+<div class="kpis">
+<div class="kpi"><strong id="pendingKpi">0</strong>In attesa</div>
+<div class="kpi"><strong id="clarKpi">0</strong>Chiarimenti ufficiali</div>
+</div>
+</section>
+
+<section class="card">
+<div id="status">Caricamento…</div>
+<div id="list"></div>
+</section>
+</main>
+
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+
+async function guard(){
+ const session=(await sb.auth.getSession()).data.session;
+ if(!session){location.replace('login.html');return null}
+ const p=await sb.from('profiles').select('role').eq('id',session.user.id).maybeSingle();
+ if(p.data?.role!=='admin'){location.replace('account-home.html');return null}
+ return session;
+}
+
+async function loadAll(){
+ const session=await guard(); if(!session)return;
+ const {data,error}=await sb.from('regulation_questions').select('*').order('created_at',{ascending:false});
+ if(error){$('status').textContent='Errore: '+error.message;return}
+ const rows=data||[];
+ const pending=rows.filter(x=>x.status==='pending_admin');
+ const clar=rows.filter(x=>x.added_as_clarification&&x.admin_answer);
+ $('pendingKpi').textContent=pending.length;
+ $('clarKpi').textContent=clar.length;
+ $('status').textContent=pending.length
+   ? `${pending.length} ${pending.length===1?'richiesta da esaminare':'richieste da esaminare'}`
+   : 'Nessuna domanda in attesa.';
+ $('list').innerHTML=rows.map(card).join('')||'<div class="muted">Nessuna domanda ricevuta.</div>';
+}
+
+function card(x){
+ const closed=x.status==='closed'||x.status==='answered';
+ return `<article class="q ${closed?'closed':''}">
+ <span class="badge">${esc(x.status||'')}</span>
+ <h3>${esc(x.question)}</h3>
+ <div class="muted">${new Date(x.created_at).toLocaleString('it-IT')} · Squadra: ${esc(x.team_name||x.team_id||'non disponibile')}</div>
+ ${x.automatic_answer?`<p><b>Valutazione automatica:</b> ${esc(x.automatic_answer)}</p>`:''}
+ <textarea id="a-${x.id}" placeholder="Scrivi qui la risposta ufficiale…">${esc(x.admin_answer||'')}</textarea>
+ <label style="display:block;margin:10px 0">
+   <input id="c-${x.id}" type="checkbox" ${x.added_as_clarification===false?'':'checked'}>
+   <b>Memorizza come chiarimento ufficiale per rispondere automaticamente in futuro</b>
+ </label>
+ <div class="actions">
+   <button class="btn primary" onclick="answer('${x.id}')">PUBBLICA RISPOSTA UFFICIALE</button>
+ </div>
+ <div id="m-${x.id}" class="notice" style="display:none"></div>
+ </article>`;
+}
+
+async function answer(id){
+ const answer=$('a-'+id).value.trim();
+ const clarification=$('c-'+id).checked;
+ if(!answer)return alert('Inserisci la risposta.');
+ const btn=event?.target;if(btn){btn.disabled=true;btn.textContent='Pubblicazione…'}
+ try{
+   const {data,error}=await sb.rpc('admin_answer_regulation_question',{
+     p_question_id:id,
+     p_answer:answer,
+     p_add_as_clarification:clarification
+   });
+   if(error)throw error;
+   const m=$('m-'+id);m.style.display='block';m.className='notice ok';
+   m.textContent=clarification
+     ? '✅ Risposta pubblicata e aggiunta ai chiarimenti ufficiali riutilizzabili.'
+     : '✅ Risposta pubblicata.';
+   setTimeout(loadAll,500);
+ }catch(e){
+   const m=$('m-'+id);m.style.display='block';m.className='notice err';m.textContent='Errore: '+(e.message||e);
+ }finally{if(btn){btn.disabled=false;btn.textContent='PUBBLICA RISPOSTA UFFICIALE'}}
+}
+
 loadAll();
-</script><div style="margin:12px auto;width:max-content;padding:5px 8px;border-radius:999px;background:#17304e;font:700 10px system-ui">V9.9.16 ASSISTENTE REGOLAMENTO</div></body></html>
+
+try{
+ sb.channel('regulation-admin-page')
+ .on('postgres_changes',{event:'*',schema:'public',table:'regulation_questions'},loadAll)
+ .subscribe();
+}catch(e){}
+</script>
+<div style="margin:12px auto;width:max-content;padding:5px 8px;border-radius:999px;background:#17304e;font:700 10px system-ui">V9 · REGOLAMENTO ADMIN</div>
+</body></html>
