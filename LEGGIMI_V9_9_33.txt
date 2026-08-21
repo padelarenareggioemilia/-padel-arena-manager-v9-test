@@ -1,0 +1,32 @@
+V9.9.33 - ACCESSI UNIFICATI
+
+OBIETTIVI
+- elimina CAP dalla registrazione giocatore e dai dati obbligatori;
+- recupero password capitano;
+- Admin può cambiare email del capitano e rigenerare accesso senza cancellare dati;
+- un solo account può essere Giocatore + Capitano + Segretario;
+- un account Capitano/Segretario può gestire più squadre;
+- account-home diventa il selettore unico di modalità e squadra.
+
+INSTALLAZIONE
+1) Supabase SQL Editor:
+   eseguire SUPABASE_V9_9_33_ACCESSI_UNIFICATI.sql
+
+2) GitHub, sostituire:
+   - account-home.html
+   - app-ui.js
+
+3) GitHub, aggiungere:
+   - admin-captain-access.html
+   - captain-multiteam.js
+
+4) In captain-home.html aggiungere UNA SOLA RIGA subito prima di </body>:
+   <script src="captain-multiteam.js?v=9933"></script>
+
+5) Per mettere la gestione accessi nel menu Admin, puoi aprire direttamente:
+   admin-captain-access.html
+   (successivamente si può aggiungere il pulsante alla dashboard Admin senza toccare altre funzioni).
+
+NOTA
+Il recupero password usa lo stesso reset-password.html già verificato e funzionante.
+Il cambio email Admin non cancella squadra, rosa, partite, classifiche o storico.
