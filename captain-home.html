@@ -156,7 +156,7 @@ function openModal(title,html){$('modalTitle').textContent=title;$('modalBody').
 function closeModal(){if(scanner){try{scanner.clear()}catch(e){}scanner=null}$('modal').classList.add('hidden')}
 function addPlayerModal(){
  openModal('Inserisci giocatore',`
-  <div class="notice"><b>Tutti i dati sono obbligatori.</b> Carica una foto tessera chiara.</div>
+  <div class="notice"><b>Tutti i dati indicati sono obbligatori.</b> Carica una foto tessera chiara.</div>
   <div class="field"><label>Foto tessera</label><input id="pphoto" type="file" accept="image/jpeg,image/png,image/webp"></div>
   <div class="grid2">
    <div class="field"><label>Nome</label><input id="pf"></div>
@@ -167,7 +167,6 @@ function addPlayerModal(){
    <div class="field"><label>Sesso</label><select id="pgender"><option value="">Seleziona</option><option value="M">Maschile</option><option value="F">Femminile</option></select></div>
    <div class="field"><label>Luogo di nascita</label><input id="pbp"></div>
    <div class="field"><label>Comune di residenza</label><input id="ptown"></div>
-   <div class="field"><label>CAP</label><input id="pcap" inputmode="numeric" maxlength="5"></div>
    <div class="field"><label>Provincia</label><input id="pprov" maxlength="2"></div>
    <div class="field"><label>Classifica FITP</label><input id="pfitp"></div>
    <div class="field"><label>Scadenza certificato</label><input id="pmed" type="date"></div>
@@ -187,8 +186,6 @@ async function uploadNewPlayerPhoto(){
 }
 async function addPlayer(){
  try{
-  const cap=$('pcap').value.trim();
-  if(!/^\d{5}$/.test(cap))throw new Error('Il CAP deve contenere 5 cifre.');
   const photoUrl=await uploadNewPlayerPhoto();
   const p={
    photo_url:photoUrl,
@@ -200,12 +197,13 @@ async function addPlayer(){
    gender:$('pgender').value,
    birth_place:$('pbp').value.trim(),
    residence_town:$('ptown').value.trim(),
-   residence_postal_code:cap,
+   residence_postal_code:null,
    residence_province:$('pprov').value.trim().toUpperCase(),
    fitp_ranking:$('pfitp').value.trim().toUpperCase(),
    medical_certificate_expiry:$('pmed').value
   };
-  if(Object.values(p).some(v=>!v))throw new Error('Compila tutti i campi.');
+  const required=['photo_url','first_name','last_name','email','phone','birth_date','gender','birth_place','residence_town','residence_province','fitp_ranking','medical_certificate_expiry'];
+  if(required.some(k=>!p[k]))throw new Error('Compila tutti i campi obbligatori.');
   const r=await sb.rpc('captain_add_player_complete',{p_team_id:data.team_id,p_player:p});
   if(r.error)throw r.error;
   closeModal();
@@ -226,7 +224,6 @@ function editPlayer(id){
    <div class="field"><label>Sesso</label><input value="${esc(p.gender||'')}" readonly></div>
    <div class="field"><label>Luogo di nascita</label><input value="${esc(p.birth_place||'')}" readonly></div>
    <div class="field"><label>Comune di residenza</label><input value="${esc(p.residence_town||'')}" readonly></div>
-   <div class="field"><label>CAP</label><input value="${esc(p.residence_postal_code||'')}" readonly></div>
    <div class="field"><label>Provincia</label><input value="${esc(p.residence_province||'')}" readonly></div>
    <div class="field"><label>Classifica FITP</label><input id="efitp" value="${esc(p.fitp_ranking||'')}"></div>
    <div class="field"><label>Scadenza certificato medico</label><input id="emed" type="date" value="${esc(p.medical_certificate_expiry||'')}"></div>
@@ -256,7 +253,6 @@ async function copyPlayerLink(){const t=data.team?.player_invite_token;if(!t)ret
 function openLineup(fixtureId){const f=arr(data.fixtures).find(x=>x.id===fixtureId),lineup=arr(data.lineups).find(x=>x.fixture_id===fixtureId&&x.team_id===data.team_id),selected=arr(data.lineup_players).filter(x=>x.lineup_id===lineup?.id);openModal('Distinta squadra',`<div class="notice"><b>${esc(tn(f.home_team_id))} - ${esc(tn(f.away_team_id))}</b><br>${esc(fmtDate(f.scheduled_at))} · ${esc(stage(f))}</div><div id="lineupRows">${arr(data.players).filter(p=>p.status==='approved').map(p=>{const x=selected.find(s=>s.player_id===p.id);return `<div class="lineup-player"><input type="checkbox" class="lp-check" data-player="${p.id}" ${x?'checked':''}><div><b>${esc(p.first_name)} ${esc(p.last_name)}</b><div class="muted">${esc(p.fitp_ranking||'')}</div></div><select class="lp-position" data-player="${p.id}"><option value="">Ruolo / posizione</option>${['M1','M2','Misto','Femminile','Riserva'].map(v=>`<option ${x?.position===v?'selected':''}>${v}</option>`).join('')}</select></div>`}).join('')}</div><div class="field"><label>Note distinta</label><textarea id="lineupNotes">${esc(lineup?.notes||'')}</textarea></div><div class="actions"><button class="btn primary" onclick="saveLineup('${fixtureId}',false)">Salva bozza</button><button class="btn success" onclick="saveLineup('${fixtureId}',true)">Conferma distinta</button></div>`)}
 async function saveLineup(fixtureId,confirmLineup){const players=[...document.querySelectorAll('.lp-check:checked')].map(c=>{const id=c.dataset.player;return{player_id:id,position:document.querySelector(`.lp-position[data-player="${id}"]`).value}});const r=await sb.rpc('captain_save_lineup',{p_fixture_id:fixtureId,p_team_id:data.team_id,p_players:players,p_notes:$('lineupNotes').value.trim(),p_confirm:confirmLineup});if(r.error)return alert(r.error.message);closeModal();await loadAll()}
 
-
 async function ensureQrScanner(){
  if(window.Html5QrcodeScanner)return;
  await new Promise((resolve,reject)=>{
@@ -270,7 +266,6 @@ async function ensureQrScanner(){
 async function openOpponentScanner(fixtureId){const f=arr(data.fixtures).find(x=>x.id===fixtureId),opponent=f.home_team_id===data.team_id?f.away_team_id:f.home_team_id;openModal('Verifica QR squadra avversaria',`<div class="notice"><b>Squadra avversaria:</b> ${esc(tn(opponent))}<br>Scansiona i QR dei giocatori presenti e confermali alla distinta avversaria.</div><div id="reader" class="scanner"></div><div class="field"><label>Oppure inserisci codice / URL QR</label><input id="manualQr"></div><button class="btn secondary" onclick="processQr('${fixtureId}','${opponent}',$('manualQr').value)">Conferma codice manuale</button><div id="scanResults"></div>`);try{await ensureQrScanner();scanner=new Html5QrcodeScanner('reader',{fps:10,qrbox:{width:250,height:250}},false);scanner.render(txt=>processQr(fixtureId,opponent,txt),()=>{})}catch(e){$('scanResults').innerHTML='<div class="notice warn">'+esc(e.message||String(e))+'</div>'}}
 function parsePlayerId(raw){try{const u=new URL(raw,location.href);return u.searchParams.get('player')||u.searchParams.get('id')}catch(e){}const m=String(raw).match(/AICSPLAYER:([0-9a-f-]{36})/i);return m?m[1]:String(raw).trim()}
 async function processQr(fixtureId,opponentTeamId,raw){const playerId=parsePlayerId(raw);if(!playerId)return alert('QR non riconosciuto.');const r=await sb.rpc('captain_verify_opponent_player',{p_fixture_id:fixtureId,p_verifying_team_id:data.team_id,p_opponent_team_id:opponentTeamId,p_player_id:playerId,p_qr_value:String(raw)});if(r.error)return alert(r.error.message);$('scanResults').insertAdjacentHTML('afterbegin',`<div class="notice ok">Giocatore confermato: ${esc(r.data?.player_name||playerId)}</div>`);await loadAll()}
-
 
 async function loadTeamHub(){
  const r=await sb.rpc('captain_get_team_hub',{p_team_id:data.team_id});
@@ -315,5 +310,7 @@ async function logout(){try{await sb.auth.signOut({scope:'local'})}catch(e){}loc
 window.setView=setView;window.closeModal=closeModal;window.addPlayerModal=addPlayerModal;window.addPlayer=addPlayer;window.editPlayer=editPlayer;window.savePlayer=savePlayer;window.generateCard=generateCard;window.setPlayerStatus=setPlayerStatus;window.saveNotes=saveNotes;window.saveCaptainTeamProfile=saveCaptainTeamProfile;window.appointSecretary=appointSecretary;window.revokeSecretary=revokeSecretary;window.copyPlayerLink=copyPlayerLink;window.openLineup=openLineup;window.saveLineup=saveLineup;window.openOpponentScanner=openOpponentScanner;window.processQr=processQr;window.uploadTeamDocument=uploadTeamDocument;window.sendTeamMessage=sendTeamMessage;window.openCallup=openCallup;window.saveCallup=saveCallup;window.loadAll=loadAll;window.logout=logout;
 loadAll();
 </script>
-<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.32 CAMBIO MODALITÀ</div></body>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.33 ACCESSI UNIFICATI</div>
+<script src="captain-multiteam.js?v=9933"></script>
+</body>
 </html>
