@@ -24,7 +24,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 <section class="card"><div class="actions" style="justify-content:space-between"><div><h2 style="margin:0">Stato generale</h2><div class="muted">Controllo di squadre, giocatori, calendari, tessere e Storage.</div></div><button id="runBtn" class="btn primary" onclick="runDiagnostics()">Esegui diagnostica completa</button></div>
 <div id="progressBox" class="hidden" style="margin-top:12px"><div class="progress"><span id="progress"></span></div><div id="progressText" class="small muted" style="margin-top:5px"></div></div><div id="mainMsg" class="notice">Premi “Esegui diagnostica completa”.</div></section>
 <section id="summaryCard" class="card hidden"><div class="kpis">
-<div class="kpi good"><strong id="kTeams">0</strong><span>Squadre in Serie</span></div><div class="kpi bad" onclick="scrollToSection('teamsNoSeries')"><strong id="kNoSeries">0</strong><span>Senza Serie</span></div><div class="kpi warn" onclick="scrollToSection('teamsNoLogo')"><strong id="kNoLogo">0</strong><span>Senza logo</span></div><div class="kpi warn" onclick="scrollToSection('incompletePlayers')"><strong id="kIncomplete">0</strong><span>Profili incompleti</span></div><div class="kpi bad" onclick="scrollToSection('expiredMedical')"><strong id="kExpired">0</strong><span>Certificati scaduti</span></div><div class="kpi bad" onclick="scrollToSection('fixtureConflicts')"><strong id="kConflicts">0</strong><span>Conflitti calendario</span></div>
+<div class="kpi good"><strong id="kTeams">0</strong><span>Squadre in Serie</span></div><div class="kpi bad" onclick="scrollToSection('teamsNoSeries')"><strong id="kNoSeries">0</strong><span>Senza Serie</span></div><div class="kpi warn" onclick="scrollToSection('teamsNoLogo')"><strong id="kNoLogo">0</strong><span>Senza logo</span></div><div class="kpi warn" onclick="scrollToSection('incompletePlayers')"><strong id="kIncomplete">0</strong><span>Profili incompleti</span></div><div class="kpi bad" onclick="scrollToSection('expiredMedical')"><strong id="kExpired">0</strong><span>Certificati scaduti</span></div><div class="kpi bad" onclick="scrollToSection('fixtureConflicts')"><strong id="kConflicts">0</strong><span>Conflitti REALI calendario</span></div>
 </div></section>
 <section id="detailsCard" class="card hidden"><div id="sections"></div></section>
 <section class="card"><h2>Test Storage immagini</h2><div class="notice">Esegue un piccolo caricamento di prova nei bucket dei loghi e delle foto, poi elimina immediatamente il file.</div><div class="actions"><button class="btn secondary" onclick="testStorage('team-logos')">Test loghi squadre</button><button class="btn secondary" onclick="testStorage('player-photos')">Test foto giocatori</button></div><div id="storageMsg" class="notice hidden"></div></section>
@@ -43,11 +43,35 @@ function empty(text){return `<div class="notice ok">${esc(text)}</div>`}
 function teamTable(rows,extra=''){if(!rows?.length)return empty('Nessuna anomalia.');return `<div class="table-wrap"><table><thead><tr><th>Logo</th><th>Squadra</th><th>Serie</th><th>Club / Città</th>${extra}<th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r.logo_url?`<img class="logo" src="${esc(r.logo_url)}">`:'—'}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.series||'—')}</td><td>${esc(r.club_name||'')} · ${esc(r.club_city||'')}</td>${extra?`<td>${esc(r.detail||'')}</td>`:''}<td><button class="btn secondary tiny" onclick="openTeam('${r.id}')">Apri</button></td></tr>`).join('')}</tbody></table></div>`}
 function playerTable(rows){if(!rows?.length)return empty('Nessuna anomalia.');return `<div class="table-wrap"><table><thead><tr><th>Giocatore</th><th>Squadra</th><th>Problema</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc((r.first_name||'')+' '+(r.last_name||''))}</b></td><td>${esc(r.team_name||'')}</td><td>${esc(r.problem||'')}</td><td><button class="btn secondary tiny" onclick="openTeam('${r.team_id}')">Apri squadra</button></td></tr>`).join('')}</tbody></table></div>`}
 function duplicateTable(rows){if(!rows?.length)return empty('Nessun possibile duplicato.');return `<div class="table-wrap"><table><thead><tr><th>Nome normalizzato</th><th>Record</th><th>Serie</th><th>Nota</th></tr></thead><tbody>${rows.map(r=>`<tr><td><b>${esc(r.normalized_name)}</b></td><td>${esc(r.names)}</td><td>${esc(r.series_list||'')}</td><td>Controllare manualmente prima di eliminare o unire.</td></tr>`).join('')}</tbody></table></div>`}
-function conflictTable(rows){if(!rows?.length)return empty('Conflitti calendario: 0. Nessuna doppia occupazione dello stesso campo è stata rilevata.');return `<div class="notice err"><b>Questi sono gli unici conflitti ancora da risolvere.</b><br>Una riga viene mostrata solo se sono identificabili almeno due partite distinte e due squadre di casa diverse sullo stesso campo nello stesso orario.</div><div class="table-wrap"><table><thead><tr><th>Data e ora</th><th>Campo</th><th>Squadre di casa contemporanee</th><th>Partite coinvolte</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${new Date(r.scheduled_at).toLocaleString('it-IT')}</td><td>${esc(r.venue)}</td><td><b>${esc(r.home_teams)}</b></td><td>${esc(r.matches)}</td><td><button class="btn secondary tiny" onclick="location.href='calendar.html'">Apri calendario</button></td></tr>`).join('')}</tbody></table></div>`}
+function conflictTable(rows){if(!rows?.length)return empty('Conflitti REALI calendario: 0. Nessuna doppia occupazione dello stesso campo è stata rilevata.');return `<div class="notice err"><b>Questi sono gli unici conflitti ancora da risolvere.</b><br>Una riga viene mostrata solo se sono identificabili almeno due partite distinte e due squadre di casa diverse sullo stesso campo nello stesso orario.</div><div class="table-wrap"><table><thead><tr><th>Data e ora</th><th>Campo</th><th>Squadre di casa contemporanee</th><th>Partite coinvolte</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${new Date(r.scheduled_at).toLocaleString('it-IT')}</td><td>${esc(r.venue)}</td><td><b>${esc(r.home_teams)}</b></td><td>${esc(r.matches)}</td><td><button class="btn secondary tiny" onclick="location.href='calendar.html'">Apri calendario</button></td></tr>`).join('')}</tbody></table></div>`}
 async function calculateRealConflicts(){
-  // Conflitti calendario disattivati nella diagnostica.
-  // Nessuna partita viene cancellata o modificata.
-  return [];
+ const [fr,tr]=await Promise.all([
+   sb.from('fixtures').select('id,scheduled_at,venue,home_team_id,away_team_id'),
+   sb.from('teams').select('id,name,home_court')
+ ]);
+ if(fr.error)throw fr.error;if(tr.error)throw tr.error;
+ const teams=new Map((tr.data||[]).map(t=>[String(t.id),t])),slots=new Map();
+ for(const f of fr.data||[]){
+   if(!f.id||!f.scheduled_at||!f.home_team_id||!f.away_team_id)continue;
+   const h=teams.get(String(f.home_team_id)),a=teams.get(String(f.away_team_id));
+   if(!h||!a)continue;
+   const venue=String(h.home_court||f.venue||'').trim();
+   if(!venue)continue;
+   const d=new Date(f.scheduled_at);if(Number.isNaN(d.getTime()))continue;
+   const key=d.toISOString()+'||'+norm(venue);
+   if(!slots.has(key))slots.set(key,{scheduled_at:f.scheduled_at,venue,rows:new Map()});
+   slots.get(key).rows.set(String(f.id),{id:String(f.id),home_id:String(f.home_team_id),home:h.name||'Squadra casa',match:`${h.name||'Squadra casa'} – ${a.name||'Squadra ospite'}`});
+ }
+ const out=[];
+ for(const slot of slots.values()){
+   const rows=[...slot.rows.values()];
+   const homeIds=[...new Set(rows.map(x=>x.home_id))],matchIds=[...new Set(rows.map(x=>x.id))];
+   if(homeIds.length<2||matchIds.length<2)continue;
+   const homes=[...new Set(rows.map(x=>x.home).filter(Boolean))],matches=[...new Set(rows.map(x=>x.match).filter(Boolean))];
+   if(homes.length<2||matches.length<2)continue;
+   out.push({scheduled_at:slot.scheduled_at,venue:slot.venue,home_teams:homes.join(' + '),matches:matches.join(' | ')});
+ }
+ return out.sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
 }
 function renderReport(){
  const s=report.summary;
@@ -60,7 +84,7 @@ function renderReport(){
  section('incompletePlayers','Giocatori con profilo incompleto',report.incomplete_players.length,'yellow',playerTable(report.incomplete_players))+
  section('expiredMedical','Certificati medici scaduti',report.expired_medical.length,'red',playerTable(report.expired_medical))+
  section('playersNoPhoto','Giocatori senza foto tessera',report.players_without_photo.length,'yellow',playerTable(report.players_without_photo))+
- section('fixtureConflicts','Conflitti calendario',report.fixture_conflicts.length,'red',conflictTable(report.fixture_conflicts))+
+ section('fixtureConflicts','Conflitti REALI ancora da risolvere',report.fixture_conflicts.length,'red',conflictTable(report.fixture_conflicts))+
  section('unpublished','Competizioni non pubblicate',report.unpublished_competitions.length,'yellow',report.unpublished_competitions.length?`<div class="notice warnbox">${report.unpublished_competitions.map(x=>esc(x.competition_code)).join(', ')}</div>`:empty('Tutte le competizioni configurate risultano pubblicate.'))+
  section('cards','Tessere digitali da controllare',report.card_issues.length,'yellow',playerTable(report.card_issues));
  $('summaryCard').classList.remove('hidden');$('detailsCard').classList.remove('hidden');
