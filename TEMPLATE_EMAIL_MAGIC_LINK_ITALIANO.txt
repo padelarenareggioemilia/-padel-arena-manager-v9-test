@@ -1,0 +1,17 @@
+OGGETTO:
+AICS Padel Championship 2027 – Entra nella tua Area Giocatore
+
+CORPO HTML DA INCOLLARE NEL TEMPLATE “Magic Link” DI SUPABASE:
+
+<h2 style="color:#0a2e5e">AICS Padel Championship 2027</h2>
+<p>Ciao,</p>
+<p>hai richiesto l’accesso alla tua <strong>Area Giocatore</strong>.</p>
+<p>Clicca il pulsante qui sotto. Non servono altri passaggi.</p>
+<p style="margin:28px 0">
+  <a href="{{ .ConfirmationURL }}"
+     style="display:inline-block;background:#164a95;color:#ffffff;text-decoration:none;padding:14px 22px;border-radius:10px;font-weight:700">
+    ENTRA NELLA TUA AREA GIOCATORE
+  </a>
+</p>
+<p>Il link è personale, può essere usato una sola volta e scade dopo poco tempo.</p>
+<p>Se non hai richiesto tu questo accesso, ignora questa email.</p>

@@ -1,24 +1,62 @@
 <!doctype html>
 <html lang="it">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Accesso giocatore</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
-  <style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f8fc;font-family:system-ui;color:#0a2e5e}.card{width:min(580px,calc(100% - 28px));padding:22px;border:1px solid #b9cde3;border-radius:22px;background:#fff;text-align:center}.notice{padding:13px;border:1px solid #b9cde3;border-radius:12px;background:#edf4fb}.err{background:#fdecef;border-color:#dd7a85}</style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS Padel Championship · Accesso giocatore</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+.card{width:min(600px,calc(100% - 28px));padding:24px;border:1px solid var(--line);border-radius:22px;background:#fff;text-align:center;box-shadow:0 14px 34px rgba(8,47,104,.13)}
+.card img{width:120px}.notice{padding:13px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;line-height:1.45}.err{background:#fdecef;border-color:#dd7a85}
+.btn{border:0;border-radius:11px;padding:12px 14px;font-weight:900;cursor:pointer;background:var(--b);color:#fff;margin-top:12px}
+</style>
 </head>
-<body><main class="card"><img src="assets/aics-logo.png" alt="AICS" style="width:110px"><h1>Accesso giocatore</h1><div id="msg" class="notice">Collegamento del profilo in corso…</div></main>
+<body>
+<main class="card">
+  <img src="assets/aics-logo.png" alt="AICS">
+  <h1>Accesso giocatore</h1>
+  <div id="msg" class="notice">Stiamo verificando il tuo link personale…</div>
+  <button id="retry" class="btn" style="display:none" onclick="location.href='player-account.html'">Richiedi un nuovo link</button>
+</main>
 <script>
-const cfg=window.PAM_V9_CONFIG,s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),msg=document.getElementById('msg');
+const cfg=window.PAM_V9_CONFIG;
+const s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const msg=document.getElementById('msg');
+const retry=document.getElementById('retry');
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+async function getValidSession(){
+  const code=new URLSearchParams(location.search).get('code');
+  if(code){
+    const x=await s.auth.exchangeCodeForSession(code);
+    if(x.error) throw x.error;
+    if(x.data?.session) return x.data.session;
+  }
+  for(let i=0;i<8;i++){
+    const q=await s.auth.getSession();
+    if(q.data?.session) return q.data.session;
+    await sleep(250);
+  }
+  return null;
+}
 async function start(){
- try{
-  const session=(await s.auth.getSession()).data.session;
-  if(!session)throw new Error('Il collegamento email non è più valido. Richiedine uno nuovo.');
-  const r=await s.rpc('claim_my_approved_player');
-  if(r.error)throw r.error;
-  if(r.data&&r.data.success===false)throw new Error(r.data.message||'Profilo giocatore non trovato.');
-  msg.textContent='Accesso riconosciuto. Apertura Area Giocatore…';
-  setTimeout(()=>location.replace('player-home.html?v=9929'),500);
- }catch(e){msg.textContent='Impossibile entrare: '+(e.message||String(e));msg.className='notice err'}
+  try{
+    const session=await getValidSession();
+    if(!session) throw new Error('Il link non è più valido o è già stato utilizzato.');
+    const r=await s.rpc('claim_my_approved_player');
+    if(r.error) throw r.error;
+    if(r.data && r.data.success===false) throw new Error(r.data.message||'Profilo giocatore non trovato.');
+    msg.textContent='✅ Accesso riconosciuto. Apertura della tua Area Giocatore…';
+    location.replace('player-home.html?v=profile-complete-1');
+  }catch(e){
+    msg.textContent='Impossibile entrare: '+(e.message||String(e))+' Richiedi un nuovo link di accesso.';
+    msg.className='notice err';
+    retry.style.display='';
+  }
 }
 start();
-</script></body></html>
+</script>
+</body>
+</html>

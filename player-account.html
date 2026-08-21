@@ -1,13 +1,84 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Recupera iscrizione</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
-<style>body{font-family:system-ui;background:#f4f8fc;color:#0a2e5e;display:grid;place-items:center;min-height:100vh;margin:0}.card{width:min(620px,calc(100% - 28px));background:#fff;border:1px solid #b9cde3;border-radius:20px;padding:20px}.field{margin:10px 0}input{width:100%;padding:11px;border:1px solid #b9cde3;border-radius:10px}.btn{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary{background:#164a95;color:#fff}.secondary{background:#fff;color:#164a95;border:1px solid #164a95}.notice{padding:11px;border:1px solid #b9cde3;border-radius:11px;background:#edf4fb;margin:10px 0}.err{background:#fdecef}.actions{display:flex;gap:8px;flex-wrap:wrap}</style></head>
-<body><main class="card"><h1>Registrati o recupera la tua iscrizione</h1><div class="notice">Usa la stessa email comunicata al capitano.</div>
-<div class="field"><label>Email</label><input id="email" type="email"></div><div class="field"><label>Password</label><input id="password" type="password" minlength="8"></div>
-<button class="btn primary" onclick="signup()">Crea account</button><button class="btn primary" onclick="claim()">Collega iscrizione approvata</button>
-<div id="msg" class="notice">Pronto.</div><div class="actions"><button class="btn secondary" onclick="location.href='login.html?v=986'">Login</button><button class="btn secondary" onclick="location.href='account-home.html?v=986'">Home account</button></div></main>
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS Padel Championship · Accesso giocatore</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.33%,#fff 33.33% 66.66%,var(--r) 66.66%)}
+.card{width:min(620px,calc(100% - 28px));background:#fff;border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:0 14px 34px rgba(8,47,104,.13)}
+.brand{text-align:center}.brand img{width:120px}.brand h1{margin:8px 0 4px}.muted{color:var(--muted)}
+.field{margin:16px 0}label{display:block;font-weight:900;margin-bottom:6px}input{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font:inherit}
+.btn{width:100%;border:0;border-radius:11px;padding:13px;font-weight:1000;cursor:pointer;margin-top:8px}.primary{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}
+.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:14px 0;line-height:1.45}.ok{background:#eaf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">
+    <img src="assets/aics-logo.png" alt="AICS">
+    <h1>Entra nella tua Area Giocatore</h1>
+    <div class="muted">AICS Padel Championship 2027</div>
+  </div>
+
+  <div class="notice">
+    Inserisci <b>la stessa email usata per l’iscrizione alla squadra</b>.
+    Ti invieremo un pulsante personale: ti basterà cliccarlo per entrare.
+  </div>
+
+  <div class="field">
+    <label for="email">Email del giocatore</label>
+    <input id="email" type="email" autocomplete="email" placeholder="nome@email.it">
+  </div>
+
+  <button id="sendBtn" class="btn primary" onclick="sendMagicLink()">INVIAMI IL LINK PER ENTRARE</button>
+  <div id="msg" class="notice">Nessun link inviato.</div>
+
+  <button class="btn secondary" onclick="location.href='login.html'">Ho già una password</button>
+  <button class="btn secondary" onclick="location.href='public.html'">Torna al portale pubblico</button>
+</main>
+
 <script>
-const cfg=window.PAM_V9_CONFIG,s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);function m(t,e=false){msg.textContent=t;msg.className='notice '+(e?'err':'')}
-async function signup(){const email=$('email').value.trim().toLowerCase(),password=$('password').value;if(!email||password.length<8)return m('Inserisci email e password di almeno 8 caratteri.',true);const r=await s.auth.signUp({email,password,options:{emailRedirectTo:new URL('player-account.html?claim=1&v=986',location.href).href}});if(r.error)return m(r.error.message,true);if(r.data.session)return claim();m('Controlla la tua email e conferma l’account.')}
-async function claim(){const q=await s.auth.getSession();if(!q.data.session)return m('Prima effettua l’accesso.',true);const p=await s.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();if(String(p.data?.role||'').toLowerCase()==='admin')return m('Questo account è amministratore e non può essere convertito in Giocatore.',true);const r=await s.rpc('claim_approved_player_profile');if(r.error)return m(r.error.message,true);m(r.data?.message||'Iscrizione collegata.');setTimeout(()=>location.replace('player-home.html?v=986'),700)}
-window.signup=signup;window.claim=claim;if(new URLSearchParams(location.search).get('claim')==='1')claim();
-</script></body></html>
+const cfg=window.PAM_V9_CONFIG;
+const s=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
+const MAGIC_REDIRECT='https://padelarenareggioemilia.github.io/-padel-arena-manager-v9-test/player-magic.html';
+
+function message(text,type=''){
+  $('msg').textContent=text;
+  $('msg').className='notice '+type;
+}
+async function sendMagicLink(){
+  const email=$('email').value.trim().toLowerCase();
+  if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    return message('Inserisci un indirizzo email valido.','err');
+  }
+  $('sendBtn').disabled=true;
+  message('Invio del link in corso…');
+  try{
+    const check=await s.rpc('player_email_is_approved',{p_email:email});
+    if(!check.error && check.data===false){
+      return message('Con questa email non risulta ancora un giocatore approvato. Usa la stessa email inserita nella richiesta di iscrizione oppure contatta il capitano.','err');
+    }
+    const r=await s.auth.signInWithOtp({
+      email,
+      options:{
+        emailRedirectTo:MAGIC_REDIRECT,
+        shouldCreateUser:true
+      }
+    });
+    if(r.error) throw r.error;
+    message('✅ Email inviata. Apri il messaggio “AICS Padel Championship 2027”, premi “ENTRA NELLA TUA AREA GIOCATORE” e verrai portato direttamente nel portale. Il link è personale e scade dopo poco tempo.','ok');
+  }catch(e){
+    message('Non è stato possibile inviare il link: '+(e.message||String(e)),'err');
+  }finally{
+    $('sendBtn').disabled=false;
+  }
+}
+window.sendMagicLink=sendMagicLink;
+</script>
+</body>
+</html>

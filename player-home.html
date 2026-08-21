@@ -6,25 +6,133 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
 <style>
 :root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui;color:var(--text)}.shell{width:min(1000px,calc(100% - 24px));margin:auto;padding:22px 0 70px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0}.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.notice,.message,.callup{padding:12px;border:1px solid var(--line);border-radius:13px;margin:8px 0;background:#edf4fb}.message.mine{background:#eaf8f0}.actions,.tabs{display:flex;gap:8px;flex-wrap:wrap}.btn,.tab{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary,.tab.active{background:var(--b);color:#fff}.secondary,.tab{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}.danger{background:var(--r);color:#fff}.hidden{display:none!important}textarea{width:100%;min-height:85px;padding:10px;border:1px solid var(--line);border-radius:10px}.muted{color:var(--muted)}
-@media(max-width:700px){.actions,.tabs{display:grid}.btn,.tab{width:100%}}
-</style></head>
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui;color:var(--text)}.shell{width:min(1000px,calc(100% - 24px));margin:auto;padding:22px 0 70px}
+.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0}.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}
+.notice,.message,.callup{padding:12px;border:1px solid var(--line);border-radius:13px;margin:8px 0;background:#edf4fb}.message.mine{background:#eaf8f0}.err{background:#fdecef;border-color:#dd7a85}
+.actions,.tabs{display:flex;gap:8px;flex-wrap:wrap}.btn,.tab{border:0;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}.primary,.tab.active{background:var(--b);color:#fff}.secondary,.tab{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}.danger{background:var(--r);color:#fff}.hidden{display:none!important}
+textarea,input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff;color:var(--text)}textarea{min-height:85px}.muted{color:var(--muted)}
+.field{margin:11px 0}.field label{display:block;font-weight:900;margin-bottom:5px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.missing{border:2px solid #d8a52d;background:#fff9e8}.lock h2{margin-top:0}
+@media(max-width:700px){.actions,.tabs,.grid{display:grid}.btn,.tab{width:100%}}
+</style>
+</head>
 <body><main class="shell">
 <section class="hero"><h1>Area Giocatore</h1><div id="teamName"></div></section>
 <section class="card"><div id="status" class="notice">Caricamento…</div></section>
+
+<section id="completeBox" class="card lock hidden">
+  <h2>Completa il tuo profilo</h2>
+  <div class="notice missing">
+    Per continuare devi completare i dati obbligatori mancanti. Dopo il salvataggio entrerai normalmente nella tua Area Giocatore.
+  </div>
+  <div id="missingList" class="notice"></div>
+  <div id="completeForm" class="grid"></div>
+  <button class="btn primary" onclick="saveCompletion()">SALVA E CONTINUA</button>
+  <div id="completeMsg" class="notice">Compila i dati indicati.</div>
+</section>
+
 <section id="app" class="hidden">
 <section id="modeSwitch" class="card hidden"><div class="actions"><button class="btn primary" disabled>Modalità Giocatore</button><button class="btn secondary" onclick="location.href='captain-home.html?v=9932'">Modalità Segretario</button></div></section>
 <section class="card"><div class="tabs"><button class="tab active" data-v="home" onclick="setView('home')">Profilo</button><button class="tab" data-v="messages" onclick="setView('messages')">Comunicazioni</button><button class="tab" data-v="callups" onclick="setView('callups')">Convocazioni</button></div></section>
 <section class="card"><div id="content"></div></section>
 <section class="card"><div class="actions"><button class="btn secondary" onclick="location.href='digital-card.html?v=9927'">Tessera digitale</button><button class="btn secondary" onclick="location.href='account-home.html?v=9927'">Menu account</button><button class="btn danger" onclick="logout()">Logout / Cambia account</button></div></section>
 </section></main>
+
 <script>
-const c=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);let s,portal,hub,modes={},view='home';const A=x=>Array.isArray(x)?x:[],E=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));function date(v){const d=new Date(v);return Number.isNaN(d.getTime())?String(v||''):d.toLocaleString('it-IT')}
+const c=window.PAM_V9_CONFIG,$=id=>document.getElementById(id);
+let s,portal,hub,modes={},view='home',completion=null;
+const A=x=>Array.isArray(x)?x:[], E=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+function date(v){const d=new Date(v);return Number.isNaN(d.getTime())?String(v||''):d.toLocaleString('it-IT')}
 function setView(v){view=v;render()}
-function render(){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.v===view));if(view==='messages')content.innerHTML=`<textarea id="newMessage" placeholder="Scrivi al capitano e alla squadra"></textarea><button class="btn primary" onclick="sendMessage()">Invia</button>${A(hub.messages).map(m=>`<div class="message ${m.sender_user_id===hub.current_user_id?'mine':''}"><b>${E(m.sender_name||m.sender_role)}</b><div class="muted">${E(date(m.created_at))}</div><div>${E(m.body)}</div></div>`).join('')||'<div class="notice">Nessun messaggio.</div>'}`;else if(view==='callups')content.innerHTML=A(hub.callups).map(c=>`<div class="callup"><b>${E(c.title||'Convocazione')}</b><div class="muted">${E(date(c.created_at))}</div><p>${E(c.message||'')}</p><div class="notice">Risposta attuale: <b>${E(c.response||'pending')}</b></div><div class="actions"><button class="btn success" onclick="respond('${c.id}','confirmed')">Confermo</button><button class="btn danger" onclick="respond('${c.id}','unavailable')">Non disponibile</button></div></div>`).join('')||'<div class="notice">Nessuna convocazione.</div>';else content.innerHTML=`<h2>${E(portal.player?.first_name||'')} ${E(portal.player?.last_name||'')}</h2><div class="notice"><b>Squadra:</b> ${E(portal.team?.name||'')}<br><b>Serie:</b> ${E(portal.team?.series||'')}<br><b>Classifica FITP:</b> ${E(portal.player?.fitp_ranking||'')}<br><b>Certificato medico:</b> ${E(portal.player?.medical_certificate_expiry||'')}</div>`}
+function render(){
+ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.v===view));
+ if(view==='messages') content.innerHTML=`<textarea id="newMessage" placeholder="Scrivi al capitano e alla squadra"></textarea><button class="btn primary" onclick="sendMessage()">Invia</button>${A(hub.messages).map(m=>`<div class="message ${m.sender_user_id===hub.current_user_id?'mine':''}"><b>${E(m.sender_name||m.sender_role)}</b><div class="muted">${E(date(m.created_at))}</div><div>${E(m.body)}</div></div>`).join('')||'<div class="notice">Nessun messaggio.</div>'}`;
+ else if(view==='callups') content.innerHTML=A(hub.callups).map(c=>`<div class="callup"><b>${E(c.title||'Convocazione')}</b><div class="muted">${E(date(c.created_at))}</div><p>${E(c.message||'')}</p><div class="notice">Risposta attuale: <b>${E(c.response||'pending')}</b></div><div class="actions"><button class="btn success" onclick="respond('${c.id}','confirmed')">Confermo</button><button class="btn danger" onclick="respond('${c.id}','unavailable')">Non disponibile</button></div></div>`).join('')||'<div class="notice">Nessuna convocazione.</div>';
+ else content.innerHTML=`<h2>${E(portal.player?.first_name||'')} ${E(portal.player?.last_name||'')}</h2><div class="notice"><b>Squadra:</b> ${E(portal.team?.name||'')}<br><b>Serie:</b> ${E(portal.team?.series||'')}<br><b>Classifica FITP:</b> ${E(portal.player?.fitp_ranking||'')}<br><b>Certificato medico:</b> ${E(portal.player?.medical_certificate_expiry||'')}</div>`;
+}
+const labels={
+ photo_url:'Foto tessera',first_name:'Nome',last_name:'Cognome',birth_date:'Data di nascita',birth_place:'Luogo di nascita',
+ residence_town:'Comune di residenza',residence_postal_code:'CAP',residence_province:'Provincia',phone:'Telefono',
+ email:'Email',gender:'Sesso',medical_certificate_expiry:'Scadenza certificato medico',fitp_ranking:'Classifica FITP'
+};
+function inputFor(k,v){
+ const val=E(v||'');
+ if(k==='photo_url') return `<div class="field"><label>Foto tessera *</label><input id="fix_photo_url" type="file" accept="image/jpeg,image/png,image/webp" required></div>`;
+ if(k==='birth_date'||k==='medical_certificate_expiry') return `<div class="field"><label>${labels[k]} *</label><input id="fix_${k}" type="date" value="${val}" required></div>`;
+ if(k==='gender') return `<div class="field"><label>Sesso *</label><select id="fix_gender" required><option value="">Seleziona</option><option ${v==='Maschile'?'selected':''}>Maschile</option><option ${v==='Femminile'?'selected':''}>Femminile</option></select></div>`;
+ const attrs=k==='residence_postal_code'?'inputmode="numeric" maxlength="5" pattern="[0-9]{5}"':k==='residence_province'?'maxlength="2"':'';
+ return `<div class="field"><label>${labels[k]} *</label><input id="fix_${k}" ${attrs} value="${val}" required></div>`;
+}
+function showCompletion(data){
+ completion=data;
+ const miss=A(data.missing_fields);
+ $('missingList').innerHTML='<b>Dati da completare:</b> '+miss.map(k=>E(labels[k]||k)).join(', ');
+ $('completeForm').innerHTML=miss.map(k=>inputFor(k,data.player?.[k])).join('');
+ $('completeBox').classList.remove('hidden');
+ $('app').classList.add('hidden');
+ status.textContent='Profilo incompleto: completa i dati indicati per continuare.';
+}
+async function uploadCompletionPhoto(playerId){
+ const el=$('fix_photo_url'); if(!el?.files?.[0]) return null;
+ const f=el.files[0], ext=(f.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+ const path=`${playerId}/${crypto.randomUUID()}.${ext||'jpg'}`;
+ const up=await s.storage.from('player-photos').upload(path,f,{contentType:f.type,upsert:false});
+ if(up.error) throw up.error;
+ return s.storage.from('player-photos').getPublicUrl(path).data.publicUrl;
+}
+async function saveCompletion(){
+ try{
+  const payload={};
+  for(const k of A(completion.missing_fields)){
+    if(k==='photo_url') continue;
+    const el=$('fix_'+k); payload[k]=el?.value?.trim?.()??el?.value;
+  }
+  if('residence_postal_code' in payload && !/^\d{5}$/.test(payload.residence_postal_code)) throw new Error('Il CAP deve contenere esattamente 5 cifre.');
+  if(A(completion.missing_fields).includes('photo_url')){
+    const url=await uploadCompletionPhoto(completion.player.id);
+    if(!url) throw new Error('Carica la foto tessera.');
+    payload.photo_url=url;
+  }
+  $('completeMsg').textContent='Salvataggio in corso…';
+  const r=await s.rpc('update_my_player_required_profile',{p_payload:payload});
+  if(r.error) throw r.error;
+  $('completeMsg').textContent='✅ Profilo completato.';
+  $('completeBox').classList.add('hidden');
+  await load();
+ }catch(e){
+  $('completeMsg').textContent='Errore: '+(e.message||String(e));
+  $('completeMsg').className='notice err';
+ }
+}
+async function checkCompletion(){
+ const r=await s.rpc('get_my_player_profile_completion');
+ if(r.error){
+   if(String(r.error.message||'').toLowerCase().includes('function') || String(r.error.code||'')==='PGRST202') return true;
+   throw r.error;
+ }
+ const data=Array.isArray(r.data)?r.data[0]:r.data;
+ if(data && data.complete===false){showCompletion(data);return false}
+ return true;
+}
 async function sendMessage(){const body=$('newMessage').value.trim();if(!body)return;const r=await s.rpc('player_send_team_message',{p_body:body});if(r.error)return alert(r.error.message);await load();view='messages';render()}
 async function respond(id,response){const note=response==='unavailable'?prompt('Motivo indisponibilità (facoltativo):','')||'':'';const r=await s.rpc('player_respond_callup',{p_callup_id:id,p_response:response,p_note:note});if(r.error)return alert(r.error.message);await load();view='callups';render()}
-async function load(){try{if(!s)s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);const mr=await s.rpc('get_my_portal_modes');if(!mr.error)modes=Array.isArray(mr.data)?mr.data[0]:mr.data||{};const p=await s.rpc('get_my_player_portal');if(p.error)throw p.error;portal=Array.isArray(p.data)?p.data[0]:p.data;const h=await s.rpc('player_get_team_hub');if(h.error)throw h.error;hub=Array.isArray(h.data)?h.data[0]:h.data;teamName.textContent=portal.team?.name||'';status.textContent='Area giocatore aggiornata.';app.classList.remove('hidden');if(modes.is_secretary)modeSwitch.classList.remove('hidden');render()}catch(e){status.textContent='Errore: '+(e.message||e)}}
-async function logout(){try{await s.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1&v=998')}
-Object.assign(window,{setView,sendMessage,respond,logout});load();
-</script><div style="position:fixed;right:8px;bottom:8px;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui">V9.9.32 CAMBIO MODALITÀ</div></body></html>
+async function load(){
+ try{
+  if(!s)s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);
+  const session=(await s.auth.getSession()).data.session;
+  if(!session){location.replace('player-account.html');return}
+  const complete=await checkCompletion();
+  if(!complete)return;
+  const mr=await s.rpc('get_my_portal_modes');if(!mr.error)modes=Array.isArray(mr.data)?mr.data[0]:mr.data||{};
+  const p=await s.rpc('get_my_player_portal');if(p.error)throw p.error;portal=Array.isArray(p.data)?p.data[0]:p.data;
+  const h=await s.rpc('player_get_team_hub');if(h.error)throw h.error;hub=Array.isArray(h.data)?h.data[0]:h.data;
+  teamName.textContent=portal.team?.name||'';status.textContent='Area giocatore aggiornata.';
+  $('completeBox').classList.add('hidden');app.classList.remove('hidden');
+  if(modes.is_secretary)modeSwitch.classList.remove('hidden');render();
+ }catch(e){status.textContent='Errore: '+(e.message||e)}
+}
+async function logout(){try{await s.auth.signOut({scope:'local'})}catch(e){}location.replace('login.html?change=1')}
+Object.assign(window,{setView,sendMessage,respond,logout,saveCompletion});load();
+</script>
+<div style="position:fixed;right:8px;bottom:8px;padding:5px 8px;border-radius:999px;background:#082f68;color:#fff;font:700 10px system-ui">V9 · PROFILO OBBLIGATORIO</div>
+</body></html>
