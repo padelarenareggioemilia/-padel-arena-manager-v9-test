@@ -1,26 +1,3 @@
-V9 CALENDAR 10.3 - DERBY / IMPIANTI CONDIVISI
-
-Questa è la logica definitiva per i campi condivisi:
-
-ESEMPIO:
-Squadra A e Squadra B condividono lo stesso campo il sabato alle 16:00.
-
-- Se A è in casa, B deve essere in trasferta.
-- Se B è in casa, A deve essere in trasferta.
-- Se A gioca contro B, è un derby:
-  A-B oppure B-A = UNA SOLA partita sul campo, quindi nessun conflitto.
-- Nel ritorno casa/trasferta si invertono automaticamente.
-
-IL MOTORE:
-- costruisce il round-robin;
-- prova le combinazioni casa/trasferta;
-- sceglie una combinazione coerente sul calendario;
-- non sposta mai una singola partita in un'altra settimana;
-- non considera giorno/orario dell'ospite;
-- non inventa campi o orari;
-- ignora le vecchie partite della competizione che si sta rigenerando.
-
-SOSTITUIRE:
-calendar-v9-clean.js
-
-NON SOSTITUIRE ALTRI FILE.
+1. Esegui SUPABASE_V9_9_36_TESSERA_CAPITANO.sql su Supabase SQL Editor.
+2. Sostituisci captain-player-card.html su GitHub.
+3. Prova Area Capitano > Rosa > Genera tessera.
