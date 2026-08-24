@@ -1,0 +1,23 @@
+V9.9.35 - RECUPERO ATTIVAZIONE CAPITANO
+
+1) SU SUPABASE
+Apri SQL Editor, crea una nuova query e incolla TUTTO il contenuto di:
+SUPABASE_V9_9_35_RECUPERO_ATTIVAZIONE_CAPITANO.sql
+Poi premi RUN.
+
+2) SU GITHUB
+Sostituisci:
+- login.html
+- captain-activate.html
+
+Aggiungi:
+- captain-recover.html
+
+3) TEST
+Apri il login.
+Premi "Recupera email di attivazione Capitano".
+Inserisci l'email di un capitano che ha già creato l'account ma non ha ancora confermato l'email.
+Seleziona la squadra e premi "Invia nuova email di conferma".
+
+NOTA
+Questa funzione serve al caso in cui l'account Supabase sia già stato creato e l'email di conferma sia stata persa/non ricevuta.

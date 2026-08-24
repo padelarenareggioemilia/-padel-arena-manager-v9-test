@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#164a95">
+<title>AICS Padel Championship · Recupera attivazione Capitano</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--soft:#edf4fb}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(90deg,rgba(0,146,70,.06),transparent 25%,transparent 75%,rgba(206,43,55,.06)),var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";display:block;height:6px;background:linear-gradient(90deg,var(--g) 0 33.333%,#fff 33.333% 66.666%,var(--r) 66.666%)}
+main{width:min(620px,calc(100% - 24px));margin:24px auto 70px}.hero,.card{border:1px solid var(--line);border-radius:22px;padding:20px;margin:12px 0;background:#fff;box-shadow:0 14px 34px rgba(8,47,104,.12)}
+.hero{display:flex;align-items:center;gap:14px;background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.hero img{width:100px;height:66px;object-fit:contain;background:#fff;border-radius:13px;padding:6px}
+.field{margin:13px 0}label{display:block;font-weight:900;margin-bottom:6px}input{width:100%;padding:13px;border:1px solid var(--line);border-radius:11px;font:inherit}.btn{width:100%;border:0;border-radius:11px;padding:13px;font:inherit;font-weight:900;cursor:pointer;margin:5px 0}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);line-height:1.45}.ok{background:#eaf8f0;border-color:#77bd90}.err{background:#fdecef;border-color:#dd7a85}.hidden{display:none!important}.team{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.team img{width:68px;height:68px;object-fit:contain;border:1px solid var(--line);border-radius:12px;background:#fff}.small{font-size:13px;color:#627b97;line-height:1.45}
+</style>
+</head>
+<body>
+<main>
+<section class="hero"><img src="assets/aics-logo.png" alt="AICS"><div><h1 style="margin:0">Recupera attivazione Capitano</h1><div>AICS Padel Championship 2027</div></div></section>
+<section class="card">
+  <div class="notice">Inserisci la stessa email registrata come capitano. Se il tuo account è stato creato ma non hai più l'email di conferma, potrai fartela inviare nuovamente.</div>
+  <div class="field"><label>Email del capitano</label><input id="email" type="email" autocomplete="email" placeholder="nome@email.it"></div>
+  <button id="searchBtn" class="btn primary">Cerca la mia squadra</button>
+  <button class="btn secondary" onclick="location.href='login.html?v=9935'">Torna all'accesso</button>
+  <div id="status" class="notice hidden"></div>
+  <div id="teams"></div>
+</section>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG,$=id=>document.getElementById(id),sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+let currentEmail='';
+function show(text,error=false,ok=false){const b=$('status');b.textContent=text;b.className='notice '+(error?'err':ok?'ok':'');b.classList.remove('hidden')}
+function esc(v){return String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
+$('searchBtn').onclick=async()=>{
+ currentEmail=$('email').value.trim().toLowerCase();
+ if(!/^\S+@\S+\.\S+$/.test(currentEmail))return show('Inserisci un indirizzo email valido.',true);
+ $('searchBtn').disabled=true;$('searchBtn').textContent='Ricerca in corso…';$('teams').innerHTML='';
+ try{
+   const r=await sb.rpc('captain_activation_recovery',{p_email:currentEmail});
+   if(r.error)throw r.error;
+   const out=Array.isArray(r.data)?r.data[0]:r.data;
+   const teams=Array.isArray(out?.teams)?out.teams:[];
+   if(!teams.length){show('Se l’email è registrata come capitano ma non compare nulla, contatta l’amministrazione per verificare l’indirizzo inserito.',false,false);return}
+   show(teams.length===1?'Squadra trovata. Puoi richiedere una nuova email di conferma.':`Sono state trovate ${teams.length} squadre collegate a questa email. Scegli quella corretta.`,false,true);
+   $('teams').innerHTML=teams.map((t,i)=>`<div class="team">${t.logo_url?`<img src="${esc(t.logo_url)}" alt="">`:'<img src="assets/aics-logo.png" alt="">' }<div><b>${esc(t.team_name||'Squadra')}</b><div class="small">Capitano: ${esc(t.captain_name||'')}</div><button class="btn primary" onclick="resend(${i})">Invia nuova email di conferma</button></div></div>`).join('');
+   window.__recoveryTeams=teams;
+ }catch(e){show('Recupero non disponibile: '+(e.message||String(e)),true)}
+ finally{$('searchBtn').disabled=false;$('searchBtn').textContent='Cerca la mia squadra'}
+};
+window.resend=async i=>{
+ const t=(window.__recoveryTeams||[])[i];if(!t)return;
+ const buttons=[...document.querySelectorAll('.team .btn')];buttons.forEach(b=>b.disabled=true);
+ show('Invio della nuova email di conferma…');
+ try{
+   const redirect=new URL('captain-activate.html',location.href);
+   redirect.searchParams.set('invite',t.invite_token);
+   redirect.searchParams.set('recovered','1');
+   const r=await sb.auth.resend({type:'signup',email:currentEmail,options:{emailRedirectTo:redirect.href}});
+   if(r.error)throw r.error;
+   show('Email inviata. Controlla la posta e anche Spam/Posta indesiderata. Il nuovo link sostituisce quello perso.',false,true);
+ }catch(e){show('Invio non riuscito: '+(e.message||String(e)),true)}
+ finally{setTimeout(()=>buttons.forEach(b=>b.disabled=false),60000)}
+};
+</script>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.35 RECUPERO ATTIVAZIONE CAPITANO</div>
+</body></html>
