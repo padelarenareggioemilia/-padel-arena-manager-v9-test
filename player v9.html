@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#164a95">
+<title>AICS Padel Championship Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<link rel="stylesheet" href="app-theme.css?v=980stable">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/aics-icon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/aics-icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{--blue:#164a95;--blue-dark:#082f68;--green:#009246;--red:#ce2b37;--bg:#f4f8fc;--panel:#fff;--text:#0a2e5e;--muted:#627b97;--line:#b9cde3}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}.shell{max-width:900px;margin:auto;padding:14px 14px 80px}.hero{background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;border-radius:24px;padding:18px;box-shadow:0 14px 34px rgba(8,47,104,.13)}.brand{display:flex;align-items:center;gap:14px}.brand-logo{width:110px;height:70px;object-fit:contain;background:#fff;border-radius:16px;padding:8px}.hero h1{margin:0;font-size:clamp(28px,6vw,44px)}.hero .muted{color:#d9e6f5}.tricolore{height:5px;border-radius:999px;margin:10px 0;background:linear-gradient(90deg,#009246 0 33.333%,#fff 33.333% 66.666%,#ce2b37 66.666%);border:1px solid #d7e3ef}.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 12px 28px rgba(8,47,104,.09)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:9px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px;color:var(--blue-dark)}input,select,textarea{width:100%;padding:13px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--text);font:inherit;outline:none}textarea{min-height:85px}.btn{border:0;border-radius:13px;padding:13px 16px;font-weight:900;cursor:pointer}.primary{background:linear-gradient(135deg,#2e6fba,#164a95);color:#fff}.secondary{background:#fff;color:var(--blue-dark);border:1px solid #2e6fba}.danger{background:var(--red);color:#fff}.notice{padding:12px;border-radius:13px;background:#edf4fb;border:1px solid var(--line);margin:10px 0;line-height:1.45}.notice.ok{background:#eaf8f0;border-color:var(--green)}.notice.err{background:#fdecef;border-color:var(--red);color:#7f1d1d}.hidden{display:none!important}.muted,.doc-note{color:var(--muted)}.doc-note{font-size:12px;line-height:1.45;margin-top:6px}.logo{width:76px;height:76px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:15px;padding:4px}.photo-preview{width:150px;height:190px;border:1px dashed #5b82a5;border-radius:16px;display:grid;place-items:center;overflow:hidden;background:#edf4fb;color:var(--muted)}.photo-preview img{width:100%;height:100%;object-fit:cover}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions .btn{flex:1}.field-error{display:none;color:var(--red);font-size:12px;font-weight:800;margin-top:6px;line-height:1.35}.field.invalid input,.field.invalid select,.field.invalid textarea{border:2px solid var(--red)!important;background:#fff7f8!important;box-shadow:0 0 0 3px rgba(206,43,55,.08)}.field.invalid .field-error{display:block}.field.valid input,.field.valid select{border-color:var(--green)!important}.error-summary{border:2px solid var(--red);background:#fff1f2;color:#7f1d1d;border-radius:15px;padding:13px;margin:14px 0}.error-summary strong{display:block;margin-bottom:6px}.error-summary ul{margin:5px 0 0;padding-left:20px}.photo-info{font-size:12px;font-weight:800;margin-top:6px}.photo-info.bad{color:var(--red)}.photo-info.good{color:var(--green)}.status-mail{margin-top:10px;padding:11px;border-radius:12px;background:#f7fbff;border:1px solid var(--line);font-size:13px}.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}.brand-logo{width:90px;height:58px}.photo-preview{width:135px;height:170px}}
+</style>
+</head>
+<body><main class="shell">
+<header class="hero"><div class="brand"><img class="brand-logo" src="assets/aics-logo.png" alt="AICS"><div><h1>Iscrizione alla squadra</h1><div class="muted">Compila i dati: se qualcosa non va, te lo indichiamo subito.</div></div></div></header>
+<div class="tricolore"></div>
+<section id="box" class="card">Verifica squadra...</section>
+</main>
+<script>
+const c=window.PAM_V9_CONFIG;
+const s=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);
+const params=new URLSearchParams(location.search);
+const t=params.get('team')||params.get('invite');
+const b=document.getElementById('box');
+const e=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+let team=null,photoFile=null,lastSignupEmail='';
+const MAX_PHOTO=5*1024*1024;
+const PHOTO_TYPES=['image/jpeg','image/png','image/webp'];
+const labels={fn:'Nome',ln:'Cognome',em:'Email',ph:'Telefono',bd:'Data di nascita',bp:'Luogo di nascita',rt:'Comune di residenza',rp:'Provincia',g:'Sesso',fitp:'Classifica FITP',medical:'Scadenza certificato medico',photo:'Foto tessera',truth:'Dichiarazione di veridicità',accountPassword:'Password',accountPasswordConfirm:'Conferma password'};
+
+function field(id){return document.getElementById(id)}
+function fieldWrap(id){return field(id)?.closest('.field')||null}
+function clearFieldError(id){const w=fieldWrap(id);if(w){w.classList.remove('invalid');const x=w.querySelector('.field-error');if(x)x.textContent=''}}
+function setFieldError(id,msg){const el=field(id),w=fieldWrap(id);if(w){w.classList.remove('valid');w.classList.add('invalid');let x=w.querySelector('.field-error');if(!x){x=document.createElement('div');x.className='field-error';w.appendChild(x)}x.textContent=msg}if(el)el.setAttribute('aria-invalid','true')}
+function setValid(id){const el=field(id),w=fieldWrap(id);if(w&&!w.classList.contains('invalid'))w.classList.add('valid');if(el)el.removeAttribute('aria-invalid')}
+function clearAllErrors(){document.querySelectorAll('.field.invalid').forEach(x=>x.classList.remove('invalid'));document.querySelectorAll('.field-error').forEach(x=>x.textContent='');document.querySelectorAll('[aria-invalid="true"]').forEach(x=>x.removeAttribute('aria-invalid'));field('errorSummary')?.classList.add('hidden')}
+function showSummary(errors){const box=field('errorSummary');if(!box)return;box.innerHTML=`<strong>⚠️ Correggi ${errors.length===1?'questo dato':'questi dati'} prima di inviare:</strong><ul>${errors.map(x=>`<li>${e(x.msg)}</li>`).join('')}</ul>`;box.classList.remove('hidden');const first=field(errors[0]?.id);setTimeout(()=>{(first||box).scrollIntoView({behavior:'smooth',block:'center'});first?.focus?.()},40)}
+function m(x,z=false){const a=field('m');if(!a)return;a.textContent=x;a.className='notice '+(z?'err':'ok');a.classList.remove('hidden');a.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function addError(arr,id,msg){arr.push({id,msg});setFieldError(id,msg)}
+function validEmail(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)}
+
+async function init(){
+ const r=await s.rpc('public_team_by_player_invite',{p_token:t});
+ if(r.error||!r.data){b.innerHTML='<h2>Link non valido</h2><p>Chiedi al capitano o all’amministratore di copiare nuovamente il link di iscrizione della squadra.</p>';return}
+ team=r.data;
+ b.innerHTML=`${team.logo_url?`<img class="logo" src="${e(team.logo_url)}" alt="Logo squadra">`:''}
+ <h2>${e(team.name)}</h2><p class="muted">${e(team.series||'')} · ${e(team.club_name||'')}</p>
+ <div class="notice"><b>Come funziona</b><br>Compila tutti i campi con *. Se manca qualcosa o un dato non è valido, il campo diventa <b style="color:#ce2b37">rosso</b> e compare il motivo. La richiesta non verrà mai bloccata senza spiegazione.</div>
+ <div class="notice err"><b>AVVISO IMPORTANTE SULLA VERIDICITÀ DEI DATI</b><br>Il capitano e ciascun giocatore sono responsabili della completezza e della veridicità dei dati, dei documenti e delle dichiarazioni inserite. Informazioni false, alterate, incomplete o riferite ad altre persone potranno comportare l’immediata sospensione o esclusione dalla competizione.</div>
+ <form id="playerForm" novalidate>
+ <div id="errorSummary" class="error-summary hidden"></div>
+ <div class="grid2">
+  <div>
+   <div class="field"><label>Foto tessera con sfondo bianco *</label><input id="photo" type="file" accept="image/jpeg,image/png,image/webp"><div class="doc-note">Foto recente, frontale e riconoscibile. JPG, PNG o WEBP. <b>Massimo 5 MB.</b></div><div class="field-error"></div><div id="photoInfo" class="photo-info"></div></div>
+   <div id="photoPreview" class="photo-preview">ANTEPRIMA FOTO</div>
+  </div>
+  <div>
+   <div class="field"><label>Nome *</label><input id="fn" autocomplete="given-name"><div class="field-error"></div></div>
+   <div class="field"><label>Cognome *</label><input id="ln" autocomplete="family-name"><div class="field-error"></div></div>
+   <div class="field"><label>Email *</label><input id="em" type="email" inputmode="email" autocomplete="email"><div class="field-error"></div></div>
+   <div class="field"><label>Telefono *</label><input id="ph" type="tel" inputmode="tel" autocomplete="tel"><div class="field-error"></div></div>
+  </div>
+ </div>
+ <div class="grid2">
+  <div class="field"><label>Data di nascita *</label><input id="bd" type="date"><div class="field-error"></div></div>
+  <div class="field"><label>Luogo di nascita *</label><input id="bp"><div class="field-error"></div></div>
+  <div class="field"><label>Comune di residenza *</label><input id="rt" autocomplete="address-level2"><div class="field-error"></div></div>
+  <div class="field"><label>Provincia *</label><input id="rp" maxlength="2" placeholder="Es. RE"><div class="field-error"></div></div>
+  <div class="field"><label>Sesso *</label><select id="g"><option value="">Seleziona</option><option>Maschile</option><option>Femminile</option></select><div class="field-error"></div></div>
+  <div class="field"><label>Classifica FITP *</label><input id="fitp" placeholder="Es. NC, 4.4, 4.1, 3.5"><div class="field-error"></div></div>
+  <div class="field"><label>Scadenza certificato medico *</label><input id="medical" type="date"><div class="field-error"></div></div>
+ </div>
+ <div class="field"><label>Note</label><textarea id="nt"></textarea></div>
+ <div class="field"><label class="notice" style="display:flex;gap:9px;align-items:flex-start;cursor:pointer"><input id="truth" type="checkbox" style="width:auto;margin-top:4px"><span>Dichiaro che i dati e i documenti inseriti sono autentici, aggiornati e riferiti alla mia persona. *</span></label><div class="field-error"></div></div>
+ <div class="notice" style="margin-top:14px"><label style="display:flex;align-items:flex-start;gap:9px;font-weight:800;cursor:pointer"><input id="createAccount" type="checkbox" style="width:auto;margin-top:4px"><span>Voglio creare anche il mio account personale</span></label><div class="doc-note">Facoltativo: potrai accedere con email e password. L’iscrizione può essere inviata anche senza account.</div>
+  <div id="accountFields" class="hidden"><div class="grid2" style="margin-top:10px"><div class="field"><label>Password *</label><input id="accountPassword" type="password" autocomplete="new-password" placeholder="Almeno 8 caratteri"><div class="field-error"></div></div><div class="field"><label>Conferma password *</label><input id="accountPasswordConfirm" type="password" autocomplete="new-password"><div class="field-error"></div></div></div></div>
+ </div>
+ <button id="sendBtn" type="submit" class="btn primary">Invia richiesta</button>
+ <div id="m" class="notice hidden"></div>
+ <div id="mailActions" class="status-mail hidden"><b>Email di conferma account</b><div id="mailStatus" style="margin:5px 0 9px"></div><button id="resendBtn" type="button" class="btn secondary">Reinvia email di conferma</button></div>
+ </form>`;
+
+ field('playerForm').addEventListener('submit',ev=>{ev.preventDefault();sendRequest()});
+ field('createAccount').addEventListener('change',toggleAccountFields);
+ field('photo').addEventListener('change',onPhotoChange);
+ field('resendBtn').addEventListener('click',resendConfirmation);
+ document.querySelectorAll('input,select,textarea').forEach(el=>{
+   if(el.id==='photo')return;
+   const evt=(el.type==='checkbox'||el.tagName==='SELECT')?'change':'input';
+   el.addEventListener(evt,()=>{clearFieldError(el.id);field('errorSummary')?.classList.add('hidden')});
+ });
+}
+
+function toggleAccountFields(){const checked=field('createAccount')?.checked;field('accountFields')?.classList.toggle('hidden',!checked);if(!checked){clearFieldError('accountPassword');clearFieldError('accountPasswordConfirm')}}
+function onPhotoChange(ev){
+ clearFieldError('photo');
+ photoFile=ev.target.files[0]||null;
+ const info=field('photoInfo'),preview=field('photoPreview');
+ if(!photoFile){info.textContent='';preview.textContent='ANTEPRIMA FOTO';return}
+ const mb=(photoFile.size/1024/1024).toFixed(2);
+ if(!PHOTO_TYPES.includes(photoFile.type)){setFieldError('photo','Formato non valido. Usa JPG, PNG o WEBP.');info.textContent='Formato foto non valido';info.className='photo-info bad';return}
+ if(photoFile.size>MAX_PHOTO){setFieldError('photo',`Foto troppo grande: ${mb} MB. Il massimo consentito è 5 MB.`);info.textContent=`❌ ${mb} MB — supera il limite di 5 MB`;info.className='photo-info bad';preview.textContent='FOTO TROPPO GRANDE';return}
+ info.textContent=`✓ Foto valida: ${mb} MB`;info.className='photo-info good';setValid('photo');
+ const u=URL.createObjectURL(photoFile);preview.innerHTML=`<img src="${u}" alt="Anteprima foto tessera">`;
+}
+
+function validateForm(){
+ clearAllErrors();const errors=[];
+ const required=[['fn','Inserisci il nome.'],['ln','Inserisci il cognome.'],['em','Inserisci l’email.'],['ph','Inserisci il numero di telefono.'],['bd','Inserisci la data di nascita.'],['bp','Inserisci il luogo di nascita.'],['rt','Inserisci il comune di residenza.'],['rp','Inserisci la provincia.'],['g','Seleziona il sesso.'],['fitp','Inserisci la classifica FITP (anche NC).'],['medical','Inserisci la scadenza del certificato medico.']];
+ for(const [id,msg] of required){if(!String(field(id)?.value||'').trim())addError(errors,id,msg);else setValid(id)}
+ if(field('em')?.value&&!validEmail(field('em').value.trim()))addError(errors,'em','Inserisci un indirizzo email valido.');
+ if(field('rp')?.value&&!/^[A-Za-z]{2}$/.test(field('rp').value.trim()))addError(errors,'rp','La provincia deve avere 2 lettere, per esempio RE, MO, PR.');
+ if(!photoFile)addError(errors,'photo','Carica la foto tessera.');
+ else if(!PHOTO_TYPES.includes(photoFile.type))addError(errors,'photo','Formato foto non valido. Usa JPG, PNG o WEBP.');
+ else if(photoFile.size>MAX_PHOTO)addError(errors,'photo',`La foto pesa ${(photoFile.size/1024/1024).toFixed(2)} MB: il massimo è 5 MB.`);
+ if(!field('truth')?.checked)addError(errors,'truth','Devi confermare la veridicità dei dati inseriti.');
+ if(field('createAccount')?.checked){
+   const p=field('accountPassword').value,pc=field('accountPasswordConfirm').value;
+   if(p.length<8)addError(errors,'accountPassword','La password deve avere almeno 8 caratteri.');
+   if(!pc)addError(errors,'accountPasswordConfirm','Ripeti la password.');
+   else if(p!==pc)addError(errors,'accountPasswordConfirm','Le due password non coincidono.');
+ }
+ if(errors.length){showSummary(errors);m(`Ci sono ${errors.length} ${errors.length===1?'dato da correggere':'dati da correggere'}. Guarda i campi evidenziati in rosso.`,true);return false}
+ return true;
+}
+
+function friendlyError(err){
+ const raw=String(err?.message||err||'Errore sconosciuto');
+ if(/payload too large|too large|maximum|exceeded|413/i.test(raw))return 'Il file è troppo grande. Riduci la foto e riprova.';
+ if(/mime|content.?type|unsupported|format/i.test(raw))return 'Formato della foto non supportato. Usa JPG, PNG o WEBP.';
+ if(/network|fetch|failed to fetch/i.test(raw))return 'Problema di connessione. Controlla internet e riprova.';
+ if(/invalid.*email|email.*invalid/i.test(raw))return 'L’indirizzo email non è valido.';
+ if(/already registered|user already registered/i.test(raw))return 'Questa email ha già un account. Puoi accedere con la stessa email oppure recuperare la password.';
+ if(/rate limit|too many/i.test(raw))return 'Troppi tentativi ravvicinati. Attendi qualche minuto e riprova.';
+ return raw;
+}
+async function uploadPhoto(){
+ if(!photoFile)throw new Error('Carica la foto tessera.');
+ if(photoFile.size>MAX_PHOTO)throw new Error(`La foto pesa ${(photoFile.size/1024/1024).toFixed(2)} MB: il massimo è 5 MB.`);
+ if(!PHOTO_TYPES.includes(photoFile.type))throw new Error('Formato foto non valido. Usa JPG, PNG o WEBP.');
+ const ext=(photoFile.name.split('.').pop()||'jpg').toLowerCase();
+ const safeExt=['jpg','jpeg','png','webp'].includes(ext)?ext:'jpg';
+ const path=`${team.id}/${crypto.randomUUID()}.${safeExt}`;
+ const up=await s.storage.from('player-photos').upload(path,photoFile,{contentType:photoFile.type,upsert:false});
+ if(up.error)throw up.error;
+ return s.storage.from('player-photos').getPublicUrl(path).data.publicUrl;
+}
+async function sendRequest(){
+ if(!validateForm())return;
+ const wantsAccount=field('createAccount').checked;
+ const password=field('accountPassword').value;
+ const p={first_name:field('fn').value.trim(),last_name:field('ln').value.trim(),email:field('em').value.trim().toLowerCase(),phone:field('ph').value.trim(),birth_date:field('bd').value,birth_place:field('bp').value.trim(),residence_town:field('rt').value.trim(),residence_province:field('rp').value.trim().toUpperCase(),gender:field('g').value,fitp_ranking:field('fitp').value.trim().toUpperCase(),medical_certificate_expiry:field('medical').value,notes:field('nt').value.trim()};
+ const btn=field('sendBtn');
+ try{
+   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Invio in corso…';m('Controllo dati, caricamento foto e invio richiesta…');
+   p.photo_url=await uploadPhoto();
+   const r=await s.rpc('submit_roster_request',{p_token:t,p_payload:p});
+   if(r.error)throw r.error;
+   if(wantsAccount){
+     const signup=await s.auth.signUp({email:p.email,password,options:{emailRedirectTo:new URL('public.html?account_confirmed=1',location.href).href}});
+     if(signup.error){
+       m('✓ Iscrizione alla squadra inviata. L’account personale invece non è stato creato: '+friendlyError(signup.error),true);
+       btn.textContent='Iscrizione inviata';return;
+     }
+     lastSignupEmail=p.email;
+     if(signup.data.session){m('✓ Iscrizione inviata e account creato. Dopo l’approvazione del capitano potrai accedere con email e password.');}
+     else{
+       m(`✓ Iscrizione inviata e account creato. Abbiamo richiesto l’invio dell’email di conferma a ${p.email}.`);
+       field('mailActions').classList.remove('hidden');
+       field('mailStatus').textContent='Stato: richiesta di invio accettata. Se non la vedi, controlla Spam/Posta indesiderata oppure usa “Reinvia”.';
+     }
+   }else m('✓ Richiesta inviata correttamente. Il capitano potrà verificarla e approvarla.');
+   btn.textContent='Richiesta inviata';btn.disabled=true;
+ }catch(err){btn.disabled=false;btn.textContent='Invia richiesta';m('Non è stato possibile completare l’iscrizione: '+friendlyError(err),true)}
+}
+async function resendConfirmation(){
+ if(!lastSignupEmail){m('Non ho un indirizzo email da reinviare in questa sessione.',true);return}
+ const btn=field('resendBtn');
+ try{btn.disabled=true;btn.textContent='Reinvio…';const r=await s.auth.resend({type:'signup',email:lastSignupEmail,options:{emailRedirectTo:new URL('public.html?account_confirmed=1',location.href).href}});if(r.error)throw r.error;field('mailStatus').textContent=`✓ Nuova richiesta di invio accettata per ${lastSignupEmail}. Controlla anche Spam/Posta indesiderata.`;m('Richiesta di reinvio email accettata.');}
+ catch(err){field('mailStatus').textContent='❌ Reinvio non riuscito: '+friendlyError(err);m('Reinvio email non riuscito: '+friendlyError(err),true)}
+ finally{btn.disabled=false;btn.textContent='Reinvia email di conferma'}
+}
+init();
+</script>
+<section class="card" style="max-width:900px;margin:12px auto"><div class="actions"><button class="btn secondary" onclick="location.href='account-home.html'">Home del mio account</button><button class="btn danger" onclick="logoutAndChange()">Cambia account</button></div></section>
+<script>
+async function logoutAndChange(){if(s)await s.auth.signOut();location.replace('login.html?change=1')}
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
+</script>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9 · ISCRIZIONE GUIDATA</div>
+<script src="app-ui.js?v=980stable"></script>
+</body></html>
