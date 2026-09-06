@@ -1,0 +1,43 @@
+V9.9.40 — MODULO TESSERAMENTI COMPLETO
+
+DATI OPERATIVI CONFIGURATI
+- Beneficiario: COMITATO PROVINCIALE AICS REGGIO EMILIA
+- IBAN: IT49Q0707212802000000406211
+- Quota tessera: € 15,00 per giocatore
+- Email Comitato: reggioemilia@aics.it
+- Email in copia: aicspadeltour@gmail.com
+- Limite rosa: 20 giocatori
+- Sostituzioni massime: 3
+- Termine: 31/01/2027
+
+FUNZIONAMENTO
+- Ogni giocatore ha stato: DA TESSERARE / TESSERATO / NON SCHIERABILE.
+- Una richiesta contiene SOLO i giocatori ancora DA TESSERARE.
+- Il totale bonifico è calcolato automaticamente: numero giocatori x € 15.
+- Il capitano non può procedere senza ricevuta del bonifico.
+- La ricevuta viene archiviata nello Storage Supabase.
+- Dopo l'invio, i giocatori inclusi passano a TESSERATO.
+- Le richieste successive non reinviano i giocatori già tesserati.
+- Con la sostituzione, l'uscente diventa NON SCHIERABILE; il nuovo resta DA TESSERARE finché non viene incluso in una nuova richiesta.
+- Storico completo delle richieste.
+
+INSTALLAZIONE
+1. Eseguire UNA SOLA VOLTA nel SQL Editor Supabase V9:
+   database/SUPABASE_V9_9_40_TESSERAMENTI.sql
+
+2. Caricare nella root GitHub V9:
+   captain-tesseramenti.html
+
+3. Aprire:
+   captain-tesseramenti.html?v=9940
+
+EMAIL
+Questa build prepara automaticamente l'email a:
+  reggioemilia@aics.it
+con CC:
+  aicspadeltour@gmail.com
+
+Il testo contiene l'elenco dei SOLI giocatori della richiesta e il link alla ricevuta.
+L'invio avviene tramite l'app email del dispositivo del capitano.
+
+Per rendere l'invio 100% automatico senza aprire Mail/Gmail serve configurare un mittente SMTP/Resend/Google Apps Script.

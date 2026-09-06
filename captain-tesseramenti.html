@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AICS Padel Championship · Tesseramenti</title>
+<meta name="theme-color" content="#164a95">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--y:#d79b00;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#627b97;--soft:#edf4fb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.33%,#fff 33.33% 66.66%,var(--r) 66.66%);z-index:99}
+.shell{max-width:1050px;margin:auto;padding:20px 12px 70px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin:12px 0}
+.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff;display:flex;gap:14px;align-items:center}.hero img{width:95px;height:62px;object-fit:contain;background:#fff;border-radius:13px;padding:6px}
+.btn{border:0;border-radius:11px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--b);color:#fff}.success{background:var(--g);color:#fff}.danger{background:var(--r);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.warning{background:var(--y);color:#fff}.btn:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:10px 0}.ok{background:#eaf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}.warn{background:#fff7dc;border-color:#dfbf68}.hidden{display:none!important}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.kpi{border:1px solid var(--line);border-radius:14px;padding:13px;text-align:center}.kpi strong{display:block;font-size:28px;color:var(--b)}
+.player{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}.player:last-child{border:0}.badge{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:900}.to-do{background:#fff7dc}.registered{background:#eaf8f0}.inactive{background:#fdecef}
+.field{margin:10px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;font:inherit}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.history{border:1px solid var(--line);border-radius:14px;padding:12px;margin:9px 0}
+@media(max-width:700px){.kpis,.grid2{grid-template-columns:1fr 1fr}.actions{display:grid}.btn{width:100%}.player{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="shell">
+<header class="hero">
+  <img src="assets/aics-logo.png" alt="AICS">
+  <div><h1 style="margin:0">Gestione Tesseramenti</h1><div id="teamSub">AICS Padel Championship</div></div>
+</header>
+
+<section class="card"><div id="status" class="notice">Caricamento…</div></section>
+
+<section id="app" class="hidden">
+  <section class="card">
+    <div class="actions">
+      <button class="btn secondary" onclick="location.href='captain-home.html?v=9940'">← Area Capitano</button>
+      <button class="btn secondary" onclick="loadAll()">Aggiorna</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Situazione rosa</h2>
+    <div class="kpis">
+      <div class="kpi"><strong id="kRegistered">0</strong>Tesserati</div>
+      <div class="kpi"><strong id="kTodo">0</strong>Da tesserare</div>
+      <div class="kpi"><strong id="kInactive">0</strong>Non schierabili</div>
+      <div class="kpi"><strong id="kFree">0</strong>Posti liberi</div>
+    </div>
+    <div id="limits" class="notice"></div>
+  </section>
+
+  <section class="card">
+    <h2>Giocatori</h2>
+    <div class="notice">Le nuove richieste includono soltanto i giocatori nello stato <b>Da tesserare</b>. I giocatori già tesserati non vengono reinviati.</div>
+    <div id="players"></div>
+  </section>
+
+  <section class="card">
+    <h2>Nuova richiesta di tesseramento</h2>
+    <div id="eligibleBox" class="notice"></div>
+    <div id="paymentBox" class="notice"></div>
+    <div class="grid2">
+      <div class="field"><label>Importo bonifico</label><input id="amount" readonly></div>
+      <div class="field"><label>Causale</label><input id="reason" readonly></div>
+    </div>
+    <div class="field">
+      <label>Ricevuta bonifico *</label>
+      <input id="receipt" type="file" accept="application/pdf,image/jpeg,image/png,image/webp">
+    </div>
+    <div class="field">
+      <label>Note facoltative</label>
+      <textarea id="notes" placeholder="Eventuali note per il Comitato"></textarea>
+    </div>
+    <div class="actions">
+      <button id="uploadBtn" class="btn primary" onclick="uploadReceipt()">Carica ricevuta</button>
+      <button id="sendBtn" class="btn success" onclick="sendRequest()" disabled>Invia richiesta tesseramento</button>
+    </div>
+    <div id="requestMsg" class="notice hidden"></div>
+  </section>
+
+  <section class="card">
+    <h2>Sostituzione giocatore</h2>
+    <div class="notice warn">Il giocatore sostituito resta tesserato ma passa a <b>Non schierabile</b>. Il nuovo giocatore deve essere già presente e approvato in rosa; resterà <b>Da tesserare</b> fino alla nuova richiesta.</div>
+    <div class="grid2">
+      <div class="field"><label>Giocatore che esce</label><select id="outPlayer"></select></div>
+      <div class="field"><label>Giocatore che entra</label><select id="inPlayer"></select></div>
+    </div>
+    <div class="field"><label>Motivo / nota</label><input id="replaceNote" placeholder="Sostituzione rosa"></div>
+    <button class="btn warning" onclick="replacePlayer()">Registra sostituzione</button>
+  </section>
+
+  <section class="card">
+    <h2>Storico richieste</h2>
+    <div id="history"></div>
+  </section>
+</section>
+</main>
+
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id);
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+let portal=null,reg=null,currentRequestId=null,currentReceiptUrl=null;
+
+function show(id,text,error=false){
+  const el=$(id);el.textContent=text;el.className='notice '+(error?'err':'ok');el.classList.remove('hidden');
+}
+function playerName(p){return `${p.first_name||''} ${p.last_name||''}`.trim()}
+function stateLabel(s){return s==='tesserato'?'Tesserato':s==='non_schierabile'?'Non schierabile':'Da tesserare'}
+function stateClass(s){return s==='tesserato'?'registered':s==='non_schierabile'?'inactive':'to-do'}
+
+async function loadAll(){
+  try{
+    $('status').textContent='Aggiornamento dati…';
+    const ses=await sb.auth.getSession();
+    if(!ses.data.session){location.href='login.html';return}
+    const p=await sb.rpc('get_my_captain_portal');
+    if(p.error)throw p.error;
+    portal=Array.isArray(p.data)?p.data[0]:p.data;
+    if(!portal?.ok)throw new Error(portal?.message||'Squadra non collegata.');
+    const r=await sb.rpc('captain_get_tesseramento_dashboard',{p_team_id:portal.team_id});
+    if(r.error)throw r.error;
+    reg=r.data;
+    render();
+    $('status').textContent='Modulo tesseramenti operativo.';
+    $('status').className='notice ok';
+    $('app').classList.remove('hidden');
+  }catch(e){
+    $('status').textContent='Impossibile caricare il modulo: '+(e.message||String(e));
+    $('status').className='notice err';
+  }
+}
+
+function render(){
+  const t=reg.team||{};
+  $('teamSub').textContent=t.name||'Squadra';
+  $('kRegistered').textContent=reg.counts?.tesserato||0;
+  $('kTodo').textContent=reg.counts?.da_tesserare||0;
+  $('kInactive').textContent=reg.counts?.non_schierabile||0;
+  $('kFree').textContent=reg.counts?.posti_liberi||0;
+  $('limits').innerHTML=`Limite rosa: <b>${reg.settings?.max_roster||20}</b> · Sostituzioni utilizzate: <b>${reg.counts?.sostituzioni||0}/${reg.settings?.replacement_limit||3}</b> · Termine nuovi tesseramenti: <b>${esc(reg.settings?.deadline||'31/01/2027')}</b>`;
+
+  const players=reg.players||[];
+  $('players').innerHTML=players.map(p=>`<div class="player"><div><b>${esc(playerName(p))}</b><div class="muted">${esc(p.email||'')} · ${esc(p.gender||'')}</div></div><span class="badge ${stateClass(p.registration_status)}">${stateLabel(p.registration_status)}</span></div>`).join('')||'<div class="notice">Nessun giocatore approvato.</div>';
+
+  const eligible=players.filter(p=>p.registration_status==='da_tesserare');
+  $('eligibleBox').innerHTML=eligible.length
+    ? `<b>${eligible.length} giocator${eligible.length===1?'e':'i'} da inserire nella prossima richiesta:</b><br>${eligible.map(p=>esc(playerName(p))).join('<br>')}`
+    : 'Nessun giocatore da tesserare al momento.';
+
+  const s=reg.settings||{};
+  const configured=s.iban && s.iban!=='DA_CONFIGURARE' && s.committee_email && s.committee_email!=='DA_CONFIGURARE';
+  $('paymentBox').innerHTML= configured
+    ? `<b>Bonifico:</b><br>Intestatario: ${esc(s.account_holder||'')}<br>IBAN: <b>${esc(s.iban)}</b><br>Quota tessera: € ${Number(s.fee_per_player||0).toFixed(2)} a giocatore<br>Comitato: ${esc(s.committee_email)}`
+    : '<b>Configurazione incompleta.</b> L’amministratore deve impostare IBAN, intestatario, quota ed email del Comitato.';
+
+  $('amount').value=(eligible.length*Number(s.fee_per_player||0)).toFixed(2)+' €';
+  $('reason').value=`TESSERAMENTO PADEL AICS 2027 - ${t.name||''} - ${eligible.length} giocator${eligible.length===1?'e':'i'}`;
+  $('uploadBtn').disabled=!eligible.length || !configured;
+  $('sendBtn').disabled=true;
+  currentRequestId=null;currentReceiptUrl=null;
+
+  const registered=players.filter(p=>p.registration_status==='tesserato');
+  const todo=players.filter(p=>p.registration_status==='da_tesserare');
+  $('outPlayer').innerHTML='<option value="">Seleziona</option>'+registered.map(p=>`<option value="${p.id}">${esc(playerName(p))}</option>`).join('');
+  $('inPlayer').innerHTML='<option value="">Seleziona</option>'+todo.map(p=>`<option value="${p.id}">${esc(playerName(p))}</option>`).join('');
+
+  const hist=reg.requests||[];
+  $('history').innerHTML=hist.map(x=>`<div class="history"><b>${esc(x.request_number||x.id)}</b> · ${esc(x.status_label||x.status)}<div class="muted">${new Date(x.created_at).toLocaleString('it-IT')} · ${x.player_count||0} giocatori · € ${Number(x.amount||0).toFixed(2)}</div>${x.receipt_url?`<a href="${esc(x.receipt_url)}" target="_blank">Apri ricevuta</a>`:''}</div>`).join('')||'<div class="notice">Nessuna richiesta inviata.</div>';
+}
+
+async function uploadReceipt(){
+  try{
+    const file=$('receipt').files[0];
+    if(!file)throw new Error('Seleziona la ricevuta del bonifico.');
+    if(file.size>8*1024*1024)throw new Error('La ricevuta non può superare 8 MB.');
+    const create=await sb.rpc('captain_create_tesseramento_request',{p_team_id:portal.team_id,p_notes:$('notes').value.trim()||null});
+    if(create.error)throw create.error;
+    currentRequestId=create.data.request_id;
+    const ext=(file.name.split('.').pop()||'pdf').toLowerCase();
+    const path=`tesseramenti/${portal.team_id}/${currentRequestId}.${ext}`;
+    const up=await sb.storage.from('team-documents').upload(path,file,{contentType:file.type,upsert:true});
+    if(up.error)throw up.error;
+    const url=sb.storage.from('team-documents').getPublicUrl(path).data.publicUrl;
+    currentReceiptUrl=url;
+    const save=await sb.rpc('captain_attach_tesseramento_receipt',{p_request_id:currentRequestId,p_receipt_url:url,p_storage_path:path,p_file_name:file.name});
+    if(save.error)throw save.error;
+    show('requestMsg','Ricevuta caricata. Ora puoi inviare la richiesta di tesseramento.');
+    $('sendBtn').disabled=false;
+    $('uploadBtn').disabled=true;
+  }catch(e){show('requestMsg',e.message||String(e),true)}
+}
+
+async function sendRequest(){
+  try{
+    if(!currentRequestId||!currentReceiptUrl)throw new Error('Carica prima la ricevuta.');
+    if(!confirm('Inviare la richiesta di tesseramento con i soli giocatori indicati?'))return;
+    $('sendBtn').disabled=true;
+    const r=await sb.rpc('captain_submit_tesseramento_request',{p_request_id:currentRequestId});
+    if(r.error)throw r.error;
+
+    const payload=r.data||{};
+    const s=reg.settings||{};
+    const subject=encodeURIComponent(payload.email_subject||`Richiesta tesseramento - ${reg.team?.name||''}`);
+    const body=encodeURIComponent(payload.email_body||'Richiesta tesseramento.');
+    const cc=encodeURIComponent(s.cc_email||'');
+    const to=encodeURIComponent(s.committee_email||'');
+    show('requestMsg','Richiesta registrata. Si apre ora l’email già compilata per il Comitato, con te in copia. La ricevuta è disponibile tramite il link inserito nel testo.');
+    window.location.href=`mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
+    setTimeout(loadAll,1200);
+  }catch(e){show('requestMsg',e.message||String(e),true);$('sendBtn').disabled=false}
+}
+
+async function replacePlayer(){
+  try{
+    const outId=$('outPlayer').value,inId=$('inPlayer').value;
+    if(!outId||!inId)throw new Error('Seleziona il giocatore che esce e quello che entra.');
+    if(!confirm('Confermi la sostituzione? Il giocatore uscente diventerà NON SCHIERABILE.'))return;
+    const r=await sb.rpc('captain_replace_registered_player',{p_team_id:portal.team_id,p_out_player_id:outId,p_in_player_id:inId,p_note:$('replaceNote').value.trim()||null});
+    if(r.error)throw r.error;
+    alert('Sostituzione registrata.');
+    await loadAll();
+  }catch(e){alert(e.message||String(e))}
+}
+
+window.loadAll=loadAll;window.uploadReceipt=uploadReceipt;window.sendRequest=sendRequest;window.replacePlayer=replacePlayer;
+loadAll();
+</script>
+</body>
+</html>
