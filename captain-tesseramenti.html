@@ -34,7 +34,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 <section id="app" class="hidden">
   <section class="card">
     <div class="actions">
-      <button class="btn secondary" onclick="location.href='captain-home.html?v=9940'">← Area Capitano</button>
+      <button class="btn secondary" onclick="location.href='captain-home.html'+(selectedTeam?'?team='+encodeURIComponent(selectedTeam)+'&v=9941':'?v=9941')">← Area Capitano</button>
       <button class="btn secondary" onclick="loadAll()">Aggiorna</button>
     </div>
   </section>
@@ -103,6 +103,7 @@ const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 const $=id=>document.getElementById(id);
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 let portal=null,reg=null,currentRequestId=null,currentReceiptUrl=null;
+const selectedTeam=new URLSearchParams(location.search).get('team')||'';
 
 function show(id,text,error=false){
   const el=$(id);el.textContent=text;el.className='notice '+(error?'err':'ok');el.classList.remove('hidden');
@@ -116,10 +117,13 @@ async function loadAll(){
     $('status').textContent='Aggiornamento dati…';
     const ses=await sb.auth.getSession();
     if(!ses.data.session){location.href='login.html';return}
-    const p=await sb.rpc('get_my_captain_portal');
+    const p=selectedTeam
+      ? await sb.rpc('get_my_captain_portal_for_team',{p_team_id:selectedTeam})
+      : await sb.rpc('get_my_captain_portal');
     if(p.error)throw p.error;
     portal=Array.isArray(p.data)?p.data[0]:p.data;
     if(!portal?.ok)throw new Error(portal?.message||'Squadra non collegata.');
+    if(selectedTeam && String(portal.team_id)!==String(selectedTeam))throw new Error('La squadra selezionata non coincide con quella caricata.');
     const r=await sb.rpc('captain_get_tesseramento_dashboard',{p_team_id:portal.team_id});
     if(r.error)throw r.error;
     reg=r.data;
@@ -228,5 +232,6 @@ async function replacePlayer(){
 window.loadAll=loadAll;window.uploadReceipt=uploadReceipt;window.sendRequest=sendRequest;window.replacePlayer=replacePlayer;
 loadAll();
 </script>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.41 TESSERAMENTI MULTI-SQUADRA</div>
 </body>
 </html>

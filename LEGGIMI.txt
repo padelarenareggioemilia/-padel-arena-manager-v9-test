@@ -1,3 +1,21 @@
-1. Esegui SUPABASE_V9_9_36_TESSERA_CAPITANO.sql su Supabase SQL Editor.
-2. Sostituisci captain-player-card.html su GitHub.
-3. Prova Area Capitano > Rosa > Genera tessera.
+V9.9.41 - TESSERAMENTI MULTI-SQUADRA
+
+Supabase è già configurato e verificato:
+- IBAN IT49Q0707212802000000406211
+- Beneficiario COMITATO PROVINCIALE AICS REGGIO EMILIA
+- quota 15,00 euro
+- Comitato: reggioemilia@aics.it
+- CC: aicspadeltour@gmail.com
+- 20 giocatori
+- 3 sostituzioni
+- scadenza 31/01/2027
+
+Caricare in ROOT su GitHub sostituendo gli omonimi:
+1) captain-tesseramenti.html
+2) account-home.html
+
+Cosa cambia:
+- Il modulo Tesseramenti usa la squadra scelta dall'account.
+- I capitani con più squadre lavorano sulla squadra corretta.
+- In 'Il mio account' compare il tasto TESSERAMENTI accanto a ogni squadra di cui l'utente è capitano.
+- Il tasto ritorno mantiene la squadra selezionata.
