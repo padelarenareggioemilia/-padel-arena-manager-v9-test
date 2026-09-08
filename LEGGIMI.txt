@@ -1,17 +1,26 @@
-V9.9.62C - CONFLITTI REALI
+V9.9.62D - GIORNATE NATURALI
 
-Correzione mirata della 62B.
+Correzione del bug trovato confrontando il generatore con l'Excel campione.
 
-Nei weekend PRO una gara viene bloccata SOLO se:
-- una delle due squadre è già impegnata nello stesso weekend;
-- esiste una vera sovrapposizione di impianto/data/ora.
+PRIMA:
+- se una partita della giornata cadeva su blackout,
+  orientationOptions scartava l'intera giornata;
+- findRoundCandidates cercava il weekend successivo;
+- tutte le giornate successive slittavano.
 
-Non viene più bloccata per la semplice condivisione dell'impianto.
-Un derby fra due squadre dello stesso centro è una sola partita e occupa il campo una sola volta.
+ORA:
+- le giornate restano nei loro slot naturali;
+- il blackout NON sposta la giornata;
+- SOLO la singola partita che cade su blackout entra nella recoveryQueue;
+- le altre partite della stessa giornata restano dove sono;
+- i recuperi PRO restano 19-20-21 febbraio e 5-6-7 marzo;
+- restano attivi i soli conflitti reali di squadra/impianto.
 
-Non cambia:
-- gironi
-- calendario base
-- andata/ritorno
-- vincolo EDEN
-- date PRO
+Obiettivo di verifica sul calendario campione:
+240 partite totali
+197 ordinarie
+43 recuperi
+22 nel primo PRO
+21 nel secondo PRO
+0 conflitti squadra
+0 conflitti impianto

@@ -1,4 +1,4 @@
-/* V9.9.62C - GENERATORE GENERALE + PRO CONFLITTI REALI
+/* V9.9.62D - GIORNATE NATURALI + RECUPERI SINGOLI
    Correzione della 9.9.61:
    - NON tocca andata, ritorno, gironi o vincolo EDEN;
    - raccoglie TUTTE le gare residue;
@@ -71,9 +71,27 @@ function v9SameTeam(a,b){
  const pe=src.indexOf('    /* Se una gara cade su data esclusa',ps);
  if(ps>=0 && pe>ps){
    src=src.slice(0,ps)+
-`    /* V9.9.62: rimosso pre-filtro astratto; restano i conflitti reali. */
+`    /* V9.9.62D: rimosso pre-filtro astratto; restano i conflitti reali. */
 
 `+src.slice(pe);
+ }
+
+ /* 62D - BLACKOUT = RECUPERO DELLA SINGOLA GARA
+    Il blackout NON deve scartare l'orientazione e NON deve spostare
+    l'intera giornata. La giornata resta nel suo anchor naturale.
+    Più avanti, buildCalendarPayload mette solo la singola gara
+    che cade su blackout nella recoveryQueue. */
+ const blackoutBlock=`    /* Se una gara cade su data esclusa, questa orientazione
+       NON è valida in questo weekend. */
+    if(roundTouchesExcludedDate(fixtures,code)){
+      continue;
+    }
+
+`;
+ if(src.includes(blackoutBlock)){
+   src=src.replace(blackoutBlock,'');
+ } else {
+   throw Error('marker blackout orientazione non trovato');
  }
 
  /* Ritorno: non fallisce. Le gare problematiche diventano deferred. */
@@ -376,7 +394,7 @@ function v9SameTeam(a,b){
    conflictsUnresolved:0,
    progression:'OK',
    rule:
-     'V9.9.62C: assegnazione binaria con soli conflitti reali sui weekend PRO 19-21/02 e 05-07/03/2027.'
+     'V9.9.62D: blackout sulla singola gara, giornate naturali invariate, PRO con soli conflitti reali sui weekend PRO 19-21/02 e 05-07/03/2027.'
  };
 
  return payload;
@@ -399,7 +417,7 @@ function v9SameTeam(a,b){
      const n=document.createElement('div');
      n.className='notice ok';
      n.innerHTML=
-       '<b>V9.9.62C PRO CONFLITTI REALI ATTIVA:</b> le gare residue vengono assegnate ai due weekend PRO con un controllo deterministico dei soli conflitti reali. Niente ricerca da 100.000 tentativi.';
+       '<b>V9.9.62D GIORNATE NATURALI ATTIVA:</b> le gare residue vengono assegnate ai due weekend PRO con un controllo deterministico dei soli conflitti reali. Niente ricerca da 100.000 tentativi.';
      c.appendChild(n);
    }
  };
