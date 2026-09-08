@@ -1,7 +1,7 @@
 window.PAM_V9_CONFIG = {
   supabaseUrl: "https://ggnmpzfuqchcwzgaxxzx.supabase.co",
   supabasePublishableKey: "sb_publishable_JJUF1lt3lob4r0z2UBTOiw_2YUjk18m",
-  version: "9.9.47-home-diagnostica-tessere"
+  version: "9.9.48-eden-calendar-constraint"
 };
 
 (function(){
@@ -11,7 +11,9 @@ window.PAM_V9_CONFIG = {
   }
 
   if(/(^|\/)calendar\.html$/i.test(location.pathname)){
-    window.addEventListener('load', function(){ add('calendar-v9-clean.js?v=920clean1'); });
+    window.addEventListener('load', function(){
+      add('calendar-v9-eden-loader.js?v=9948');
+    });
     return;
   }
 

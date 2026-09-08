@@ -1,0 +1,35 @@
+V9.9.48 - VINCOLO CALENDARIO EDEN VIA BALLA 6
+
+OBIETTIVO
+Le tre squadre EDEN:
+- EDEN PADEL CLUB - Serie B
+- EDEN ACADEMY SERIE C
+- EDEN NEXT GEN PADEL CLUB - Serie C
+
+non possono essere calendarizzate IN CASA prima del 1 novembre 2026.
+Fino al 31 ottobre 2026 il motore deve quindi orientare le loro gare in TRASFERTA.
+Dal 1 novembre 2026 le gare casalinghe tornano consentite.
+
+COME FUNZIONA
+Il vincolo viene applicato DURANTE il GLOBAL SORT, non dopo la generazione.
+Quando un'orientazione CASA/TRASFERTA metterebbe una squadra EDEN in casa prima di novembre,
+quell'orientazione viene scartata e il motore prova automaticamente un'altra combinazione.
+Il ritorno e il controllo finale applicano lo stesso blocco.
+
+INSTALLAZIONE
+Caricare nella ROOT GitHub:
+1) calendar-v9-eden-loader.js  (NUOVO)
+2) config.js                   (SOSTITUISCI quello esistente)
+
+NON sostituire calendar-v9-clean.js: il loader usa il motore attuale e applica soltanto questa forzatura.
+
+TEST
+Aprire calendar.html con ?v=9948.
+Deve apparire un riquadro verde "Vincolo speciale EDEN attivo".
+Generare prima Serie B e poi Serie C (o viceversa) e controllare che nessuna delle tre squadre EDEN
+abbia una gara casalinga con data precedente al 01/11/2026.
+
+NOTA
+Se una configurazione di girone rendesse matematicamente impossibile rispettare il vincolo (es. derby EDEN
+obbligatorio prima di novembre), il motore non deve creare silenziosamente una partita non valida: continuerà
+a cercare un turno utile oppure segnalerà che non riesce a costruire il calendario rispettando i vincoli.
