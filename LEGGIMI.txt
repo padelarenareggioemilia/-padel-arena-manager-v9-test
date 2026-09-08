@@ -1,11 +1,13 @@
-V9.9.57 - DUE BINARI + PRO
+V9.9.58 MOTORE PULITO
 
-Coppa Italia: weekend iniziale 01/10/2026.
-Campionato: weekend iniziale 08/10/2026.
-Cadenza: ogni 2 settimane per ciascuna competizione.
-Numero giornate: dinamico in base al girone.
-PRO: solo dopo fallimento del tentativo con tutte le giornate naturali; viene aggiunto nel successivo slot della stessa competizione, quindi non invade il weekend dell’altra.
-EDEN: mai casa prima 01/11/2026 in entrambe le competizioni.
+Questa versione nasce dall’analisi del calendar-v9-clean.js originale.
+Non usa la logica 9.9.51-57.
+
+Mantiene GLOBAL SORT e conflitti reali.
+Rimuove il pre-filtro ridondante sharedSlotViolation.
+EDEN mai casa prima 01/11/2026.
+Ritorno non speculare: riordina le giornate dell’andata invertite, senza spostare singole gare.
+PRO volutamente disattivata nel primo test: prima verifichiamo se il falso vincolo era la causa.
 
 Sostituire calendar-v9-eden-loader.js e config.js.
-Aprire calendar.html?v=9957.
+Aprire calendar.html?v=9958.
