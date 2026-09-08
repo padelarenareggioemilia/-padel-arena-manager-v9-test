@@ -1,25 +1,8 @@
-V9.9.54 PATCH CHIRURGICA EDEN
+V9.9.55 - RITORNO A PARTITE LIBERE
 
-Questa versione ABBANDONA le modifiche generali 9.9.51/52/53.
+Sostituire calendar-v9-eden-loader.js e config.js.
 
-NON cambia:
-- accoppiamenti dell'andata;
-- regole normali casa/trasferta delle altre squadre;
-- date delle singole partite con anticipi/posticipi artificiali;
-- motore impianti;
-- sospensioni.
+Andata: motore originale; unica eccezione EDEN mai casa prima 01/11/2026.
+Ritorno: ogni singola gara inversa può finire in qualunque giornata di ritorno disponibile. Non esiste più obbligo G1->G1, G2->G2 ecc. Ogni squadra gioca al massimo una volta per giornata e ogni coppia ha una gara casa e una fuori.
 
-Cambia SOLO:
-1. EDEN PADEL CLUB, EDEN ACADEMY SERIE C, EDEN NEXT GEN:
-   mai in casa prima del 01/11/2026.
-2. Il ritorno riusa esattamente gli accoppiamenti dell'andata invertiti casa/fuori.
-   Se necessario può cambiare SOLO l'ordine delle giornate del ritorno.
-
-INSTALLAZIONE:
-sostituire in root GitHub:
-- calendar-v9-eden-loader.js
-- config.js
-
-TEST:
-calendar.html?v=9954
-Deve apparire: V9.9.54 PATCH CHIRURGICA ATTIVA.
+Aprire calendar.html?v=9955.
