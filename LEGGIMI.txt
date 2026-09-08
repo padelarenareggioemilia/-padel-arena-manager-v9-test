@@ -1,13 +1,17 @@
-V9.9.62B - PRO BINARIA VELOCE
+V9.9.62C - CONFLITTI REALI
 
-Stesso motore 9.9.62, ma viene sostituito SOLO il solver dei recuperi PRO.
+Correzione mirata della 62B.
 
-- niente 100.000 tentativi
-- due weekend = assegnazione binaria
-- stessa squadra -> weekend opposto
-- stesso impianto con reale sovrapposizione -> weekend opposto
-- calendario esterno può vietare uno dei due weekend alla singola gara
-- errore immediato e specifico se esiste un conflitto reale
+Nei weekend PRO una gara viene bloccata SOLO se:
+- una delle due squadre è già impegnata nello stesso weekend;
+- esiste una vera sovrapposizione di impianto/data/ora.
 
-PRO1: 19-20-21 febbraio 2027
-PRO2: 05-06-07 marzo 2027
+Non viene più bloccata per la semplice condivisione dell'impianto.
+Un derby fra due squadre dello stesso centro è una sola partita e occupa il campo una sola volta.
+
+Non cambia:
+- gironi
+- calendario base
+- andata/ritorno
+- vincolo EDEN
+- date PRO

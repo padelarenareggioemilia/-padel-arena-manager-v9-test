@@ -1,4 +1,4 @@
-/* V9.9.62B - GENERATORE GENERALE + PRO BINARIA VELOCE
+/* V9.9.62C - GENERATORE GENERALE + PRO CONFLITTI REALI
    Correzione della 9.9.61:
    - NON tocca andata, ritorno, gironi o vincolo EDEN;
    - raccoglie TUTTE le gare residue;
@@ -198,8 +198,30 @@ function v9SameTeam(a,b){
    const allowed=candidates.map(candidate=>{
      if(v9ForbiddenHome(candidate)) return false;
      if(fixtureFallsOnExcludedDate(candidate,code)) return false;
-     if(!compatibleWithExternal([candidate],external)) return false;
-     if(conflictsAny(candidate,payload)) return false;
+     /* 62C: nei PRO niente blocchi astratti contro il calendario ordinario.
+        Un recupero è vietato solo se:
+        - la stessa squadra è già impegnata nello stesso weekend;
+        - esiste una reale sovrapposizione di impianto/data/ora. */
+     for(const x of external){
+       if(v9SameTeam(candidate,x)){
+         const dc=new Date(candidate.scheduled_at);
+         const dx=new Date(x.scheduled_at);
+         const wc=new Date(dc); wc.setDate(dc.getDate()-((dc.getDay()+6)%7));
+         const wx=new Date(dx); wx.setDate(dx.getDate()-((dx.getDay()+6)%7));
+         if(dateKeyLocal(wc)===dateKeyLocal(wx)) return false;
+       }
+       if(realFacilityConflict(candidate,x)) return false;
+     }
+     for(const x of payload){
+       if(v9SameTeam(candidate,x)){
+         const dc=new Date(candidate.scheduled_at);
+         const dx=new Date(x.scheduled_at);
+         const wc=new Date(dc); wc.setDate(dc.getDate()-((dc.getDay()+6)%7));
+         const wx=new Date(dx); wx.setDate(dx.getDate()-((dx.getDay()+6)%7));
+         if(dateKeyLocal(wc)===dateKeyLocal(wx)) return false;
+       }
+       if(realFacilityConflict(candidate,x)) return false;
+     }
      return true;
    });
 
@@ -222,7 +244,11 @@ function v9SameTeam(a,b){
    for(let j=i+1;j<nodes.length;j++){
      const a=nodes[i].candidates[0];
      const b=nodes[j].candidates[0];
-     if(v9SameTeam(a,b)||realFacilityConflict(a,b)){
+     const sameFixture =
+       (String(a.home_team_id)===String(b.home_team_id) &&
+        String(a.away_team_id)===String(b.away_team_id) &&
+        Number(a.round_number)===Number(b.round_number));
+     if(!sameFixture && (v9SameTeam(a,b)||realFacilityConflict(a,b))){
        nodes[i].edges.add(j);
        nodes[j].edges.add(i);
      }
@@ -350,7 +376,7 @@ function v9SameTeam(a,b){
    conflictsUnresolved:0,
    progression:'OK',
    rule:
-     'V9.9.62B: assegnazione binaria deterministica sui weekend PRO 19-21/02 e 05-07/03/2027.'
+     'V9.9.62C: assegnazione binaria con soli conflitti reali sui weekend PRO 19-21/02 e 05-07/03/2027.'
  };
 
  return payload;
@@ -373,7 +399,7 @@ function v9SameTeam(a,b){
      const n=document.createElement('div');
      n.className='notice ok';
      n.innerHTML=
-       '<b>V9.9.62B PRO BINARIA VELOCE ATTIVA:</b> le gare residue vengono assegnate ai due weekend PRO con un controllo deterministico dei soli conflitti reali. Niente ricerca da 100.000 tentativi.';
+       '<b>V9.9.62C PRO CONFLITTI REALI ATTIVA:</b> le gare residue vengono assegnate ai due weekend PRO con un controllo deterministico dei soli conflitti reali. Niente ricerca da 100.000 tentativi.';
      c.appendChild(n);
    }
  };
