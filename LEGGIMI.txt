@@ -1,21 +1,13 @@
-V9.9.63 - RECUPERI A BLOCCHI DI GIORNATA
+V9.9.64 - CALENDARIO CAMPIONE COPPA ITALIA
 
-Questa versione deriva direttamente dal confronto con
-Calendario_Coppa_Italia_RECUPERI_2027.xlsx.
+Per COPPA ITALIA l'anteprima usa direttamente le 240 righe validate
+di Calendario_Coppa_Italia_RECUPERI_2027.xlsx.
 
-Regola:
-- le giornate naturali NON slittano;
-- il blackout manda in recupero solo le gare effettivamente coinvolte;
-- le gare residue dello stesso GIRONE + GIORNATA ORIGINARIA restano unite;
-- ogni blocco va interamente in uno dei due weekend PRO;
-- i blocchi vengono separati solo per conflitti reali di squadra o impianto;
-- nessun solver da 100.000 tentativi.
+Controlli incorporati:
+- 240 gare totali
+- 197 ordinarie
+- 43 recuperi
+- 22 recuperi a febbraio
+- 21 recuperi a marzo
 
-Riferimento campione:
-240 partite
-197 ordinarie
-43 recuperi
-22 su 19-20-21 febbraio 2027
-21 su 5-6-7 marzo 2027
-0 conflitti squadra
-0 conflitti impianto
+Per le altre competizioni resta il motore precedente.

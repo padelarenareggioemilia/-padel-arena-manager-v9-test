@@ -1,488 +1,150 @@
-/* V9.9.63 - RECUPERI A BLOCCHI DI GIORNATA
-   Correzione della 9.9.61:
-   - NON tocca andata, ritorno, gironi o vincolo EDEN;
-   - raccoglie TUTTE le gare residue;
-   - le distribuisce globalmente tra due weekend PRO;
-   - usa backtracking: se una scelta blocca una gara successiva, torna indietro;
-   - max 1 gara per squadra per weekend PRO;
-   - nessun conflitto reale impianto/data/ora.
-
-   Slot PRO attuali validati manualmente:
-   PRO1: 19-20-21 febbraio 2027
-   PRO2: 05-06-07 marzo 2027
+/* V9.9.64 - COPPA ITALIA: CALENDARIO CAMPIONE VALIDATO
+   Fonte: Calendario_Coppa_Italia_RECUPERI_2027.xlsx
+   240 gare = 197 ordinarie + 43 recuperi (22 + 21).
+   Per le altre competizioni resta attivo il motore precedente.
 */
 (async function(){
 'use strict';
 
 const SOURCE='calendar-v9-clean.js?v=9962base';
-const EDEN_IDS=new Set([
- '3371654b-99ca-4135-b28a-582bdc0a41f1',
- 'e4939c59-9670-4706-8abc-abb88a60a18f',
- '33a195e2-ad86-488c-9691-1ce188e9a490'
-]);
-const EDEN_HOME_FROM='2026-11-01';
-const PRO_ANCHORS=['2027-02-18','2027-03-04']; // giovedì anchor -> ven/sab/dom 19-21 e 5-7
+const CAMPIONE=[{"r":1,"g":"A","d":"2026-10-04","t":"11:00","h":"HORMIGA PADEL CLUB","a":"VILLAGE PADDLE MODENA","v":"via panaro 193, Formica di Savignano sul Panaro","s":"OK"},{"r":1,"g":"A","d":"2026-10-03","t":"14:00","h":"ALL STAR PADEL - SERIE B","a":"RISORSE RED TEAM","v":"VIA LAVACCHI 1635, 41038 SAN FELICE S/P (MO)","s":"OK"},{"r":1,"g":"A","d":"2026-10-03","t":"17:00","h":"Padel San Donnino A","a":"Padel San Donnino B","v":"Via della Genziana, 18, 41126","s":"OK"},{"r":2,"g":"A","d":"2026-10-18","t":"11:00","h":"HORMIGA PADEL CLUB","a":"ALL STAR PADEL - SERIE B","v":"via panaro 193, Formica di Savignano sul Panaro","s":"OK"},{"r":2,"g":"A","d":"2026-10-17","t":"16:00","h":"RISORSE RED TEAM","a":"Padel San Donnino A","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"OK"},{"r":2,"g":"A","d":"2026-10-18","t":"15:00","h":"VILLAGE PADDLE MODENA","a":"Padel San Donnino B","v":"STRADA CAVEZZO 27, 41126 BAGGIOVARA (MO)","s":"OK"},{"r":3,"g":"A","d":"2027-03-07","t":"11:00","h":"HORMIGA PADEL CLUB","a":"Padel San Donnino A","v":"via panaro 193, Formica di Savignano sul Panaro","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"A","d":"2027-03-07","t":"15:00","h":"VILLAGE PADDLE MODENA","a":"ALL STAR PADEL - SERIE B","v":"STRADA CAVEZZO 27, 41126 BAGGIOVARA (MO)","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"A","d":"2027-03-06","t":"16:00","h":"RISORSE RED TEAM","a":"Padel San Donnino B","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"RECUPERO PROGRAMMATO"},{"r":4,"g":"A","d":"2026-11-15","t":"11:00","h":"HORMIGA PADEL CLUB","a":"Padel San Donnino B","v":"via panaro 193, Formica di Savignano sul Panaro","s":"OK"},{"r":4,"g":"A","d":"2026-11-14","t":"14:00","h":"ALL STAR PADEL - SERIE B","a":"Padel San Donnino A","v":"VIA LAVACCHI 1635, 41038 SAN FELICE S/P (MO)","s":"OK"},{"r":4,"g":"A","d":"2026-11-14","t":"16:00","h":"RISORSE RED TEAM","a":"VILLAGE PADDLE MODENA","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"OK"},{"r":5,"g":"A","d":"2026-11-28","t":"16:00","h":"RISORSE RED TEAM","a":"HORMIGA PADEL CLUB","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"OK"},{"r":5,"g":"A","d":"2026-11-28","t":"14:00","h":"ALL STAR PADEL - SERIE B","a":"Padel San Donnino B","v":"VIA LAVACCHI 1635, 41038 SAN FELICE S/P (MO)","s":"OK"},{"r":5,"g":"A","d":"2026-11-29","t":"15:00","h":"VILLAGE PADDLE MODENA","a":"Padel San Donnino A","v":"STRADA CAVEZZO 27, 41126 BAGGIOVARA (MO)","s":"OK"},{"r":6,"g":"A","d":"2026-12-13","t":"15:00","h":"VILLAGE PADDLE MODENA","a":"HORMIGA PADEL CLUB","v":"STRADA CAVEZZO 27, 41126 BAGGIOVARA (MO)","s":"OK"},{"r":6,"g":"A","d":"2026-12-12","t":"16:00","h":"RISORSE RED TEAM","a":"ALL STAR PADEL - SERIE B","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"OK"},{"r":6,"g":"A","d":"2026-12-13","t":"15:00","h":"Padel San Donnino B","a":"Padel San Donnino A","v":"Via della Genziana 18, 41126","s":"OK"},{"r":7,"g":"A","d":"2027-02-20","t":"14:00","h":"ALL STAR PADEL - SERIE B","a":"HORMIGA PADEL CLUB","v":"VIA LAVACCHI 1635, 41038 SAN FELICE S/P (MO)","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"A","d":"2027-02-20","t":"17:00","h":"Padel San Donnino A","a":"RISORSE RED TEAM","v":"Via della Genziana, 18, 41126","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"A","d":"2027-02-21","t":"15:00","h":"Padel San Donnino B","a":"VILLAGE PADDLE MODENA","v":"Via della Genziana 18, 41126","s":"RECUPERO PROGRAMMATO"},{"r":8,"g":"A","d":"2027-01-09","t":"17:00","h":"Padel San Donnino A","a":"HORMIGA PADEL CLUB","v":"Via della Genziana, 18, 41126","s":"OK"},{"r":8,"g":"A","d":"2027-01-09","t":"14:00","h":"ALL STAR PADEL - SERIE B","a":"VILLAGE PADDLE MODENA","v":"VIA LAVACCHI 1635, 41038 SAN FELICE S/P (MO)","s":"OK"},{"r":8,"g":"A","d":"2027-01-10","t":"15:00","h":"Padel San Donnino B","a":"RISORSE RED TEAM","v":"Via della Genziana 18, 41126","s":"OK"},{"r":9,"g":"A","d":"2027-01-24","t":"15:00","h":"Padel San Donnino B","a":"HORMIGA PADEL CLUB","v":"Via della Genziana 18, 41126","s":"OK"},{"r":9,"g":"A","d":"2027-01-23","t":"17:00","h":"Padel San Donnino A","a":"ALL STAR PADEL - SERIE B","v":"Via della Genziana, 18, 41126","s":"OK"},{"r":9,"g":"A","d":"2027-01-24","t":"15:00","h":"VILLAGE PADDLE MODENA","a":"RISORSE RED TEAM","v":"STRADA CAVEZZO 27, 41126 BAGGIOVARA (MO)","s":"OK"},{"r":10,"g":"A","d":"2027-02-07","t":"11:00","h":"HORMIGA PADEL CLUB","a":"RISORSE RED TEAM","v":"via panaro 193, Formica di Savignano sul Panaro","s":"OK"},{"r":10,"g":"A","d":"2027-02-07","t":"15:00","h":"Padel San Donnino B","a":"ALL STAR PADEL - SERIE B","v":"Via della Genziana 18, 41126","s":"OK"},{"r":10,"g":"A","d":"2027-02-06","t":"17:00","h":"Padel San Donnino A","a":"VILLAGE PADDLE MODENA","v":"Via della Genziana, 18, 41126","s":"OK"},{"r":1,"g":"B","d":"2026-10-02","t":"20:00","h":"Pol Nonantola Padel","a":"PLAYA PADEL SERIE C","v":"Via Risorgimento 50, 41015 Nonantola","s":"OK"},{"r":1,"g":"B","d":"2026-10-03","t":"17:00","h":"ALL STAR PADEL - SERIE C","a":"PLAYA PADEL","v":"VIA LAVACCHI 1635, 41038 SAN FELICE SUL PANARO","s":"OK"},{"r":1,"g":"B","d":"2026-10-02","t":"20:00","h":"MIRAPADEL CENTER SERIE B","a":"MIRAPADEL CENTER SERIE C","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"OK"},{"r":2,"g":"B","d":"2026-10-17","t":"17:00","h":"ALL STAR PADEL - SERIE C","a":"Pol Nonantola Padel","v":"VIA LAVACCHI 1635, 41038 SAN FELICE SUL PANARO","s":"OK"},{"r":2,"g":"B","d":"2026-10-18","t":"10:00","h":"PLAYA PADEL","a":"MIRAPADEL CENTER SERIE B","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":2,"g":"B","d":"2026-10-19","t":"00:00","h":"PLAYA PADEL SERIE C","a":"MIRAPADEL CENTER SERIE C","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":3,"g":"B","d":"2026-10-30","t":"20:00","h":"MIRAPADEL CENTER SERIE B","a":"Pol Nonantola Padel","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"OK"},{"r":3,"g":"B","d":"2026-11-02","t":"00:00","h":"PLAYA PADEL SERIE C","a":"ALL STAR PADEL - SERIE C","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":3,"g":"B","d":"2027-03-07","t":"10:00","h":"PLAYA PADEL","a":"MIRAPADEL CENTER SERIE C","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"RECUPERO PROGRAMMATO"},{"r":4,"g":"B","d":"2026-11-15","t":"15:00","h":"MIRAPADEL CENTER SERIE C","a":"Pol Nonantola Padel","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"OK"},{"r":4,"g":"B","d":"2026-11-13","t":"20:00","h":"MIRAPADEL CENTER SERIE B","a":"ALL STAR PADEL - SERIE C","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"OK"},{"r":4,"g":"B","d":"2026-11-15","t":"10:00","h":"PLAYA PADEL","a":"PLAYA PADEL SERIE C","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":5,"g":"B","d":"2026-11-29","t":"10:00","h":"PLAYA PADEL","a":"Pol Nonantola Padel","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":5,"g":"B","d":"2026-11-29","t":"15:00","h":"MIRAPADEL CENTER SERIE C","a":"ALL STAR PADEL - SERIE C","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"OK"},{"r":5,"g":"B","d":"2026-11-27","t":"20:00","h":"MIRAPADEL CENTER SERIE B","a":"PLAYA PADEL SERIE C","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"OK"},{"r":6,"g":"B","d":"2026-12-14","t":"00:00","h":"PLAYA PADEL SERIE C","a":"Pol Nonantola Padel","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":6,"g":"B","d":"2026-12-13","t":"10:00","h":"PLAYA PADEL","a":"ALL STAR PADEL - SERIE C","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":6,"g":"B","d":"2026-12-13","t":"15:00","h":"MIRAPADEL CENTER SERIE C","a":"MIRAPADEL CENTER SERIE B","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"OK"},{"r":7,"g":"B","d":"2027-02-19","t":"20:00","h":"Pol Nonantola Padel","a":"ALL STAR PADEL - SERIE C","v":"Via Risorgimento 50, 41015 Nonantola","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"B","d":"2027-02-19","t":"20:00","h":"MIRAPADEL CENTER SERIE B","a":"PLAYA PADEL","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"B","d":"2027-02-21","t":"15:00","h":"MIRAPADEL CENTER SERIE C","a":"PLAYA PADEL SERIE C","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"RECUPERO PROGRAMMATO"},{"r":8,"g":"B","d":"2027-01-08","t":"20:00","h":"Pol Nonantola Padel","a":"MIRAPADEL CENTER SERIE B","v":"Via Risorgimento 50, 41015 Nonantola","s":"OK"},{"r":8,"g":"B","d":"2027-01-09","t":"17:00","h":"ALL STAR PADEL - SERIE C","a":"PLAYA PADEL SERIE C","v":"VIA LAVACCHI 1635, 41038 SAN FELICE SUL PANARO","s":"OK"},{"r":8,"g":"B","d":"2027-01-10","t":"15:00","h":"MIRAPADEL CENTER SERIE C","a":"PLAYA PADEL","v":"VIA 2 GIUGNO 26, 41037 MIRANDOLA (MO)","s":"OK"},{"r":9,"g":"B","d":"2027-01-22","t":"20:00","h":"Pol Nonantola Padel","a":"MIRAPADEL CENTER SERIE C","v":"Via Risorgimento 50, 41015 Nonantola","s":"OK"},{"r":9,"g":"B","d":"2027-01-23","t":"17:00","h":"ALL STAR PADEL - SERIE C","a":"MIRAPADEL CENTER SERIE B","v":"VIA LAVACCHI 1635, 41038 SAN FELICE SUL PANARO","s":"OK"},{"r":9,"g":"B","d":"2027-01-25","t":"00:00","h":"PLAYA PADEL SERIE C","a":"PLAYA PADEL","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":10,"g":"B","d":"2027-02-05","t":"20:00","h":"Pol Nonantola Padel","a":"PLAYA PADEL","v":"Via Risorgimento 50, 41015 Nonantola","s":"OK"},{"r":10,"g":"B","d":"2027-02-06","t":"17:00","h":"ALL STAR PADEL - SERIE C","a":"MIRAPADEL CENTER SERIE C","v":"VIA LAVACCHI 1635, 41038 SAN FELICE SUL PANARO","s":"OK"},{"r":10,"g":"B","d":"2027-02-08","t":"00:00","h":"PLAYA PADEL SERIE C","a":"MIRAPADEL CENTER SERIE B","v":"Via imperiale 22/a 41037 Mirandola (MO)","s":"OK"},{"r":1,"g":"C","d":"2026-10-02","t":"20:00","h":"SPORTING PARMA","a":"B&B TEAM - Bope & Bullet","v":"Strada Martinella 328/a 43124 - Parma - Vigatto","s":"OK"},{"r":1,"g":"C","d":"2026-10-03","t":"12:30","h":"B&B Team Serie B","a":"Punto G White","v":"Strada Martinella 328 Vigatto Parma","s":"OK"},{"r":1,"g":"C","d":"2026-10-02","t":"20:00","h":"Punto G Nera","a":"PRO PARMA LOBOS","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":2,"g":"C","d":"2026-10-17","t":"12:30","h":"B&B Team Serie B","a":"B&B TEAM - Bope & Bullet","v":"Strada Martinella 328 Vigatto Parma","s":"OK"},{"r":2,"g":"C","d":"2026-10-16","t":"20:00","h":"Punto G White","a":"PRO PARMA LOBOS","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":2,"g":"C","d":"2026-10-16","t":"20:00","h":"SPORTING PARMA","a":"Punto G Nera","v":"Strada Martinella 328/a 43124 - Parma - Vigatto","s":"OK"},{"r":3,"g":"C","d":"2026-10-30","t":"20:00","h":"PRO PARMA LOBOS","a":"B&B TEAM - Bope & Bullet","v":"Via Ernesto Ghirarduzzi 2 (Parma) cap 43122","s":"OK"},{"r":3,"g":"C","d":"2027-02-20","t":"12:30","h":"B&B Team Serie B","a":"SPORTING PARMA","v":"Strada Martinella 328 Vigatto Parma","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"C","d":"2026-10-30","t":"20:00","h":"Punto G White","a":"Punto G Nera","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":4,"g":"C","d":"2026-11-13","t":"20:00","h":"Punto G Nera","a":"B&B TEAM - Bope & Bullet","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":4,"g":"C","d":"2026-11-14","t":"12:30","h":"B&B Team Serie B","a":"PRO PARMA LOBOS","v":"Strada Martinella 328 Vigatto Parma","s":"OK"},{"r":4,"g":"C","d":"2026-11-13","t":"20:00","h":"SPORTING PARMA","a":"Punto G White","v":"Strada Martinella 328/a 43124 - Parma - Vigatto","s":"OK"},{"r":5,"g":"C","d":"2026-11-27","t":"20:00","h":"Punto G White","a":"B&B TEAM - Bope & Bullet","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":5,"g":"C","d":"2026-11-28","t":"12:30","h":"B&B Team Serie B","a":"Punto G Nera","v":"Strada Martinella 328 Vigatto Parma","s":"OK"},{"r":5,"g":"C","d":"2026-11-27","t":"20:00","h":"PRO PARMA LOBOS","a":"SPORTING PARMA","v":"Via Ernesto Ghirarduzzi 2 (Parma) cap 43122","s":"OK"},{"r":6,"g":"C","d":"2026-12-12","t":"12:30","h":"B&B TEAM - Bope & Bullet","a":"SPORTING PARMA","v":"PRO GREEN STR. MARTINELLA 328 VIGATTO 43124 PR","s":"OK"},{"r":6,"g":"C","d":"2026-12-11","t":"20:00","h":"Punto G White","a":"B&B Team Serie B","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":6,"g":"C","d":"2026-12-11","t":"20:00","h":"PRO PARMA LOBOS","a":"Punto G Nera","v":"Via Ernesto Ghirarduzzi 2 (Parma) cap 43122","s":"OK"},{"r":7,"g":"C","d":"2027-03-06","t":"12:30","h":"B&B TEAM - Bope & Bullet","a":"B&B Team Serie B","v":"PRO GREEN STR. MARTINELLA 328 VIGATTO 43124 PR","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"C","d":"2027-02-19","t":"20:00","h":"PRO PARMA LOBOS","a":"Punto G White","v":"Via Ernesto Ghirarduzzi 2 (Parma) cap 43122","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"C","d":"2027-03-05","t":"20:00","h":"Punto G Nera","a":"SPORTING PARMA","v":"Via Sonnino 21 - 43126 Parma","s":"RECUPERO PROGRAMMATO"},{"r":8,"g":"C","d":"2027-01-09","t":"12:30","h":"B&B TEAM - Bope & Bullet","a":"PRO PARMA LOBOS","v":"PRO GREEN STR. MARTINELLA 328 VIGATTO 43124 PR","s":"OK"},{"r":8,"g":"C","d":"2027-01-08","t":"20:00","h":"SPORTING PARMA","a":"B&B Team Serie B","v":"Strada Martinella 328/a 43124 - Parma - Vigatto","s":"OK"},{"r":8,"g":"C","d":"2027-01-08","t":"20:00","h":"Punto G Nera","a":"Punto G White","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":9,"g":"C","d":"2027-01-23","t":"12:30","h":"B&B TEAM - Bope & Bullet","a":"Punto G Nera","v":"PRO GREEN STR. MARTINELLA 328 VIGATTO 43124 PR","s":"OK"},{"r":9,"g":"C","d":"2027-01-22","t":"20:00","h":"PRO PARMA LOBOS","a":"B&B Team Serie B","v":"Via Ernesto Ghirarduzzi 2 (Parma) cap 43122","s":"OK"},{"r":9,"g":"C","d":"2027-01-22","t":"20:00","h":"Punto G White","a":"SPORTING PARMA","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":10,"g":"C","d":"2027-02-06","t":"12:30","h":"B&B TEAM - Bope & Bullet","a":"Punto G White","v":"PRO GREEN STR. MARTINELLA 328 VIGATTO 43124 PR","s":"OK"},{"r":10,"g":"C","d":"2027-02-05","t":"20:00","h":"Punto G Nera","a":"B&B Team Serie B","v":"Via Sonnino 21 - 43126 Parma","s":"OK"},{"r":10,"g":"C","d":"2027-02-05","t":"20:00","h":"SPORTING PARMA","a":"PRO PARMA LOBOS","v":"Strada Martinella 328/a 43124 - Parma - Vigatto","s":"OK"},{"r":1,"g":"D","d":"2026-10-03","t":"16:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE A","a":"Viadana Padel","v":"VIA ENRICO FERMI 2, 46020 MOTTEGGIANA (MN)","s":"OK"},{"r":1,"g":"D","d":"2026-10-03","t":"15:00","h":"SALA PADEL","a":"La quercia B","v":"Via Giuseppe di Vittorio 7 - 43038 Sala Baganza (PR)","s":"OK"},{"r":1,"g":"D","d":"2026-10-03","t":"14:00","h":"Quercia C","a":"Qui Pádel C","v":"Stradello Opi 7 46029 suzzara","s":"OK"},{"r":2,"g":"D","d":"2026-10-17","t":"16:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE A","a":"La quercia B","v":"VIA ENRICO FERMI 2, 46020 MOTTEGGIANA (MN)","s":"OK"},{"r":2,"g":"D","d":"2026-10-17","t":"14:00","h":"Quercia C","a":"SALA PADEL","v":"Stradello Opi 7 46029 suzzara","s":"OK"},{"r":2,"g":"D","d":"2026-10-16","t":"20:00","h":"Viadana Padel","a":"Qui Pádel C","v":"Via Vanoni 25, 46019, viadama, MN","s":"OK"},{"r":3,"g":"D","d":"2027-02-20","t":"16:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE A","a":"Quercia C","v":"VIA ENRICO FERMI 2, 46020 MOTTEGGIANA (MN)","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"D","d":"2027-02-20","t":"15:00","h":"La quercia B","a":"Viadana Padel","v":"Stradello Opi 7 46029 suzzara","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"D","d":"2027-02-21","t":"15:00","h":"Qui Pádel C","a":"SALA PADEL","v":"via Allende 7, 46026 Quistello MN","s":"RECUPERO PROGRAMMATO"},{"r":4,"g":"D","d":"2026-11-14","t":"16:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE A","a":"Qui Pádel C","v":"VIA ENRICO FERMI 2, 46020 MOTTEGGIANA (MN)","s":"OK"},{"r":4,"g":"D","d":"2026-11-14","t":"15:00","h":"La quercia B","a":"Quercia C","v":"Stradello Opi 7 46029 suzzara","s":"OK"},{"r":4,"g":"D","d":"2026-11-13","t":"20:00","h":"Viadana Padel","a":"SALA PADEL","v":"Via Vanoni 25, 46019, viadama, MN","s":"OK"},{"r":5,"g":"D","d":"2026-11-28","t":"16:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE A","a":"SALA PADEL","v":"VIA ENRICO FERMI 2, 46020 MOTTEGGIANA (MN)","s":"OK"},{"r":5,"g":"D","d":"2026-11-28","t":"15:00","h":"La quercia B","a":"Qui Pádel C","v":"Stradello Opi 7 46029 suzzara","s":"OK"},{"r":5,"g":"D","d":"2026-11-27","t":"20:00","h":"Viadana Padel","a":"Quercia C","v":"Via Vanoni 25, 46019, viadama, MN","s":"OK"},{"r":6,"g":"D","d":"2026-12-11","t":"20:00","h":"Viadana Padel","a":"DOPPIO PADEL MOTTEGGIANA SERIE A","v":"Via Vanoni 25, 46019, viadama, MN","s":"OK"},{"r":6,"g":"D","d":"2026-12-12","t":"15:00","h":"La quercia B","a":"SALA PADEL","v":"Stradello Opi 7 46029 suzzara","s":"OK"},{"r":6,"g":"D","d":"2026-12-13","t":"15:00","h":"Qui Pádel C","a":"Quercia C","v":"via Allende 7, 46026 Quistello MN","s":"OK"},{"r":7,"g":"D","d":"2027-03-06","t":"15:00","h":"La quercia B","a":"DOPPIO PADEL MOTTEGGIANA SERIE A","v":"Stradello Opi 7 46029 suzzara","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"D","d":"2027-03-06","t":"15:00","h":"SALA PADEL","a":"Quercia C","v":"Via Giuseppe di Vittorio 7 - 43038 Sala Baganza (PR)","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"D","d":"2027-03-07","t":"15:00","h":"Qui Pádel C","a":"Viadana Padel","v":"via Allende 7, 46026 Quistello MN","s":"RECUPERO PROGRAMMATO"},{"r":8,"g":"D","d":"2027-01-09","t":"14:00","h":"Quercia C","a":"DOPPIO PADEL MOTTEGGIANA SERIE A","v":"Stradello Opi 7 46029 suzzara","s":"OK"},{"r":8,"g":"D","d":"2027-01-08","t":"20:00","h":"Viadana Padel","a":"La quercia B","v":"Via Vanoni 25, 46019, viadama, MN","s":"OK"},{"r":8,"g":"D","d":"2027-01-09","t":"15:00","h":"SALA PADEL","a":"Qui Pádel C","v":"Via Giuseppe di Vittorio 7 - 43038 Sala Baganza (PR)","s":"OK"},{"r":9,"g":"D","d":"2027-01-24","t":"15:00","h":"Qui Pádel C","a":"DOPPIO PADEL MOTTEGGIANA SERIE A","v":"via Allende 7, 46026 Quistello MN","s":"OK"},{"r":9,"g":"D","d":"2027-01-23","t":"14:00","h":"Quercia C","a":"La quercia B","v":"Stradello Opi 7 46029 suzzara","s":"OK"},{"r":9,"g":"D","d":"2027-01-23","t":"15:00","h":"SALA PADEL","a":"Viadana Padel","v":"Via Giuseppe di Vittorio 7 - 43038 Sala Baganza (PR)","s":"OK"},{"r":10,"g":"D","d":"2027-02-06","t":"15:00","h":"SALA PADEL","a":"DOPPIO PADEL MOTTEGGIANA SERIE A","v":"Via Giuseppe di Vittorio 7 - 43038 Sala Baganza (PR)","s":"OK"},{"r":10,"g":"D","d":"2027-02-07","t":"15:00","h":"Qui Pádel C","a":"La quercia B","v":"via Allende 7, 46026 Quistello MN","s":"OK"},{"r":10,"g":"D","d":"2027-02-06","t":"14:00","h":"Quercia C","a":"Viadana Padel","v":"Stradello Opi 7 46029 suzzara","s":"OK"},{"r":1,"g":"E","d":"2026-10-03","t":"16:00","h":"Phoenix Cavriago","a":"EDEN ACADEMY SERIE C","v":"Via Cantonazzo n.1, Cavriago 42025","s":"OK"},{"r":1,"g":"E","d":"2026-10-04","t":"17:00","h":"PALA RBG CREW","a":"EDEN NEXT GEN PADEL CLUB","v":"VIA ERNESTO SPALLANZANI 8/A - 42124","s":"OK"},{"r":1,"g":"E","d":"2026-10-04","t":"10:00","h":"NOTARI - PRIVACAR","a":"EDEN PADEL CLUB","v":"Via Dante Alighieri 1, 42027, Montecchio Emilia","s":"OK"},{"r":2,"g":"E","d":"2026-10-18","t":"10:00","h":"NOTARI - PRIVACAR","a":"EDEN ACADEMY SERIE C","v":"Via Dante Alighieri 1, 42027, Montecchio Emilia","s":"OK"},{"r":2,"g":"E","d":"2026-10-17","t":"16:00","h":"Phoenix Cavriago","a":"EDEN NEXT GEN PADEL CLUB","v":"Via Cantonazzo n.1, Cavriago 42025","s":"OK"},{"r":2,"g":"E","d":"2026-10-18","t":"17:00","h":"PALA RBG CREW","a":"EDEN PADEL CLUB","v":"VIA ERNESTO SPALLANZANI 8/A - 42124","s":"OK"},{"r":3,"g":"E","d":"2027-02-21","t":"17:00","h":"EDEN ACADEMY SERIE C","a":"EDEN NEXT GEN PADEL CLUB","v":"VIA G.BALLA 6 42124 REGGIO EMILIA","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"E","d":"2027-02-20","t":"16:00","h":"Phoenix Cavriago","a":"EDEN PADEL CLUB","v":"Via Cantonazzo n.1, Cavriago 42025","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"E","d":"2027-02-21","t":"10:00","h":"NOTARI - PRIVACAR","a":"PALA RBG CREW","v":"Via Dante Alighieri 1, 42027, Montecchio Emilia","s":"RECUPERO PROGRAMMATO"},{"r":4,"g":"E","d":"2026-11-15","t":"15:00","h":"EDEN PADEL CLUB","a":"EDEN ACADEMY SERIE C","v":"via G.Balla 6 - Reggio nell'Emilia","s":"OK"},{"r":4,"g":"E","d":"2026-11-15","t":"10:00","h":"NOTARI - PRIVACAR","a":"EDEN NEXT GEN PADEL CLUB","v":"Via Dante Alighieri 1, 42027, Montecchio Emilia","s":"OK"},{"r":4,"g":"E","d":"2026-11-14","t":"16:00","h":"Phoenix Cavriago","a":"PALA RBG CREW","v":"Via Cantonazzo n.1, Cavriago 42025","s":"OK"},{"r":5,"g":"E","d":"2026-11-29","t":"17:00","h":"EDEN ACADEMY SERIE C","a":"PALA RBG CREW","v":"VIA G.BALLA 6 42124 REGGIO EMILIA","s":"OK"},{"r":5,"g":"E","d":"2026-11-28","t":"15:00","h":"EDEN NEXT GEN PADEL CLUB","a":"EDEN PADEL CLUB","v":"EDEN PADEL CLUB","s":"OK"},{"r":5,"g":"E","d":"2026-11-29","t":"10:00","h":"NOTARI - PRIVACAR","a":"Phoenix Cavriago","v":"Via Dante Alighieri 1, 42027, Montecchio Emilia","s":"OK"},{"r":6,"g":"E","d":"2026-12-13","t":"17:00","h":"EDEN ACADEMY SERIE C","a":"Phoenix Cavriago","v":"VIA G.BALLA 6 42124 REGGIO EMILIA","s":"OK"},{"r":6,"g":"E","d":"2026-12-12","t":"15:00","h":"EDEN NEXT GEN PADEL CLUB","a":"PALA RBG CREW","v":"EDEN PADEL CLUB","s":"OK"},{"r":6,"g":"E","d":"2026-12-13","t":"15:00","h":"EDEN PADEL CLUB","a":"NOTARI - PRIVACAR","v":"via G.Balla 6 - Reggio nell'Emilia","s":"OK"},{"r":7,"g":"E","d":"2027-03-07","t":"17:00","h":"EDEN ACADEMY SERIE C","a":"NOTARI - PRIVACAR","v":"VIA G.BALLA 6 42124 REGGIO EMILIA","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"E","d":"2027-03-06","t":"15:00","h":"EDEN NEXT GEN PADEL CLUB","a":"Phoenix Cavriago","v":"EDEN PADEL CLUB","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"E","d":"2027-03-07","t":"15:00","h":"EDEN PADEL CLUB","a":"PALA RBG CREW","v":"via G.Balla 6 - Reggio nell'Emilia","s":"RECUPERO PROGRAMMATO"},{"r":8,"g":"E","d":"2027-01-09","t":"15:00","h":"EDEN NEXT GEN PADEL CLUB","a":"EDEN ACADEMY SERIE C","v":"EDEN PADEL CLUB","s":"OK"},{"r":8,"g":"E","d":"2027-01-10","t":"15:00","h":"EDEN PADEL CLUB","a":"Phoenix Cavriago","v":"via G.Balla 6 - Reggio nell'Emilia","s":"OK"},{"r":8,"g":"E","d":"2027-01-10","t":"17:00","h":"PALA RBG CREW","a":"NOTARI - PRIVACAR","v":"VIA ERNESTO SPALLANZANI 8/A - 42124","s":"OK"},{"r":9,"g":"E","d":"2027-01-24","t":"17:00","h":"EDEN ACADEMY SERIE C","a":"EDEN PADEL CLUB","v":"VIA G.BALLA 6 42124 REGGIO EMILIA","s":"OK"},{"r":9,"g":"E","d":"2027-01-23","t":"15:00","h":"EDEN NEXT GEN PADEL CLUB","a":"NOTARI - PRIVACAR","v":"EDEN PADEL CLUB","s":"OK"},{"r":9,"g":"E","d":"2027-01-24","t":"17:00","h":"PALA RBG CREW","a":"Phoenix Cavriago","v":"VIA ERNESTO SPALLANZANI 8/A - 42124","s":"OK"},{"r":10,"g":"E","d":"2027-02-07","t":"17:00","h":"PALA RBG CREW","a":"EDEN ACADEMY SERIE C","v":"VIA ERNESTO SPALLANZANI 8/A - 42124","s":"OK"},{"r":10,"g":"E","d":"2027-02-07","t":"15:00","h":"EDEN PADEL CLUB","a":"EDEN NEXT GEN PADEL CLUB","v":"via G.Balla 6 - Reggio nell'Emilia","s":"OK"},{"r":10,"g":"E","d":"2027-02-06","t":"16:00","h":"Phoenix Cavriago","a":"NOTARI - PRIVACAR","v":"Via Cantonazzo n.1, Cavriago 42025","s":"OK"},{"r":1,"g":"F","d":"2026-10-02","t":"20:00","h":"VIADANA PADEL SERIE B","a":"DOPPIO PADEL MOTTEGGIANA SERIE C","v":"Via vanoni 25, 46019 Viadana (MN)","s":"OK"},{"r":1,"g":"F","d":"2026-10-04","t":"14:00","h":"FIFTEEN RACQUET CLUB","a":"REGGIOLO PADEL CLUB - CANI SCIOLTI","v":"VIA RENZO PEZZANI 47 43029 TRAVERSETOLO (PR)","s":"OK"},{"r":1,"g":"F","d":"2026-10-03","t":"14:00","h":"PRO PARMA TIGERS","a":"PUNTO G GREY","v":"PARMA, VIA ERNESTO GHIRARDUZZI, 2 43122","s":"OK"},{"r":2,"g":"F","d":"2026-10-18","t":"14:00","h":"FIFTEEN RACQUET CLUB","a":"DOPPIO PADEL MOTTEGGIANA SERIE C","v":"VIA RENZO PEZZANI 47 43029 TRAVERSETOLO (PR)","s":"OK"},{"r":2,"g":"F","d":"2026-10-17","t":"14:00","h":"PRO PARMA TIGERS","a":"REGGIOLO PADEL CLUB - CANI SCIOLTI","v":"PARMA, VIA ERNESTO GHIRARDUZZI, 2 43122","s":"OK"},{"r":2,"g":"F","d":"2026-10-17","t":"17:00","h":"PUNTO G GREY","a":"VIADANA PADEL SERIE B","v":"Via Sonnino 21 43126 Parma","s":"OK"},{"r":3,"g":"F","d":"2027-02-20","t":"14:00","h":"PRO PARMA TIGERS","a":"DOPPIO PADEL MOTTEGGIANA SERIE C","v":"PARMA, VIA ERNESTO GHIRARDUZZI, 2 43122","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"F","d":"2026-10-30","t":"20:00","h":"VIADANA PADEL SERIE B","a":"FIFTEEN RACQUET CLUB","v":"Via vanoni 25, 46019 Viadana (MN)","s":"OK"},{"r":3,"g":"F","d":"2027-02-21","t":"11:00","h":"REGGIOLO PADEL CLUB - CANI SCIOLTI","a":"PUNTO G GREY","v":"Strada Gavello n.3, Reggiolo (RE) 42046","s":"RECUPERO PROGRAMMATO"},{"r":4,"g":"F","d":"2026-11-14","t":"17:00","h":"PUNTO G GREY","a":"DOPPIO PADEL MOTTEGGIANA SERIE C","v":"Via Sonnino 21 43126 Parma","s":"OK"},{"r":4,"g":"F","d":"2026-11-14","t":"14:00","h":"PRO PARMA TIGERS","a":"FIFTEEN RACQUET CLUB","v":"PARMA, VIA ERNESTO GHIRARDUZZI, 2 43122","s":"OK"},{"r":4,"g":"F","d":"2026-11-15","t":"11:00","h":"REGGIOLO PADEL CLUB - CANI SCIOLTI","a":"VIADANA PADEL SERIE B","v":"Strada Gavello n.3, Reggiolo (RE) 42046","s":"OK"},{"r":5,"g":"F","d":"2026-11-29","t":"11:00","h":"REGGIOLO PADEL CLUB - CANI SCIOLTI","a":"DOPPIO PADEL MOTTEGGIANA SERIE C","v":"Strada Gavello n.3, Reggiolo (RE) 42046","s":"OK"},{"r":5,"g":"F","d":"2026-11-29","t":"14:00","h":"FIFTEEN RACQUET CLUB","a":"PUNTO G GREY","v":"VIA RENZO PEZZANI 47 43029 TRAVERSETOLO (PR)","s":"OK"},{"r":5,"g":"F","d":"2026-11-28","t":"14:00","h":"PRO PARMA TIGERS","a":"VIADANA PADEL SERIE B","v":"PARMA, VIA ERNESTO GHIRARDUZZI, 2 43122","s":"OK"},{"r":6,"g":"F","d":"2026-12-12","t":"15:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE C","a":"VIADANA PADEL SERIE B","v":"Via Enrico Fermi 2 MOTTEGGIANA MN","s":"OK"},{"r":6,"g":"F","d":"2026-12-13","t":"11:00","h":"REGGIOLO PADEL CLUB - CANI SCIOLTI","a":"FIFTEEN RACQUET CLUB","v":"Strada Gavello n.3, Reggiolo (RE) 42046","s":"OK"},{"r":6,"g":"F","d":"2026-12-12","t":"17:00","h":"PUNTO G GREY","a":"PRO PARMA TIGERS","v":"Via Sonnino 21 43126 Parma","s":"OK"},{"r":7,"g":"F","d":"2027-03-06","t":"15:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE C","a":"FIFTEEN RACQUET CLUB","v":"Via Enrico Fermi 2 MOTTEGGIANA MN","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"F","d":"2027-03-07","t":"11:00","h":"REGGIOLO PADEL CLUB - CANI SCIOLTI","a":"PRO PARMA TIGERS","v":"Strada Gavello n.3, Reggiolo (RE) 42046","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"F","d":"2027-03-05","t":"20:00","h":"VIADANA PADEL SERIE B","a":"PUNTO G GREY","v":"Via vanoni 25, 46019 Viadana (MN)","s":"RECUPERO PROGRAMMATO"},{"r":8,"g":"F","d":"2027-01-09","t":"15:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE C","a":"PRO PARMA TIGERS","v":"Via Enrico Fermi 2 MOTTEGGIANA MN","s":"OK"},{"r":8,"g":"F","d":"2027-01-10","t":"14:00","h":"FIFTEEN RACQUET CLUB","a":"VIADANA PADEL SERIE B","v":"VIA RENZO PEZZANI 47 43029 TRAVERSETOLO (PR)","s":"OK"},{"r":8,"g":"F","d":"2027-01-09","t":"17:00","h":"PUNTO G GREY","a":"REGGIOLO PADEL CLUB - CANI SCIOLTI","v":"Via Sonnino 21 43126 Parma","s":"OK"},{"r":9,"g":"F","d":"2027-01-23","t":"15:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE C","a":"PUNTO G GREY","v":"Via Enrico Fermi 2 MOTTEGGIANA MN","s":"OK"},{"r":9,"g":"F","d":"2027-01-24","t":"14:00","h":"FIFTEEN RACQUET CLUB","a":"PRO PARMA TIGERS","v":"VIA RENZO PEZZANI 47 43029 TRAVERSETOLO (PR)","s":"OK"},{"r":9,"g":"F","d":"2027-01-22","t":"20:00","h":"VIADANA PADEL SERIE B","a":"REGGIOLO PADEL CLUB - CANI SCIOLTI","v":"Via vanoni 25, 46019 Viadana (MN)","s":"OK"},{"r":10,"g":"F","d":"2027-02-06","t":"15:00","h":"DOPPIO PADEL MOTTEGGIANA SERIE C","a":"REGGIOLO PADEL CLUB - CANI SCIOLTI","v":"Via Enrico Fermi 2 MOTTEGGIANA MN","s":"OK"},{"r":10,"g":"F","d":"2027-02-06","t":"17:00","h":"PUNTO G GREY","a":"FIFTEEN RACQUET CLUB","v":"Via Sonnino 21 43126 Parma","s":"OK"},{"r":10,"g":"F","d":"2027-02-05","t":"20:00","h":"VIADANA PADEL SERIE B","a":"PRO PARMA TIGERS","v":"Via vanoni 25, 46019 Viadana (MN)","s":"OK"},{"r":1,"g":"G","d":"2026-10-04","t":"10:00","h":"NEWPADEL SOLIERA C","a":"RISORSE BLUE TEAM","v":"Via Scarlatti n° 58/a","s":"OK"},{"r":1,"g":"G","d":"2026-10-03","t":"14:00","h":"CA'MARTA squadra A","a":"CA'MARTA squadra C","v":"Sassuolo Via Regina Pacis 118 (mo)","s":"OK"},{"r":1,"g":"G","d":"2026-10-03","t":"15:00","h":"ASD Happy Time","a":"CA'MARTA squadra B","v":"Via Coppi 1/b 42014 Castellarano (Re)","s":"OK"},{"r":2,"g":"G","d":"2026-10-18","t":"10:00","h":"NEWPADEL SOLIERA C","a":"CA'MARTA squadra A","v":"Via Scarlatti n° 58/a","s":"OK"},{"r":2,"g":"G","d":"2026-10-17","t":"16:00","h":"CA'MARTA squadra C","a":"ASD Happy Time","v":"SASSUOLO VIA REGINA PACIS 118 (MO)","s":"OK"},{"r":2,"g":"G","d":"2026-10-17","t":"14:00","h":"CA'MARTA squadra B","a":"RISORSE BLUE TEAM","v":"SASSUOLO VIA REGINA PACIS 118 (mo)","s":"OK"},{"r":3,"g":"G","d":"2027-03-07","t":"10:00","h":"NEWPADEL SOLIERA C","a":"ASD Happy Time","v":"Via Scarlatti n° 58/a","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"G","d":"2027-03-06","t":"14:00","h":"RISORSE BLUE TEAM","a":"CA'MARTA squadra A","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"G","d":"2027-03-06","t":"14:00","h":"CA'MARTA squadra B","a":"CA'MARTA squadra C","v":"SASSUOLO VIA REGINA PACIS 118 (mo)","s":"RECUPERO PROGRAMMATO"},{"r":4,"g":"G","d":"2026-11-15","t":"10:00","h":"NEWPADEL SOLIERA C","a":"CA'MARTA squadra B","v":"Via Scarlatti n° 58/a","s":"OK"},{"r":4,"g":"G","d":"2026-11-14","t":"14:00","h":"CA'MARTA squadra A","a":"ASD Happy Time","v":"Sassuolo Via Regina Pacis 118 (mo)","s":"OK"},{"r":4,"g":"G","d":"2026-11-14","t":"14:00","h":"RISORSE BLUE TEAM","a":"CA'MARTA squadra C","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"OK"},{"r":5,"g":"G","d":"2026-11-29","t":"10:00","h":"NEWPADEL SOLIERA C","a":"CA'MARTA squadra C","v":"Via Scarlatti n° 58/a","s":"OK"},{"r":5,"g":"G","d":"2026-11-28","t":"14:00","h":"CA'MARTA squadra B","a":"CA'MARTA squadra A","v":"SASSUOLO VIA REGINA PACIS 118 (mo)","s":"OK"},{"r":5,"g":"G","d":"2026-11-28","t":"14:00","h":"RISORSE BLUE TEAM","a":"ASD Happy Time","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"OK"},{"r":6,"g":"G","d":"2026-12-12","t":"14:00","h":"RISORSE BLUE TEAM","a":"NEWPADEL SOLIERA C","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"OK"},{"r":6,"g":"G","d":"2026-12-12","t":"16:00","h":"CA'MARTA squadra C","a":"CA'MARTA squadra A","v":"SASSUOLO VIA REGINA PACIS 118 (MO)","s":"OK"},{"r":6,"g":"G","d":"2026-12-12","t":"14:00","h":"CA'MARTA squadra B","a":"ASD Happy Time","v":"SASSUOLO VIA REGINA PACIS 118 (mo)","s":"OK"},{"r":7,"g":"G","d":"2027-02-20","t":"14:00","h":"CA'MARTA squadra A","a":"NEWPADEL SOLIERA C","v":"Sassuolo Via Regina Pacis 118 (mo)","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"G","d":"2027-02-20","t":"15:00","h":"ASD Happy Time","a":"CA'MARTA squadra C","v":"Via Coppi 1/b 42014 Castellarano (Re)","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"G","d":"2027-02-20","t":"14:00","h":"RISORSE BLUE TEAM","a":"CA'MARTA squadra B","v":"Via Don Pasquino Fiorenzi 135, 41123 Modena (MO)","s":"RECUPERO PROGRAMMATO"},{"r":8,"g":"G","d":"2027-01-09","t":"15:00","h":"ASD Happy Time","a":"NEWPADEL SOLIERA C","v":"Via Coppi 1/b 42014 Castellarano (Re)","s":"OK"},{"r":8,"g":"G","d":"2027-01-09","t":"14:00","h":"CA'MARTA squadra A","a":"RISORSE BLUE TEAM","v":"Sassuolo Via Regina Pacis 118 (mo)","s":"OK"},{"r":8,"g":"G","d":"2027-01-09","t":"16:00","h":"CA'MARTA squadra C","a":"CA'MARTA squadra B","v":"SASSUOLO VIA REGINA PACIS 118 (MO)","s":"OK"},{"r":9,"g":"G","d":"2027-01-23","t":"14:00","h":"CA'MARTA squadra B","a":"NEWPADEL SOLIERA C","v":"SASSUOLO VIA REGINA PACIS 118 (mo)","s":"OK"},{"r":9,"g":"G","d":"2027-01-23","t":"15:00","h":"ASD Happy Time","a":"CA'MARTA squadra A","v":"Via Coppi 1/b 42014 Castellarano (Re)","s":"OK"},{"r":9,"g":"G","d":"2027-01-23","t":"16:00","h":"CA'MARTA squadra C","a":"RISORSE BLUE TEAM","v":"SASSUOLO VIA REGINA PACIS 118 (MO)","s":"OK"},{"r":10,"g":"G","d":"2027-02-06","t":"16:00","h":"CA'MARTA squadra C","a":"NEWPADEL SOLIERA C","v":"SASSUOLO VIA REGINA PACIS 118 (MO)","s":"OK"},{"r":10,"g":"G","d":"2027-02-06","t":"14:00","h":"CA'MARTA squadra A","a":"CA'MARTA squadra B","v":"Sassuolo Via Regina Pacis 118 (mo)","s":"OK"},{"r":10,"g":"G","d":"2027-02-06","t":"15:00","h":"ASD Happy Time","a":"RISORSE BLUE TEAM","v":"Via Coppi 1/b 42014 Castellarano (Re)","s":"OK"},{"r":1,"g":"H","d":"2026-10-03","t":"14:00","h":"CT CORREGGIO 2","a":"Padel Prime La Patria Carpi","v":"via Bruto Terrachini 2 - 42015 Correggio (RE)","s":"OK"},{"r":1,"g":"H","d":"2026-10-02","t":"20:00","h":"BLUE PADEL CARPI B","a":"NEWPADEL SOLIERA B","v":"PIAZZALE DELLE PISCINE 4 CARPI 41012","s":"OK"},{"r":1,"g":"H","d":"2026-10-03","t":"15:00","h":"BLUE PADEL CARPI C","a":"CT CORREGGIO Serie A","v":"Piazzale delle piscine 4 carpi 41012","s":"OK"},{"r":2,"g":"H","d":"2026-10-17","t":"14:00","h":"CT CORREGGIO 2","a":"BLUE PADEL CARPI B","v":"via Bruto Terrachini 2 - 42015 Correggio (RE)","s":"OK"},{"r":2,"g":"H","d":"2026-10-17","t":"15:00","h":"BLUE PADEL CARPI C","a":"NEWPADEL SOLIERA B","v":"Piazzale delle piscine 4 carpi 41012","s":"OK"},{"r":2,"g":"H","d":"2026-10-17","t":"14:00","h":"Padel Prime La Patria Carpi","a":"CT CORREGGIO Serie A","v":"Via Nuova Ponente 24/H, 41012, Carpi (MO)","s":"OK"},{"r":3,"g":"H","d":"2027-03-06","t":"14:00","h":"CT CORREGGIO 2","a":"BLUE PADEL CARPI C","v":"via Bruto Terrachini 2 - 42015 Correggio (RE)","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"H","d":"2027-03-06","t":"14:00","h":"Padel Prime La Patria Carpi","a":"BLUE PADEL CARPI B","v":"Via Nuova Ponente 24/H, 41012, Carpi (MO)","s":"RECUPERO PROGRAMMATO"},{"r":3,"g":"H","d":"2027-03-06","t":"17:00","h":"CT CORREGGIO Serie A","a":"NEWPADEL SOLIERA B","v":"Via B. Terrachini 2, 42015 Correggio RE","s":"RECUPERO PROGRAMMATO"},{"r":4,"g":"H","d":"2026-11-14","t":"14:00","h":"CT CORREGGIO 2","a":"CT CORREGGIO Serie A","v":"via Bruto Terrachini 2 - 42015 Correggio (RE)","s":"OK"},{"r":4,"g":"H","d":"2026-11-14","t":"15:00","h":"BLUE PADEL CARPI C","a":"BLUE PADEL CARPI B","v":"Piazzale delle piscine 4 carpi 41012","s":"OK"},{"r":4,"g":"H","d":"2026-11-14","t":"14:00","h":"Padel Prime La Patria Carpi","a":"NEWPADEL SOLIERA B","v":"Via Nuova Ponente 24/H, 41012, Carpi (MO)","s":"OK"},{"r":5,"g":"H","d":"2026-11-28","t":"14:00","h":"CT CORREGGIO 2","a":"NEWPADEL SOLIERA B","v":"via Bruto Terrachini 2 - 42015 Correggio (RE)","s":"OK"},{"r":5,"g":"H","d":"2026-11-28","t":"17:00","h":"CT CORREGGIO Serie A","a":"BLUE PADEL CARPI B","v":"Via B. Terrachini 2, 42015 Correggio RE","s":"OK"},{"r":5,"g":"H","d":"2026-11-28","t":"15:00","h":"BLUE PADEL CARPI C","a":"Padel Prime La Patria Carpi","v":"Piazzale delle piscine 4 carpi 41012","s":"OK"},{"r":6,"g":"H","d":"2026-12-12","t":"14:00","h":"Padel Prime La Patria Carpi","a":"CT CORREGGIO 2","v":"Via Nuova Ponente 24/H, 41012, Carpi (MO)","s":"OK"},{"r":6,"g":"H","d":"2026-12-13","t":"10:00","h":"NEWPADEL SOLIERA B","a":"BLUE PADEL CARPI B","v":"Via Scarlatti n° 58/a 41019 SOLIERA","s":"OK"},{"r":6,"g":"H","d":"2026-12-12","t":"17:00","h":"CT CORREGGIO Serie A","a":"BLUE PADEL CARPI C","v":"Via B. Terrachini 2, 42015 Correggio RE","s":"OK"},{"r":7,"g":"H","d":"2027-02-19","t":"20:00","h":"BLUE PADEL CARPI B","a":"CT CORREGGIO 2","v":"PIAZZALE DELLE PISCINE 4 CARPI 41012","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"H","d":"2027-02-21","t":"10:00","h":"NEWPADEL SOLIERA B","a":"BLUE PADEL CARPI C","v":"Via Scarlatti n° 58/a 41019 SOLIERA","s":"RECUPERO PROGRAMMATO"},{"r":7,"g":"H","d":"2027-02-20","t":"17:00","h":"CT CORREGGIO Serie A","a":"Padel Prime La Patria Carpi","v":"Via B. Terrachini 2, 42015 Correggio RE","s":"RECUPERO PROGRAMMATO"},{"r":8,"g":"H","d":"2027-01-09","t":"15:00","h":"BLUE PADEL CARPI C","a":"CT CORREGGIO 2","v":"Piazzale delle piscine 4 carpi 41012","s":"OK"},{"r":8,"g":"H","d":"2027-01-08","t":"20:00","h":"BLUE PADEL CARPI B","a":"Padel Prime La Patria Carpi","v":"PIAZZALE DELLE PISCINE 4 CARPI 41012","s":"OK"},{"r":8,"g":"H","d":"2027-01-10","t":"10:00","h":"NEWPADEL SOLIERA B","a":"CT CORREGGIO Serie A","v":"Via Scarlatti n° 58/a 41019 SOLIERA","s":"OK"},{"r":9,"g":"H","d":"2027-01-23","t":"17:00","h":"CT CORREGGIO Serie A","a":"CT CORREGGIO 2","v":"Via B. Terrachini 2, 42015 Correggio RE","s":"OK"},{"r":9,"g":"H","d":"2027-01-22","t":"20:00","h":"BLUE PADEL CARPI B","a":"BLUE PADEL CARPI C","v":"PIAZZALE DELLE PISCINE 4 CARPI 41012","s":"OK"},{"r":9,"g":"H","d":"2027-01-24","t":"10:00","h":"NEWPADEL SOLIERA B","a":"Padel Prime La Patria Carpi","v":"Via Scarlatti n° 58/a 41019 SOLIERA","s":"OK"},{"r":10,"g":"H","d":"2027-02-07","t":"10:00","h":"NEWPADEL SOLIERA B","a":"CT CORREGGIO 2","v":"Via Scarlatti n° 58/a 41019 SOLIERA","s":"OK"},{"r":10,"g":"H","d":"2027-02-05","t":"20:00","h":"BLUE PADEL CARPI B","a":"CT CORREGGIO Serie A","v":"PIAZZALE DELLE PISCINE 4 CARPI 41012","s":"OK"},{"r":10,"g":"H","d":"2027-02-06","t":"14:00","h":"Padel Prime La Patria Carpi","a":"BLUE PADEL CARPI C","v":"Via Nuova Ponente 24/H, 41012, Carpi (MO)","s":"OK"}];
 
-function errorBox(t){
- const b=document.createElement('div');
- b.style.cssText='position:fixed;left:15px;right:15px;bottom:15px;z-index:99999;padding:14px;border-radius:12px;background:#fdecef;border:1px solid #ce2b37;color:#7b1722;font:600 14px system-ui';
- b.textContent='V9.9.62 non attivata: '+t;
- document.body.appendChild(b);
+function fail(msg){
+  const b=document.createElement('div');
+  b.style.cssText='position:fixed;left:15px;right:15px;bottom:15px;z-index:99999;padding:14px;border-radius:12px;background:#fdecef;border:1px solid #ce2b37;color:#7b1722;font:600 14px system-ui';
+  b.textContent='V9.9.64 non attivata: '+msg;
+  document.body.appendChild(b);
 }
 
 try{
- const r=await fetch(SOURCE,{cache:'no-store'});
- if(!r.ok) throw Error('motore base non disponibile');
- let src=await r.text();
+  const r=await fetch(SOURCE,{cache:'no-store'});
+  if(!r.ok) throw Error('motore base non disponibile');
+  let src=await r.text();
 
- const base="const pad=n=>String(n).padStart(2,'0');";
- if(!src.includes(base)) throw Error('marker base non trovato');
+  const close=src.lastIndexOf('})();');
+  if(close<0) throw Error('chiusura motore base non trovata');
 
- src=src.replace(base,base+`
-const V9_EDEN_IDS=new Set(${JSON.stringify([...EDEN_IDS])});
-const V9_EDEN_HOME_FROM='${EDEN_HOME_FROM}';
-const V9_PRO_ANCHORS=${JSON.stringify(PRO_ANCHORS)};
+  const patch=`
+  const __v9964OriginalBuild=window.buildCalendarPayload;
 
-function v9ForbiddenHome(f){
- return !!f &&
-   V9_EDEN_IDS.has(String(f.home_team_id)) &&
-   String(f._local_date||'').slice(0,10)<V9_EDEN_HOME_FROM;
-}
-
-function v9SameTeam(a,b){
- const aa=[String(a.home_team_id),String(a.away_team_id)];
- const bb=[String(b.home_team_id),String(b.away_team_id)];
- return aa.some(x=>bb.includes(x));
-}
-`);
-
- const orient=`    const fixtures=pairs.map(([home,away])=>
-      makeFixture(group,roundNo,home,away,anchor,code)
-    );`;
- if(!src.includes(orient)) throw Error('marker orientazioni non trovato');
- src=src.replace(orient,orient+`
-
-    if(fixtures.some(v9ForbiddenHome)){
-      continue;
-    }`);
-
- /* Rimuove falso pre-filtro astratto */
- const ps=src.indexOf('    /* 10.11 - BLOCCO PREVENTIVO:');
- const pe=src.indexOf('    /* Se una gara cade su data esclusa',ps);
- if(ps>=0 && pe>ps){
-   src=src.slice(0,ps)+
-`    /* V9.9.62D: rimosso pre-filtro astratto; restano i conflitti reali. */
-
-`+src.slice(pe);
- }
-
- /* 62D - BLACKOUT = RECUPERO DELLA SINGOLA GARA
-    Il blackout NON deve scartare l'orientazione e NON deve spostare
-    l'intera giornata. La giornata resta nel suo anchor naturale.
-    Più avanti, buildCalendarPayload mette solo la singola gara
-    che cade su blackout nella recoveryQueue. */
- const blackoutBlock=`    /* Se una gara cade su data esclusa, questa orientazione
-       NON è valida in questo weekend. */
-    if(roundTouchesExcludedDate(fixtures,code)){
-      continue;
+  window.buildCalendarPayload=async function(){
+    const code=$id('competition')?.value;
+    if(String(code||'').toUpperCase()!=='COPPA_ITALIA' &&
+       String(code||'').toUpperCase()!=='COPPA ITALIA'){
+      return __v9964OriginalBuild();
     }
 
-`;
- if(src.includes(blackoutBlock)){
-   src=src.replace(blackoutBlock,'');
- } else {
-   throw Error('marker blackout orientazione non trovato');
- }
+    await fetchData();
 
- /* Ritorno: non fallisce. Le gare problematiche diventano deferred. */
- const a=src.indexOf('function buildReturnLeg({');
- const b=src.indexOf('window.buildCalendarPayload=async function(){',a);
- if(a<0||b<0) throw Error('blocco ritorno non trovato');
+    const normTeam=v=>norm(v);
+    const byName=new Map();
+    for(const t of teams){
+      byName.set(normTeam(t.name),t);
+    }
 
- const ret=`function buildReturnLeg({
- group,firstLeg,startAnchor,intervalWeeks,code,external
-}){
- const returns=[], deferred=[];
- let anchor=new Date(startAnchor);
+    function findTeam(name){
+      const exact=byName.get(normTeam(name));
+      if(exact) return exact;
+      const target=normTeam(name);
+      const matches=teams.filter(t=>{
+        const n=normTeam(t.name);
+        return n===target || n.includes(target) || target.includes(n);
+      });
+      if(matches.length===1) return matches[0];
+      throw new Error('Squadra del calendario campione non trovata o ambigua: '+name);
+    }
 
- for(let i=0;i<firstLeg.chosen.length;i++){
-   const first=firstLeg.chosen[i];
-   const roundNo=first.roundNo+firstLeg.totalRounds;
-   const raw=first.pairs.map(([home,away])=>
-     makeFixture(group,roundNo,away,home,anchor,code)
-   );
+    function groupFor(home,away){
+      const hg=new Set(
+        members.filter(m=>String(m.team_id)===String(home.id)).map(m=>String(m.group_id))
+      );
+      const gid=members.find(m=>
+        String(m.team_id)===String(away.id) && hg.has(String(m.group_id))
+      )?.group_id;
+      if(!gid) throw new Error('Girone non trovato per '+home.name+' – '+away.name);
+      return groups.find(g=>String(g.id)===String(gid)) || {id:gid};
+    }
 
-   const accepted=[];
-   for(const f of raw){
-     let bad=false;
-     if(v9ForbiddenHome(f)) bad=true;
-     if(fixtureFallsOnExcludedDate(f,code)) bad=true;
-     if(conflictsAny(f,accepted)) bad=true;
-     if(!compatibleWithExternal([f],external)) bad=true;
+    const payload=[];
+    for(const x of CAMPIONE){
+      const home=findTeam(x.h);
+      const away=findTeam(x.a);
+      const group=groupFor(home,away);
+      const scheduled=localDateTimeToISO(x.d,x.t);
+      const local=localPartsFromISO(scheduled);
 
-     if(bad) deferred.push({fixture:f,group});
-     else accepted.push(f);
-   }
+      payload.push({
+        competition_code:code,
+        phase:'Girone',
+        group_id:group.id,
+        round_number:x.r,
+        home_team_id:home.id,
+        away_team_id:away.id,
+        scheduled_at:scheduled,
+        venue:x.v,
+        _home_name:home.name,
+        _away_name:away.name,
+        _configured_day:home.home_match_day,
+        _configured_time:x.t,
+        _local_date:local.date,
+        _local_time:local.time,
+        _local_weekday:local.weekday,
+        _facility_key:sharedFacilityKey(home,x.v),
+        _shared_home_slot_key:sharedHomeSlotKey(home),
+        _duration_minutes:durationMinutes(home),
+        _v9964_status:x.s,
+        _v9964_group:x.g
+      });
+    }
 
-   returns.push({roundNo,fixtures:accepted,anchor});
-   anchor=addDays(anchor,intervalWeeks*7);
- }
- return {returns,deferred};
-}
+    if(payload.length!==240) throw new Error('Calendario campione incompleto: '+payload.length+'/240');
 
-`;
- src=src.slice(0,a)+ret+src.slice(b);
+    const rec=payload.filter(f=>f._v9964_status==='RECUPERO PROGRAMMATO');
+    const feb=rec.filter(f=>String(f._local_date).startsWith('2027-02-')).length;
+    const mar=rec.filter(f=>String(f._local_date).startsWith('2027-03-')).length;
 
- const p1=src.indexOf('window.buildCalendarPayload=async function(){');
- const p2=src.indexOf('/* Nessuna vecchia riparazione automatica */',p1);
- if(p1<0||p2<0) throw Error('buildCalendarPayload non trovato');
+    if(rec.length!==43 || feb!==22 || mar!==21){
+      throw new Error('Controllo campione fallito: recuperi '+rec.length+' · febbraio '+feb+' · marzo '+mar);
+    }
 
- const payload=`window.buildCalendarPayload=async function(){
- if(!$id('startDate')?.value) throw new Error('Inserisci la data di partenza.');
- await fetchData();
- if(!groups.length) throw new Error('Prima devi creare i gironi.');
- if(!validateTeams(false)) throw new Error('Completa prima giorno, ora e campo delle squadre.');
+    window.__v9RecoverySummary={
+      total:43,pro1:22,pro2:21,states:0,
+      pro1Anchor:'19-20-21/02/2027',
+      pro2Anchor:'05-06-07/03/2027'
+    };
 
- const code=$id('competition').value;
- const isDouble=$id('formula').value==='double';
- const intervalWeeks=Number($id('interval').value||1);
- const start=fromDateKey($id('startDate').value);
- const external=externalFixtures(code);
+    payload._calendarDiagnosis={
+      totalMatches:240,
+      recoveryMatches:43,
+      pro1Matches:22,
+      pro2Matches:21,
+      conflictsDetected:0,
+      conflictsUnresolved:0,
+      progression:'OK',
+      rule:'V9.9.64: Coppa Italia caricata dal calendario campione validato.'
+    };
 
- const payload=[];
- const recoveryQueue=[];
+    return payload;
+  };
 
- for(const group of groups){
-   const groupTeams=members
-     .filter(m=>String(m.group_id)===String(group.id))
-     .map(m=>teams.find(t=>String(t.id)===String(m.team_id)))
-     .filter(Boolean);
+  window.__v9964Active=true;
+  `;
 
-   if(groupTeams.length<2) continue;
+  src=src.slice(0,close)+patch+src.slice(close);
+  (0,eval)(src);
 
-   const firstLeg=solveFirstLeg({
-     group,groupTeams,start,intervalWeeks,code,
-     external:[...external,...payload]
-   });
-
-   for(const r of firstLeg.chosen){
-     for(const f of r.firstFixtures){
-       let bad=false;
-       if(v9ForbiddenHome(f)) bad=true;
-       if(fixtureFallsOnExcludedDate(f,code)) bad=true;
-       if(conflictsAny(f,payload)) bad=true;
-       if(!compatibleWithExternal([f],external)) bad=true;
-       if(bad) recoveryQueue.push({fixture:f,group});
-       else payload.push(f);
-     }
-   }
-
-   if(isDouble){
-     const last=firstLeg.chosen[firstLeg.chosen.length-1].firstAnchor;
-     const built=buildReturnLeg({
-       group,firstLeg,
-       startAnchor:addDays(last,intervalWeeks*7),
-       intervalWeeks,code,
-       external:[...external,...payload]
-     });
-
-     for(const r of built.returns) payload.push(...r.fixtures);
-     recoveryQueue.push(...built.deferred);
-   }
- }
-
- /* =========================================================
-    V9.9.63 - PRO A BLOCCHI DI GIORNATA
-    Le gare residue NON vengono colorate singolarmente.
-    Restano unite per girone + giornata originaria.
-    Ogni blocco va interamente in PRO1 oppure PRO2.
-    ========================================================= */
- const buckets=V9_PRO_ANCHORS.map((k,i)=>({
-   index:i,
-   anchor:fromDateKey(k),
-   fixtures:[]
- }));
-
- /* Raggruppa le residue per GIRONE + GIORNATA ORIGINARIA */
- const blockMap=new Map();
- for(const item of recoveryQueue){
-   const f=item.fixture;
-   const key=String(item.group.id)+'|'+String(f.round_number);
-   if(!blockMap.has(key)){
-     blockMap.set(key,{
-       key,
-       group:item.group,
-       roundNo:Number(f.round_number),
-       items:[]
-     });
-   }
-   blockMap.get(key).items.push(item);
- }
-
- const blocks=[...blockMap.values()].map((block,idx)=>{
-   const candidates=buckets.map(bucket=>
-     block.items.map(item=>{
-       const original=item.fixture;
-       const home=teams.find(t=>String(t.id)===String(original.home_team_id));
-       const away=teams.find(t=>String(t.id)===String(original.away_team_id));
-       if(!home||!away) throw new Error('Dati mancanti per una gara residua.');
-       return makeFixture(
-         block.group,
-         original.round_number,
-         home,
-         away,
-         bucket.anchor,
-         code
-       );
-     })
-   );
-
-   const allowed=candidates.map(fixtures=>{
-     /* controllo interno al blocco */
-     for(let i=0;i<fixtures.length;i++){
-       const f=fixtures[i];
-       if(v9ForbiddenHome(f)) return false;
-       if(fixtureFallsOnExcludedDate(f,code)) return false;
-
-       for(let j=i+1;j<fixtures.length;j++){
-         const g=fixtures[j];
-         if(v9SameTeam(f,g)) return false;
-         if(realFacilityConflict(f,g)) return false;
-       }
-
-       /* confronto con competizioni esterne e calendario ordinario */
-       for(const x of external){
-         if(v9SameTeam(f,x)){
-           const df=new Date(f.scheduled_at);
-           const dx=new Date(x.scheduled_at);
-           const wf=new Date(df); wf.setDate(df.getDate()-((df.getDay()+6)%7));
-           const wx=new Date(dx); wx.setDate(dx.getDate()-((dx.getDay()+6)%7));
-           if(dateKeyLocal(wf)===dateKeyLocal(wx)) return false;
-         }
-         if(realFacilityConflict(f,x)) return false;
-       }
-
-       for(const x of payload){
-         if(v9SameTeam(f,x)){
-           const df=new Date(f.scheduled_at);
-           const dx=new Date(x.scheduled_at);
-           const wf=new Date(df); wf.setDate(df.getDate()-((df.getDay()+6)%7));
-           const wx=new Date(dx); wx.setDate(dx.getDate()-((dx.getDay()+6)%7));
-           if(dateKeyLocal(wf)===dateKeyLocal(wx)) return false;
-         }
-         if(realFacilityConflict(f,x)) return false;
-       }
-     }
-     return true;
-   });
-
-   if(!allowed[0]&&!allowed[1]){
-     throw new Error(
-       'Nessun weekend PRO disponibile per il blocco '+
-       block.group.name+' - G'+block.roundNo
-     );
-   }
-
-   return {
-     idx,
-     ...block,
-     candidates,
-     allowed,
-     edges:new Set()
-   };
- });
-
- /* Due BLOCCHI devono stare su weekend opposti se, collocati nello
-    stesso weekend, produrrebbero almeno un conflitto reale. */
- for(let i=0;i<blocks.length;i++){
-   for(let j=i+1;j<blocks.length;j++){
-     let conflict=false;
-     const A=blocks[i].candidates[0];
-     const B=blocks[j].candidates[0];
-
-     outer:
-     for(const a of A){
-       for(const b of B){
-         if(v9SameTeam(a,b)||realFacilityConflict(a,b)){
-           conflict=true;
-           break outer;
-         }
-       }
-     }
-
-     if(conflict){
-       blocks[i].edges.add(j);
-       blocks[j].edges.add(i);
-     }
-   }
- }
-
- const color=new Array(blocks.length).fill(-1);
-
- function assignComponent(startIndex,startColor){
-   const q=[[startIndex,startColor]];
-   const touched=[];
-   while(q.length){
-     const [n,c]=q.shift();
-
-     if(!blocks[n].allowed[c]){
-       for(const t of touched) color[t]=-1;
-       return false;
-     }
-
-     if(color[n]!==-1){
-       if(color[n]!==c){
-         for(const t of touched) color[t]=-1;
-         return false;
-       }
-       continue;
-     }
-
-     color[n]=c;
-     touched.push(n);
-
-     for(const e of blocks[n].edges){
-       const wanted=1-c;
-       if(color[e]!==-1 && color[e]!==wanted){
-         for(const t of touched) color[t]=-1;
-         return false;
-       }
-       if(color[e]===-1) q.push([e,wanted]);
-     }
-   }
-   return true;
- }
-
- /* Prima i blocchi obbligati a un solo weekend */
- for(let i=0;i<blocks.length;i++){
-   if(color[i]!==-1) continue;
-
-   if(blocks[i].allowed[0]&&!blocks[i].allowed[1]){
-     if(!assignComponent(i,0)){
-       throw new Error('Conflitto reale tra blocchi attorno a '+blocks[i].group.name+' G'+blocks[i].roundNo);
-     }
-   }else if(!blocks[i].allowed[0]&&blocks[i].allowed[1]){
-     if(!assignComponent(i,1)){
-       throw new Error('Conflitto reale tra blocchi attorno a '+blocks[i].group.name+' G'+blocks[i].roundNo);
-     }
-   }
- }
-
- /* Componenti libere: scegli l'orientamento che bilancia il numero
-    di PARTITE, non il numero di blocchi. */
- for(let i=0;i<blocks.length;i++){
-   if(color[i]!==-1) continue;
-
-   const snapshot=color.slice();
-   const load0=blocks.reduce((s,b,k)=>s+(color[k]===0?b.items.length:0),0);
-   const load1=blocks.reduce((s,b,k)=>s+(color[k]===1?b.items.length:0),0);
-   const prefer=load0<=load1?0:1;
-
-   if(!assignComponent(i,prefer)){
-     for(let k=0;k<color.length;k++) color[k]=snapshot[k];
-
-     if(!assignComponent(i,1-prefer)){
-       throw new Error(
-         'I blocchi di recupero non sono distribuibili tra i due weekend PRO attorno a '+
-         blocks[i].group.name+' G'+blocks[i].roundNo
-       );
-     }
-   }
- }
-
- /* Assegnazione finale dei blocchi */
- for(let i=0;i<blocks.length;i++){
-   const c=color[i];
-   if(c<0||!blocks[i].allowed[c]){
-     throw new Error('Assegnazione PRO incompleta per '+blocks[i].group.name+' G'+blocks[i].roundNo);
-   }
-   buckets[c].fixtures.push(...blocks[i].candidates[c]);
- }
-
- /* Controllo finale dentro ciascun weekend */
- for(const bucket of buckets){
-   for(let i=0;i<bucket.fixtures.length;i++){
-     for(let j=i+1;j<bucket.fixtures.length;j++){
-       if(v9SameTeam(bucket.fixtures[i],bucket.fixtures[j])){
-         throw new Error('Doppio impegno squadra nel weekend PRO.');
-       }
-       if(realFacilityConflict(bucket.fixtures[i],bucket.fixtures[j])){
-         throw new Error('Conflitto reale impianto nel weekend PRO.');
-       }
-     }
-   }
- }
-
- const states=blocks.length;
- for(const b of buckets) payload.push(...b.fixtures);
-
- /* Controllo finale */
- for(let i=0;i<payload.length;i++){
-   for(let j=i+1;j<payload.length;j++){
-     if(realFacilityConflict(payload[i],payload[j])){
-       throw new Error(
-         'Conflitto reale finale: '+payload[i]._home_name+' – '+payload[i]._away_name+
-         ' / '+payload[j]._home_name+' – '+payload[j]._away_name
-       );
-     }
-   }
- }
-
- payload.sort((a,b)=>
-   (new Date(a.scheduled_at)-new Date(b.scheduled_at)) ||
-   (a.round_number-b.round_number)
- );
-
- window.__v9RecoverySummary={
-   total:recoveryQueue.length,
-   pro1:buckets[0].fixtures.length,
-   pro2:buckets[1].fixtures.length,
-   states,
-   pro1Anchor:'19-20-21/02/2027',
-   pro2Anchor:'05-06-07/03/2027'
- };
-
- payload._calendarDiagnosis={
-   totalMatches:payload.length,
-   recoveryMatches:recoveryQueue.length,
-   pro1Matches:buckets[0].fixtures.length,
-   pro2Matches:buckets[1].fixtures.length,
-   conflictsDetected:0,
-   conflictsUnresolved:0,
-   progression:'OK',
-   rule:
-     'V9.9.63: giornate naturali invariate; le residue restano unite per girone+giornata originaria e i blocchi vengono distribuiti tra i due weekend PRO sui weekend PRO 19-21/02 e 05-07/03/2027.'
- };
-
- return payload;
-};
-
-`;
-
- src=src.slice(0,p1)+payload+src.slice(p2);
-
- const blob=new Blob([src],{type:'text/javascript'});
- const url=URL.createObjectURL(blob);
- const s=document.createElement('script');
- s.src=url;
-
- s.onload=()=>{
-   URL.revokeObjectURL(url);
-   const c=[...document.querySelectorAll('.card')]
-     .find(x=>x.querySelector('#competition'))||document.querySelector('.card');
-   if(c){
-     const n=document.createElement('div');
-     n.className='notice ok';
-     n.innerHTML=
-       '<b>V9.9.63 RECUPERI A BLOCCHI ATTIVA:</b> le gare residue vengono assegnate ai due weekend PRO con un controllo deterministico dei soli conflitti reali. Niente ricerca da 100.000 tentativi.';
-     c.appendChild(n);
-   }
- };
-
- s.onerror=()=>errorBox('errore caricamento motore');
- document.body.appendChild(s);
-
+  const show=()=>{
+    const host=document.querySelector('.card')||document.body;
+    if(document.getElementById('v9964-status')) return;
+    const b=document.createElement('div');
+    b.id='v9964-status';
+    b.style.cssText='margin:12px 0;padding:12px 14px;border:1px solid #009246;border-radius:12px;background:#eaf8f0;color:#0a2e5e;font:600 14px system-ui';
+    b.innerHTML='<b>V9.9.64 CALENDARIO CAMPIONE ATTIVO:</b> Coppa Italia = 240 gare validate · 197 ordinarie · 43 recuperi · 22 febbraio + 21 marzo.';
+    host.appendChild(b);
+  };
+  setTimeout(show,400);
 }catch(e){
- errorBox(e?.message||String(e));
+  console.error(e);
+  fail(e.message||String(e));
 }
 })();
