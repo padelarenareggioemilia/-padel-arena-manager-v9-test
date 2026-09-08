@@ -1,16 +1,22 @@
-V9.9.46 - SITUAZIONE TESSERAMENTI
+V9.9.47
 
-Supabase:
-la funzione admin_tesseramenti_overview è già stata installata.
+Carica nella ROOT GitHub:
+- config.js (sostituisci)
+- tesseramenti-overview.js (sostituisci)
+- diagnostics-v9947.js (nuovo)
 
-Caricare nella ROOT GitHub questi 3 file:
-1) config.js (SOSTITUISCI quello esistente)
-2) tesseramenti-overview.js (NUOVO)
-3) situazione-tesseramenti.html (NUOVO)
+Poi aggiorna Google Apps Script:
+- sostituisci tutto il codice con GOOGLE_APPS_SCRIPT_V9_9_47.gs
+- Salva
+- Esegui il deployment > Gestisci deployment > Modifica > Nuova versione > Esegui il deployment
 
-Risultato:
-- HOME ADMIN: nuova sezione separata “Situazione tesseramenti”
-- DIAGNOSTICA: la stessa situazione viene mostrata anche nel Centro diagnostico
-- PAGINA COMPLETA: dettaglio di tutte le squadre con filtri e stati
-- evidenza immediata di ricevute da verificare e richieste pronte da inviare
-- accesso rapido al modulo Admin Tesseramenti
+Cosa cambia:
+1) Home Admin: compaiono due accessi chiari
+   - Gestione Tesseramenti
+   - Situazione Tesseramenti
+2) Diagnostica:
+   - rimossa la falsa anomalia “Tessere digitali da controllare”
+   - i certificati medici scaduti restano una vera anomalia
+   - nuovo tasto unico “Avvisa tutti i Capitani”
+   - una sola email per squadra con elenco dei giocatori scaduti
+3) La funzione Supabase notify-expired-medical è già stata pubblicata.

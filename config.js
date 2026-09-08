@@ -1,35 +1,30 @@
 window.PAM_V9_CONFIG = {
   supabaseUrl: "https://ggnmpzfuqchcwzgaxxzx.supabase.co",
   supabasePublishableKey: "sb_publishable_JJUF1lt3lob4r0z2UBTOiw_2YUjk18m",
-  version: "9.9.46-tesseramenti-overview"
+  version: "9.9.47-home-diagnostica-tessere"
 };
 
 (function(){
+  function add(src){
+    const s=document.createElement('script');
+    s.src=src; s.async=false; document.body.appendChild(s);
+  }
+
   if(/(^|\/)calendar\.html$/i.test(location.pathname)){
-    window.addEventListener('load', function(){
-      const script=document.createElement('script');
-      script.src='calendar-v9-clean.js?v=920clean1';
-      script.async=false;
-      document.body.appendChild(script);
-    });
+    window.addEventListener('load', function(){ add('calendar-v9-clean.js?v=920clean1'); });
     return;
   }
 
   if(/(^|\/)diagnostics\.html$/i.test(location.pathname)){
     window.addEventListener('load', function(){
-      const script=document.createElement('script');
-      script.src='diagnostics-calendar-fix.js?v=921diag1';
-      script.async=false;
-      document.body.appendChild(script);
+      add('diagnostics-calendar-fix.js?v=921diag1');
+      add('tesseramenti-overview.js?v=9947');
+      add('diagnostics-v9947.js?v=9947');
     });
+    return;
   }
 
-  if(/(^|\/)(index|diagnostics)\.html$/i.test(location.pathname) || /\/$/.test(location.pathname)){
-    window.addEventListener('load', function(){
-      const script=document.createElement('script');
-      script.src='tesseramenti-overview.js?v=9946';
-      script.async=false;
-      document.body.appendChild(script);
-    });
+  if(/(^|\/)index\.html$/i.test(location.pathname) || /\/$/.test(location.pathname)){
+    window.addEventListener('load', function(){ add('tesseramenti-overview.js?v=9947'); });
   }
 })();
