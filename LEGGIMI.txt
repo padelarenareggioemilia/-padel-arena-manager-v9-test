@@ -1,22 +1,4 @@
-V9.9.47
-
-Carica nella ROOT GitHub:
-- config.js (sostituisci)
-- tesseramenti-overview.js (sostituisci)
-- diagnostics-v9947.js (nuovo)
-
-Poi aggiorna Google Apps Script:
-- sostituisci tutto il codice con GOOGLE_APPS_SCRIPT_V9_9_47.gs
-- Salva
-- Esegui il deployment > Gestisci deployment > Modifica > Nuova versione > Esegui il deployment
-
-Cosa cambia:
-1) Home Admin: compaiono due accessi chiari
-   - Gestione Tesseramenti
-   - Situazione Tesseramenti
-2) Diagnostica:
-   - rimossa la falsa anomalia “Tessere digitali da controllare”
-   - i certificati medici scaduti restano una vera anomalia
-   - nuovo tasto unico “Avvisa tutti i Capitani”
-   - una sola email per squadra con elenco dei giocatori scaduti
-3) La funzione Supabase notify-expired-medical è già stata pubblicata.
+V9.9.49 FIX EDEN
+Sostituire in root GitHub: calendar-v9-eden-loader.js e config.js.
+Corregge errore "Can't find variable: fixture" della V9.9.48.
+Poi aprire calendar.html?v=9949 e verificare il riquadro verde VINCOLO EDEN ATTIVO.
