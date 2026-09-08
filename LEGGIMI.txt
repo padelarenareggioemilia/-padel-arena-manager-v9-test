@@ -1,26 +1,21 @@
-V9.9.62D - GIORNATE NATURALI
+V9.9.63 - RECUPERI A BLOCCHI DI GIORNATA
 
-Correzione del bug trovato confrontando il generatore con l'Excel campione.
+Questa versione deriva direttamente dal confronto con
+Calendario_Coppa_Italia_RECUPERI_2027.xlsx.
 
-PRIMA:
-- se una partita della giornata cadeva su blackout,
-  orientationOptions scartava l'intera giornata;
-- findRoundCandidates cercava il weekend successivo;
-- tutte le giornate successive slittavano.
+Regola:
+- le giornate naturali NON slittano;
+- il blackout manda in recupero solo le gare effettivamente coinvolte;
+- le gare residue dello stesso GIRONE + GIORNATA ORIGINARIA restano unite;
+- ogni blocco va interamente in uno dei due weekend PRO;
+- i blocchi vengono separati solo per conflitti reali di squadra o impianto;
+- nessun solver da 100.000 tentativi.
 
-ORA:
-- le giornate restano nei loro slot naturali;
-- il blackout NON sposta la giornata;
-- SOLO la singola partita che cade su blackout entra nella recoveryQueue;
-- le altre partite della stessa giornata restano dove sono;
-- i recuperi PRO restano 19-20-21 febbraio e 5-6-7 marzo;
-- restano attivi i soli conflitti reali di squadra/impianto.
-
-Obiettivo di verifica sul calendario campione:
-240 partite totali
+Riferimento campione:
+240 partite
 197 ordinarie
 43 recuperi
-22 nel primo PRO
-21 nel secondo PRO
+22 su 19-20-21 febbraio 2027
+21 su 5-6-7 marzo 2027
 0 conflitti squadra
 0 conflitti impianto

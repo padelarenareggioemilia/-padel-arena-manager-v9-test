@@ -1,4 +1,4 @@
-/* V9.9.62D - GIORNATE NATURALI + RECUPERI SINGOLI
+/* V9.9.63 - RECUPERI A BLOCCHI DI GIORNATA
    Correzione della 9.9.61:
    - NON tocca andata, ritorno, gironi o vincolo EDEN;
    - raccoglie TUTTE le gare residue;
@@ -192,9 +192,10 @@ function v9SameTeam(a,b){
  }
 
  /* =========================================================
-    PRO 62B - ASSEGNAZIONE BINARIA DETERMINISTICA
-    Nessun backtracking massivo: con due weekend il problema
-    viene trattato come grafo a 2 colori con vincoli unari.
+    V9.9.63 - PRO A BLOCCHI DI GIORNATA
+    Le gare residue NON vengono colorate singolarmente.
+    Restano unite per girone + giornata originaria.
+    Ogni blocco va interamente in PRO1 oppure PRO2.
     ========================================================= */
  const buckets=V9_PRO_ANCHORS.map((k,i)=>({
    index:i,
@@ -202,147 +203,203 @@ function v9SameTeam(a,b){
    fixtures:[]
  }));
 
- /* Candidato di ogni gara nei due weekend */
- const nodes=recoveryQueue.map((item,idx)=>{
-   const original=item.fixture;
-   const home=teams.find(t=>String(t.id)===String(original.home_team_id));
-   const away=teams.find(t=>String(t.id)===String(original.away_team_id));
-   if(!home||!away) throw new Error('Dati mancanti per una gara residua.');
+ /* Raggruppa le residue per GIRONE + GIORNATA ORIGINARIA */
+ const blockMap=new Map();
+ for(const item of recoveryQueue){
+   const f=item.fixture;
+   const key=String(item.group.id)+'|'+String(f.round_number);
+   if(!blockMap.has(key)){
+     blockMap.set(key,{
+       key,
+       group:item.group,
+       roundNo:Number(f.round_number),
+       items:[]
+     });
+   }
+   blockMap.get(key).items.push(item);
+ }
 
+ const blocks=[...blockMap.values()].map((block,idx)=>{
    const candidates=buckets.map(bucket=>
-     makeFixture(item.group,original.round_number,home,away,bucket.anchor,code)
+     block.items.map(item=>{
+       const original=item.fixture;
+       const home=teams.find(t=>String(t.id)===String(original.home_team_id));
+       const away=teams.find(t=>String(t.id)===String(original.away_team_id));
+       if(!home||!away) throw new Error('Dati mancanti per una gara residua.');
+       return makeFixture(
+         block.group,
+         original.round_number,
+         home,
+         away,
+         bucket.anchor,
+         code
+       );
+     })
    );
 
-   const allowed=candidates.map(candidate=>{
-     if(v9ForbiddenHome(candidate)) return false;
-     if(fixtureFallsOnExcludedDate(candidate,code)) return false;
-     /* 62C: nei PRO niente blocchi astratti contro il calendario ordinario.
-        Un recupero è vietato solo se:
-        - la stessa squadra è già impegnata nello stesso weekend;
-        - esiste una reale sovrapposizione di impianto/data/ora. */
-     for(const x of external){
-       if(v9SameTeam(candidate,x)){
-         const dc=new Date(candidate.scheduled_at);
-         const dx=new Date(x.scheduled_at);
-         const wc=new Date(dc); wc.setDate(dc.getDate()-((dc.getDay()+6)%7));
-         const wx=new Date(dx); wx.setDate(dx.getDate()-((dx.getDay()+6)%7));
-         if(dateKeyLocal(wc)===dateKeyLocal(wx)) return false;
+   const allowed=candidates.map(fixtures=>{
+     /* controllo interno al blocco */
+     for(let i=0;i<fixtures.length;i++){
+       const f=fixtures[i];
+       if(v9ForbiddenHome(f)) return false;
+       if(fixtureFallsOnExcludedDate(f,code)) return false;
+
+       for(let j=i+1;j<fixtures.length;j++){
+         const g=fixtures[j];
+         if(v9SameTeam(f,g)) return false;
+         if(realFacilityConflict(f,g)) return false;
        }
-       if(realFacilityConflict(candidate,x)) return false;
-     }
-     for(const x of payload){
-       if(v9SameTeam(candidate,x)){
-         const dc=new Date(candidate.scheduled_at);
-         const dx=new Date(x.scheduled_at);
-         const wc=new Date(dc); wc.setDate(dc.getDate()-((dc.getDay()+6)%7));
-         const wx=new Date(dx); wx.setDate(dx.getDate()-((dx.getDay()+6)%7));
-         if(dateKeyLocal(wc)===dateKeyLocal(wx)) return false;
+
+       /* confronto con competizioni esterne e calendario ordinario */
+       for(const x of external){
+         if(v9SameTeam(f,x)){
+           const df=new Date(f.scheduled_at);
+           const dx=new Date(x.scheduled_at);
+           const wf=new Date(df); wf.setDate(df.getDate()-((df.getDay()+6)%7));
+           const wx=new Date(dx); wx.setDate(dx.getDate()-((dx.getDay()+6)%7));
+           if(dateKeyLocal(wf)===dateKeyLocal(wx)) return false;
+         }
+         if(realFacilityConflict(f,x)) return false;
        }
-       if(realFacilityConflict(candidate,x)) return false;
+
+       for(const x of payload){
+         if(v9SameTeam(f,x)){
+           const df=new Date(f.scheduled_at);
+           const dx=new Date(x.scheduled_at);
+           const wf=new Date(df); wf.setDate(df.getDate()-((df.getDay()+6)%7));
+           const wx=new Date(dx); wx.setDate(dx.getDate()-((dx.getDay()+6)%7));
+           if(dateKeyLocal(wf)===dateKeyLocal(wx)) return false;
+         }
+         if(realFacilityConflict(f,x)) return false;
+       }
      }
      return true;
    });
 
    if(!allowed[0]&&!allowed[1]){
      throw new Error(
-       'Nessuno slot PRO disponibile per '+
-       original._home_name+' – '+original._away_name
+       'Nessun weekend PRO disponibile per il blocco '+
+       block.group.name+' - G'+block.roundNo
      );
    }
 
-   return {idx,item,candidates,allowed,edges:new Set()};
+   return {
+     idx,
+     ...block,
+     candidates,
+     allowed,
+     edges:new Set()
+   };
  });
 
- /* Due gare non possono stare nello stesso weekend se:
-    - condividono una squadra;
-    - usano realmente lo stesso impianto in sovrapposizione.
-    Il test viene fatto sul primo weekend: giorno/ora/campo
-    restano identici anche nel secondo. */
- for(let i=0;i<nodes.length;i++){
-   for(let j=i+1;j<nodes.length;j++){
-     const a=nodes[i].candidates[0];
-     const b=nodes[j].candidates[0];
-     const sameFixture =
-       (String(a.home_team_id)===String(b.home_team_id) &&
-        String(a.away_team_id)===String(b.away_team_id) &&
-        Number(a.round_number)===Number(b.round_number));
-     if(!sameFixture && (v9SameTeam(a,b)||realFacilityConflict(a,b))){
-       nodes[i].edges.add(j);
-       nodes[j].edges.add(i);
+ /* Due BLOCCHI devono stare su weekend opposti se, collocati nello
+    stesso weekend, produrrebbero almeno un conflitto reale. */
+ for(let i=0;i<blocks.length;i++){
+   for(let j=i+1;j<blocks.length;j++){
+     let conflict=false;
+     const A=blocks[i].candidates[0];
+     const B=blocks[j].candidates[0];
+
+     outer:
+     for(const a of A){
+       for(const b of B){
+         if(v9SameTeam(a,b)||realFacilityConflict(a,b)){
+           conflict=true;
+           break outer;
+         }
+       }
+     }
+
+     if(conflict){
+       blocks[i].edges.add(j);
+       blocks[j].edges.add(i);
      }
    }
  }
 
- const color=new Array(nodes.length).fill(-1);
+ const color=new Array(blocks.length).fill(-1);
 
- function forceColor(i,c){
-   if(!nodes[i].allowed[c]) return false;
-   if(color[i]!==-1) return color[i]===c;
-
-   const q=[[i,c]];
+ function assignComponent(startIndex,startColor){
+   const q=[[startIndex,startColor]];
+   const touched=[];
    while(q.length){
-     const [n,cl]=q.shift();
-     if(!nodes[n].allowed[cl]) return false;
+     const [n,c]=q.shift();
+
+     if(!blocks[n].allowed[c]){
+       for(const t of touched) color[t]=-1;
+       return false;
+     }
+
      if(color[n]!==-1){
-       if(color[n]!==cl) return false;
+       if(color[n]!==c){
+         for(const t of touched) color[t]=-1;
+         return false;
+       }
        continue;
      }
-     color[n]=cl;
 
-     for(const e of nodes[n].edges){
-       const other=1-cl;
-       if(color[e]!==-1 && color[e]===cl) return false;
-       if(color[e]===-1) q.push([e,other]);
+     color[n]=c;
+     touched.push(n);
+
+     for(const e of blocks[n].edges){
+       const wanted=1-c;
+       if(color[e]!==-1 && color[e]!==wanted){
+         for(const t of touched) color[t]=-1;
+         return false;
+       }
+       if(color[e]===-1) q.push([e,wanted]);
      }
    }
    return true;
  }
 
- /* Prima applica i vincoli obbligati da calendario esterno */
- for(let i=0;i<nodes.length;i++){
-   if(nodes[i].allowed[0]&&!nodes[i].allowed[1]){
-     if(!forceColor(i,0)){
-       throw new Error('Conflitto PRO obbligato su '+nodes[i].item.fixture._home_name);
+ /* Prima i blocchi obbligati a un solo weekend */
+ for(let i=0;i<blocks.length;i++){
+   if(color[i]!==-1) continue;
+
+   if(blocks[i].allowed[0]&&!blocks[i].allowed[1]){
+     if(!assignComponent(i,0)){
+       throw new Error('Conflitto reale tra blocchi attorno a '+blocks[i].group.name+' G'+blocks[i].roundNo);
      }
-   }else if(!nodes[i].allowed[0]&&nodes[i].allowed[1]){
-     if(!forceColor(i,1)){
-       throw new Error('Conflitto PRO obbligato su '+nodes[i].item.fixture._home_name);
+   }else if(!blocks[i].allowed[0]&&blocks[i].allowed[1]){
+     if(!assignComponent(i,1)){
+       throw new Error('Conflitto reale tra blocchi attorno a '+blocks[i].group.name+' G'+blocks[i].roundNo);
      }
    }
  }
 
- /* Componenti libere: prova il colore che bilancia meglio i due weekend.
-    In un grafo bipartito basta una propagazione per componente. */
- for(let i=0;i<nodes.length;i++){
+ /* Componenti libere: scegli l'orientamento che bilancia il numero
+    di PARTITE, non il numero di blocchi. */
+ for(let i=0;i<blocks.length;i++){
    if(color[i]!==-1) continue;
 
    const snapshot=color.slice();
-   const c0=color.filter(x=>x===0).length;
-   const c1=color.filter(x=>x===1).length;
-   const prefer=c0<=c1?0:1;
+   const load0=blocks.reduce((s,b,k)=>s+(color[k]===0?b.items.length:0),0);
+   const load1=blocks.reduce((s,b,k)=>s+(color[k]===1?b.items.length:0),0);
+   const prefer=load0<=load1?0:1;
 
-   if(!forceColor(i,prefer)){
+   if(!assignComponent(i,prefer)){
      for(let k=0;k<color.length;k++) color[k]=snapshot[k];
-     if(!forceColor(i,1-prefer)){
-       const f=nodes[i].item.fixture;
+
+     if(!assignComponent(i,1-prefer)){
        throw new Error(
-         'Le residue creano un conflitto reale non bipartibile attorno a '+
-         f._home_name+' – '+f._away_name
+         'I blocchi di recupero non sono distribuibili tra i due weekend PRO attorno a '+
+         blocks[i].group.name+' G'+blocks[i].roundNo
        );
      }
    }
  }
 
- /* Verifica e assegnazione finale */
- for(let i=0;i<nodes.length;i++){
+ /* Assegnazione finale dei blocchi */
+ for(let i=0;i<blocks.length;i++){
    const c=color[i];
-   if(c<0||!nodes[i].allowed[c]){
-     throw new Error('Assegnazione PRO incompleta.');
+   if(c<0||!blocks[i].allowed[c]){
+     throw new Error('Assegnazione PRO incompleta per '+blocks[i].group.name+' G'+blocks[i].roundNo);
    }
-   buckets[c].fixtures.push(nodes[i].candidates[c]);
+   buckets[c].fixtures.push(...blocks[i].candidates[c]);
  }
 
- /* Controllo esplicito dentro ogni weekend */
+ /* Controllo finale dentro ciascun weekend */
  for(const bucket of buckets){
    for(let i=0;i<bucket.fixtures.length;i++){
      for(let j=i+1;j<bucket.fixtures.length;j++){
@@ -356,7 +413,7 @@ function v9SameTeam(a,b){
    }
  }
 
- const states=nodes.length;
+ const states=blocks.length;
  for(const b of buckets) payload.push(...b.fixtures);
 
  /* Controllo finale */
@@ -394,7 +451,7 @@ function v9SameTeam(a,b){
    conflictsUnresolved:0,
    progression:'OK',
    rule:
-     'V9.9.62D: blackout sulla singola gara, giornate naturali invariate, PRO con soli conflitti reali sui weekend PRO 19-21/02 e 05-07/03/2027.'
+     'V9.9.63: giornate naturali invariate; le residue restano unite per girone+giornata originaria e i blocchi vengono distribuiti tra i due weekend PRO sui weekend PRO 19-21/02 e 05-07/03/2027.'
  };
 
  return payload;
@@ -417,7 +474,7 @@ function v9SameTeam(a,b){
      const n=document.createElement('div');
      n.className='notice ok';
      n.innerHTML=
-       '<b>V9.9.62D GIORNATE NATURALI ATTIVA:</b> le gare residue vengono assegnate ai due weekend PRO con un controllo deterministico dei soli conflitti reali. Niente ricerca da 100.000 tentativi.';
+       '<b>V9.9.63 RECUPERI A BLOCCHI ATTIVA:</b> le gare residue vengono assegnate ai due weekend PRO con un controllo deterministico dei soli conflitti reali. Niente ricerca da 100.000 tentativi.';
      c.appendChild(n);
    }
  };

@@ -1,7 +1,7 @@
 window.PAM_V9_CONFIG={
   supabaseUrl:"https://ggnmpzfuqchcwzgaxxzx.supabase.co",
   supabasePublishableKey:"sb_publishable_JJUF1lt3lob4r0z2UBTOiw_2YUjk18m",
-  version:"9.9.62D-natural-rounds"
+  version:"9.9.63-block-recoveries"
 };
 (function(){
  function add(src){
@@ -11,7 +11,7 @@ window.PAM_V9_CONFIG={
    document.body.appendChild(s);
  }
  if(/(^|\/)calendar\.html$/i.test(location.pathname)){
-   window.addEventListener('load',()=>add('calendar-v9-eden-loader.js?v=9962d'));
+   window.addEventListener('load',()=>add('calendar-v9-eden-loader.js?v=9963'));
    return;
  }
  if(/(^|\/)diagnostics\.html$/i.test(location.pathname)){
