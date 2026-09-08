@@ -1,13 +1,38 @@
-V9.9.58 MOTORE PULITO
+V9.9.60 - GENERATORE GENERALE CALENDARI
 
-Questa versione nasce dall’analisi del calendar-v9-clean.js originale.
-Non usa la logica 9.9.51-57.
+NON è specifico per Coppa Italia.
 
-Mantiene GLOBAL SORT e conflitti reali.
-Rimuove il pre-filtro ridondante sharedSlotViolation.
-EDEN mai casa prima 01/11/2026.
-Ritorno non speculare: riordina le giornate dell’andata invertite, senza spostare singole gare.
-PRO volutamente disattivata nel primo test: prima verifichiamo se il falso vincolo era la causa.
+Vale per:
+- Serie A
+- Serie B
+- Serie C
+- Coppa Italia
+- competizioni future
 
-Sostituire calendar-v9-eden-loader.js e config.js.
-Aprire calendar.html?v=9958.
+REGOLE GENERALI
+1. Numero giornate dinamico in base al girone.
+2. Formula singola o andata/ritorno.
+3. Cadenza scelta dall'Admin.
+4. Ritorno non obbligatoriamente speculare.
+5. Una casa e una fuori per ogni coppia nell'andata/ritorno.
+6. Giorno, ora e campo sempre della squadra di casa.
+7. Conflitti solo reali di data/ora/impianto.
+8. Gare su blackout accodate ai recuperi senza far fallire tutto.
+9. Recuperi PRO nel successivo slot DELLA STESSA COMPETIZIONE.
+10. Se il primo PRO non basta, usa il secondo.
+11. Max una partita per squadra nello stesso weekend PRO.
+12. Vincoli speciali di disponibilità casa indipendenti dalla competizione.
+
+VINCOLO ATTUALE
+Le tre squadre EDEN non possono giocare in casa prima del 01/11/2026.
+Il vincolo vale qualunque sia la competizione.
+
+INSTALLAZIONE
+Sostituire:
+- calendar-v9-eden-loader.js
+- config.js
+
+TEST
+Aprire calendar.html?v=9960
+Deve comparire:
+V9.9.60 GENERATORE GENERALE ATTIVO
