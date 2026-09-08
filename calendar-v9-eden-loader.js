@@ -1,26 +1,15 @@
-/* V9.9.60 - GENERATORE GENERALE CALENDARI
-   Motore unico per Campionati, Coppa Italia e competizioni future.
-
-   Principi:
-   - numero giornate dinamico dal girone;
-   - formula singola o andata/ritorno;
-   - cadenza scelta dall'Admin;
-   - ritorno non necessariamente speculare;
-   - una casa e una fuori per coppia nell'andata/ritorno;
-   - giorno/ora/campo derivano SEMPRE dalla squadra di casa;
-   - conflitti solo REALI: stessa risorsa/impianto nello stesso intervallo;
-   - blackout: la singola gara problematica viene messa in coda recuperi,
-     senza distruggere il resto del calendario;
-   - recuperi: massimo una gara per squadra per weekend e nessun conflitto impianto;
-   - vincoli speciali impianto/squadra applicabili a QUALSIASI competizione.
+/* V9.9.61 - GENERATORE GENERALE CON CODA RECUPERI REALE
+   Correzione mirata:
+   - il ritorno NON fallisce più se una gara non entra;
+   - la singola gara problematica viene accodata ai recuperi;
+   - il resto del calendario continua a generarsi;
+   - alla fine le residue vengono distribuite nei successivi slot PRO
+     della stessa competizione.
 */
 (async function(){
 'use strict';
 
-const SOURCE='calendar-v9-clean.js?v=9960general';
-
-/* Vincolo speciale attuale: Via Balla / tre squadre EDEN.
-   È volutamente indipendente dalla competizione. */
+const SOURCE='calendar-v9-clean.js?v=9961base';
 const EDEN_IDS=new Set([
   '3371654b-99ca-4135-b28a-582bdc0a41f1',
   'e4939c59-9670-4706-8abc-abb88a60a18f',
@@ -29,266 +18,351 @@ const EDEN_IDS=new Set([
 const EDEN_HOME_FROM='2026-11-01';
 
 function errorBox(t){
- const b=document.createElement('div');
- b.style.cssText='position:fixed;left:15px;right:15px;bottom:15px;z-index:99999;padding:14px;border-radius:12px;background:#fdecef;border:1px solid #ce2b37;color:#7b1722;font:600 14px system-ui';
- b.textContent='V9.9.60 non attivata: '+t;
- document.body.appendChild(b);
+  const b=document.createElement('div');
+  b.style.cssText='position:fixed;left:15px;right:15px;bottom:15px;z-index:99999;padding:14px;border-radius:12px;background:#fdecef;border:1px solid #ce2b37;color:#7b1722;font:600 14px system-ui';
+  b.textContent='V9.9.61 non attivata: '+t;
+  document.body.appendChild(b);
 }
 
 try{
- const r=await fetch(SOURCE,{cache:'no-store'});
- if(!r.ok) throw Error('motore base non disponibile');
- let src=await r.text();
+  const r=await fetch(SOURCE,{cache:'no-store'});
+  if(!r.ok) throw Error('motore base non disponibile');
+  let src=await r.text();
 
- const base="const pad=n=>String(n).padStart(2,'0');";
- if(!src.includes(base)) throw Error('marker base non trovato');
+  const base="const pad=n=>String(n).padStart(2,'0');";
+  if(!src.includes(base)) throw Error('marker base non trovato');
 
- src=src.replace(base,base+`
-const V9_SPECIAL_EDEN_IDS=new Set(${JSON.stringify([...EDEN_IDS])});
-const V9_SPECIAL_EDEN_HOME_FROM='${EDEN_HOME_FROM}';
+  src=src.replace(base,base+`
+const V9_EDEN_IDS=new Set(${JSON.stringify([...EDEN_IDS])});
+const V9_EDEN_HOME_FROM='${EDEN_HOME_FROM}';
 
-function v9SpecialHomeForbidden(f){
- if(!f) return false;
- if(!V9_SPECIAL_EDEN_IDS.has(String(f.home_team_id))) return false;
- return String(f._local_date||'').slice(0,10)<V9_SPECIAL_EDEN_HOME_FROM;
+function v9ForbiddenHome(f){
+  return !!f &&
+    V9_EDEN_IDS.has(String(f.home_team_id)) &&
+    String(f._local_date||'').slice(0,10)<V9_EDEN_HOME_FROM;
 }
 
-/* Restituisce il successivo anchor della STESSA competizione.
-   Usa la cadenza scelta dall'Admin: se è 2 settimane, non invade
-   automaticamente il weekend intermedio dell'altra competizione. */
-function v9NextCompetitionAnchor(anchor,intervalWeeks,steps=1){
- return addDays(anchor,intervalWeeks*7*steps);
+function v9TeamUsedInBucket(f,bucket){
+  return bucket.some(x =>
+    String(x.home_team_id)===String(f.home_team_id) ||
+    String(x.away_team_id)===String(f.home_team_id) ||
+    String(x.home_team_id)===String(f.away_team_id) ||
+    String(x.away_team_id)===String(f.away_team_id)
+  );
 }
 
-function v9TeamAlreadyInBucket(f,bucket){
- return bucket.some(x =>
-   String(x.home_team_id)===String(f.home_team_id) ||
-   String(x.away_team_id)===String(f.home_team_id) ||
-   String(x.home_team_id)===String(f.away_team_id) ||
-   String(x.away_team_id)===String(f.away_team_id)
- );
+function v9NextSlot(anchor,intervalWeeks,steps=1){
+  return addDays(anchor,intervalWeeks*7*steps);
 }
 `);
 
- /* Unica forzatura speciale nell'orientamento: vincoli reali di disponibilità casa */
- const orient=`    const fixtures=pairs.map(([home,away])=>
+  /* Eden nell'andata */
+  const orient=`    const fixtures=pairs.map(([home,away])=>
       makeFixture(group,roundNo,home,away,anchor,code)
     );`;
- if(!src.includes(orient)) throw Error('marker orientazioni non trovato');
- src=src.replace(orient,orient+`
+  if(!src.includes(orient)) throw Error('marker orientazioni non trovato');
+  src=src.replace(orient,orient+`
 
-    if(fixtures.some(v9SpecialHomeForbidden)){
+    if(fixtures.some(v9ForbiddenHome)){
       continue;
     }`);
 
- /* Rimuove il pre-filtro astratto sharedSlotViolation.
-    Resta il controllo reale realFacilityConflict(), che usa overlap data/ora. */
- const preStart=src.indexOf('    /* 10.11 - BLOCCO PREVENTIVO:');
- const preEnd=src.indexOf('    /* Se una gara cade su data esclusa',preStart);
- if(preStart>=0 && preEnd>preStart){
-   src=src.slice(0,preStart)+
-`    /* V9.9.60: nessun falso conflitto preventivo.
-       Da qui decide il controllo reale di data/ora/impianto. */
+  /* Rimuove il falso pre-filtro sharedSlotViolation; resta il conflitto reale */
+  const preStart=src.indexOf('    /* 10.11 - BLOCCO PREVENTIVO:');
+  const preEnd=src.indexOf('    /* Se una gara cade su data esclusa',preStart);
+  if(preStart>=0 && preEnd>preStart){
+    src=src.slice(0,preStart)+
+`    /* V9.9.61: eliminato il pre-filtro astratto.
+       Decide solo il controllo reale data/ora/impianto. */
 
 `+src.slice(preEnd);
- }
+  }
 
- /* Ritorno generale non speculare: stessi blocchi di accoppiamenti,
-    invertiti casa/fuori, ma ordine delle giornate libero. */
- const a=src.indexOf('function buildReturnLeg({');
- const b=src.indexOf('window.buildCalendarPayload=async function(){',a);
- if(a<0||b<0) throw Error('blocco ritorno non trovato');
+  /* Ritorno: speculare come struttura base, ma le singole gare problematiche
+     vengono messe in coda invece di far fallire tutto. */
+  const a=src.indexOf('function buildReturnLeg({');
+  const b=src.indexOf('window.buildCalendarPayload=async function(){',a);
+  if(a<0||b<0) throw Error('blocco ritorno non trovato');
 
- const returnFn=`function buildReturnLeg({
-  group,firstLeg,startAnchor,intervalWeeks,code,external
+  const returnFn=`function buildReturnLeg({
+  group,
+  firstLeg,
+  startAnchor,
+  intervalWeeks,
+  code,
+  external
 }){
- const sources=firstLeg.chosen.map((r,i)=>({idx:i,pairs:r.pairs}));
- const used=new Set(), result=[];
- let states=0;
- const MAX_STATES=30000;
+  const returns=[];
+  const deferred=[];
+  let anchor=new Date(startAnchor);
 
- function rec(pos,anchor){
-   if(pos===sources.length) return true;
-   if(++states>MAX_STATES) return false;
+  for(let i=0;i<firstLeg.chosen.length;i++){
+    const first=firstLeg.chosen[i];
+    const roundNo=first.roundNo+firstLeg.totalRounds;
 
-   const roundNo=firstLeg.totalRounds+pos+1;
+    const raw=first.pairs.map(([home,away])=>
+      makeFixture(group,roundNo,away,home,anchor,code)
+    );
 
-   for(const source of sources){
-     if(used.has(source.idx)) continue;
+    const accepted=[];
 
-     const fixtures=source.pairs.map(([h,a])=>
-       makeFixture(group,roundNo,a,h,anchor,code)
-     );
+    for(const f of raw){
+      let bad=false;
 
-     if(fixtures.some(v9SpecialHomeForbidden)) continue;
+      if(v9ForbiddenHome(f)) bad=true;
+      if(fixtureFallsOnExcludedDate(f,code)) bad=true;
+      if(conflictsAny(f,accepted)) bad=true;
+      if(!compatibleWithExternal([f],external)) bad=true;
 
-     let bad=false;
-     for(let i=0;i<fixtures.length;i++){
-       if(conflictsAny(fixtures[i],fixtures.filter((_,j)=>j!==i))){
-         bad=true; break;
-       }
-     }
-     if(bad) continue;
-     if(!compatibleWithExternal(fixtures,external)) continue;
+      if(bad){
+        deferred.push({fixture:f,group,reason:'RETURN_DEFERRED'});
+      }else{
+        accepted.push(f);
+      }
+    }
 
-     used.add(source.idx);
-     result.push({roundNo,fixtures,anchor,sourceIndex:source.idx});
+    returns.push({
+      roundNo,
+      fixtures:accepted,
+      anchor
+    });
 
-     if(rec(pos+1,v9NextCompetitionAnchor(anchor,intervalWeeks))){
-       return true;
-     }
+    anchor=v9NextSlot(anchor,intervalWeeks);
+  }
 
-     result.pop();
-     used.delete(source.idx);
-   }
-   return false;
- }
-
- if(!rec(0,new Date(startAnchor))){
-   throw new Error(
-     'Non riesco a comporre il ritorno nelle giornate naturali rispettando i vincoli reali.'
-   );
- }
-
- return result;
+  return {returns,deferred};
 }
 
 `;
- src=src.slice(0,a)+returnFn+src.slice(b);
+  src=src.slice(0,a)+returnFn+src.slice(b);
 
- /* Modifica la sicurezza finale: le gare su blackout verranno gestite
-    dalla coda recuperi PRIMA della restituzione del payload. */
- const payloadStart=src.indexOf('window.buildCalendarPayload=async function(){');
- const safety=src.indexOf('  /* SICUREZZA FINALE:',payloadStart);
- if(payloadStart<0||safety<0) throw Error('sezione payload/sicurezza non trovata');
+  /* Sostituisce buildCalendarPayload con versione che gestisce davvero
+     la coda recuperi PRIMA di qualunque throw globale. */
+  const p1=src.indexOf('window.buildCalendarPayload=async function(){');
+  const p2=src.indexOf('/* Nessuna vecchia riparazione automatica */',p1);
+  if(p1<0||p2<0) throw Error('buildCalendarPayload non trovato');
 
- /* Inserisce gestione recuperi subito prima della sicurezza finale.
-    Gli slot PRO sono DINAMICI: partono dal successivo slot della stessa competizione
-    dopo l'ultima data ordinaria effettivamente generata. */
- const recovery=`
-  /* =====================================================
-     V9.9.60 - CODA RECUPERI GENERALE
-     ===================================================== */
-  const recoveryItems=[];
-  const regularItems=[];
-
-  for(const f of payload){
-    if(fixtureFallsOnExcludedDate(f,code)){
-      recoveryItems.push(f);
-    }else{
-      regularItems.push(f);
-    }
+  const payloadFn=`window.buildCalendarPayload=async function(){
+  if(!$id('startDate')?.value){
+    throw new Error('Inserisci la data di partenza.');
   }
 
-  if(recoveryItems.length){
-    payload.length=0;
-    payload.push(...regularItems);
+  await fetchData();
 
-    let lastAnchor=start;
-    for(const f of regularItems){
-      const a=f._round_anchor ? fromDateKey(f._round_anchor) : new Date(f.scheduled_at);
-      if(a>lastAnchor) lastAnchor=a;
+  if(!groups.length){
+    throw new Error('Prima devi creare i gironi.');
+  }
+
+  if(!validateTeams(false)){
+    throw new Error('Completa prima giorno, ora e campo delle squadre.');
+  }
+
+  const code=$id('competition').value;
+  const isDouble=$id('formula').value==='double';
+  const intervalWeeks=Number($id('interval').value||1);
+  const start=fromDateKey($id('startDate').value);
+
+  const external=externalFixtures(code);
+  const payload=[];
+  const recoveryQueue=[];
+
+  let latestNaturalAnchor=new Date(start);
+
+  for(const group of groups){
+    const groupTeams=members
+      .filter(m=>String(m.group_id)===String(group.id))
+      .map(m=>teams.find(t=>String(t.id)===String(m.team_id)))
+      .filter(Boolean);
+
+    if(groupTeams.length<2) continue;
+
+    const crossGroupExternal=[
+      ...external,
+      ...payload.map(f=>({...f}))
+    ];
+
+    const firstLeg=solveFirstLeg({
+      group,
+      groupTeams,
+      start,
+      intervalWeeks,
+      code,
+      external:crossGroupExternal
+    });
+
+    /* Andata: blackout o vincolo speciale => recupero, non fallimento */
+    for(const r of firstLeg.chosen){
+      if(r.firstAnchor>latestNaturalAnchor) latestNaturalAnchor=new Date(r.firstAnchor);
+
+      for(const f of r.firstFixtures){
+        let bad=false;
+        if(v9ForbiddenHome(f)) bad=true;
+        if(fixtureFallsOnExcludedDate(f,code)) bad=true;
+        if(conflictsAny(f,payload)) bad=true;
+        if(!compatibleWithExternal([f],external)) bad=true;
+
+        if(bad){
+          recoveryQueue.push({fixture:f,group,reason:'FIRST_DEFERRED'});
+        }else{
+          payload.push(f);
+        }
+      }
     }
 
-    /* Primo PRO = successivo slot naturale della stessa competizione.
-       Se non basta, secondo PRO = slot successivo ancora. */
-    const proBuckets=[];
-    for(let p=1;p<=2;p++){
-      proBuckets.push({
-        index:p,
-        anchor:v9NextCompetitionAnchor(lastAnchor,intervalWeeks,p),
-        fixtures:[]
+    if(isDouble){
+      const lastFirstAnchor=
+        firstLeg.chosen[firstLeg.chosen.length-1].firstAnchor;
+
+      const returnStart=v9NextSlot(lastFirstAnchor,intervalWeeks);
+      if(returnStart>latestNaturalAnchor) latestNaturalAnchor=new Date(returnStart);
+
+      const built=buildReturnLeg({
+        group,
+        firstLeg,
+        startAnchor:returnStart,
+        intervalWeeks,
+        code,
+        external:[
+          ...external,
+          ...payload.map(f=>({...f}))
+        ]
       });
+
+      for(const r of built.returns){
+        if(r.anchor>latestNaturalAnchor) latestNaturalAnchor=new Date(r.anchor);
+        payload.push(...r.fixtures);
+      }
+
+      recoveryQueue.push(...built.deferred);
     }
-
-    for(const original of recoveryItems){
-      const group=groups.find(g=>String(g.id)===String(original.group_id));
-      const home=teams.find(t=>String(t.id)===String(original.home_team_id));
-      const away=teams.find(t=>String(t.id)===String(original.away_team_id));
-
-      if(!group||!home||!away){
-        throw new Error('Dati mancanti per una gara di recupero.');
-      }
-
-      let placed=null;
-
-      for(const bucket of proBuckets){
-        const candidate=makeFixture(
-          group,
-          original.round_number,
-          home,
-          away,
-          bucket.anchor,
-          code
-        );
-
-        if(v9SpecialHomeForbidden(candidate)) continue;
-        if(fixtureFallsOnExcludedDate(candidate,code)) continue;
-        if(v9TeamAlreadyInBucket(candidate,bucket.fixtures)) continue;
-        if(conflictsAny(candidate,bucket.fixtures)) continue;
-        if(!compatibleWithExternal(candidate?[candidate]:[],external)) continue;
-
-        bucket.fixtures.push(candidate);
-        placed=candidate;
-        break;
-      }
-
-      if(!placed){
-        throw new Error(
-          'Recuperi PRO insufficienti per '+original._home_name+
-          ' – '+original._away_name+'.'
-        );
-      }
-
-      payload.push(placed);
-    }
-
-    window.__v9GeneralRecoverySummary={
-      total:recoveryItems.length,
-      buckets:proBuckets.map(b=>({
-        index:b.index,
-        anchor:dateKeyLocal(b.anchor),
-        matches:b.fixtures.length
-      }))
-    };
   }
 
-  /* Vincolo speciale finale */
-  for(const f of payload){
-    if(v9SpecialHomeForbidden(f)){
+  /* =========================================================
+     RECUPERI PRO
+     Primo slot = successivo slot della stessa competizione
+     Secondo slot = quello ancora successivo
+     ========================================================= */
+  const proBuckets=[
+    {index:1,anchor:v9NextSlot(latestNaturalAnchor,intervalWeeks,1),fixtures:[]},
+    {index:2,anchor:v9NextSlot(latestNaturalAnchor,intervalWeeks,2),fixtures:[]}
+  ];
+
+  for(const item of recoveryQueue){
+    const original=item.fixture;
+    const group=item.group;
+
+    const home=teams.find(t=>String(t.id)===String(original.home_team_id));
+    const away=teams.find(t=>String(t.id)===String(original.away_team_id));
+
+    if(!home||!away||!group){
+      throw new Error('Dati mancanti per una gara di recupero.');
+    }
+
+    let placed=null;
+
+    for(const bucket of proBuckets){
+      const candidate=makeFixture(
+        group,
+        original.round_number,
+        home,
+        away,
+        bucket.anchor,
+        code
+      );
+
+      if(v9ForbiddenHome(candidate)) continue;
+      if(fixtureFallsOnExcludedDate(candidate,code)) continue;
+      if(v9TeamUsedInBucket(candidate,bucket.fixtures)) continue;
+      if(conflictsAny(candidate,bucket.fixtures)) continue;
+      if(!compatibleWithExternal([candidate],external)) continue;
+      if(conflictsAny(candidate,payload)) continue;
+
+      bucket.fixtures.push(candidate);
+      placed=candidate;
+      break;
+    }
+
+    if(!placed){
       throw new Error(
-        'Vincolo disponibilità casa non rispettato: '+f._home_name+
-        ' il '+f._local_date+'.'
+        'Recuperi PRO insufficienti per '+
+        original._home_name+' – '+original._away_name+'.'
       );
     }
+
+    payload.push(placed);
   }
 
+  /* Controllo finale: nessun conflitto reale */
+  for(let i=0;i<payload.length;i++){
+    for(let j=i+1;j<payload.length;j++){
+      if(realFacilityConflict(payload[i],payload[j])){
+        throw new Error(
+          'Conflitto reale finale: '+
+          payload[i]._home_name+' – '+payload[i]._away_name+
+          ' / '+
+          payload[j]._home_name+' – '+payload[j]._away_name
+        );
+      }
+    }
+  }
+
+  payload.sort((a,b)=>
+    (new Date(a.scheduled_at)-new Date(b.scheduled_at)) ||
+    (a.round_number-b.round_number)
+  );
+
+  window.__v9RecoverySummary={
+    total:recoveryQueue.length,
+    pro1:proBuckets[0].fixtures.length,
+    pro2:proBuckets[1].fixtures.length,
+    pro1Anchor:dateKeyLocal(proBuckets[0].anchor),
+    pro2Anchor:dateKeyLocal(proBuckets[1].anchor)
+  };
+
+  payload._calendarDiagnosis={
+    totalMatches:payload.length,
+    recoveryMatches:recoveryQueue.length,
+    conflictsDetected:0,
+    conflictsUnresolved:0,
+    progression:'OK',
+    rule:
+      'V9.9.61: le gare non collocabili non bloccano il generatore; '+
+      'vengono accodate e distribuite nei successivi slot PRO della stessa competizione.'
+  };
+
+  return payload;
+};
+
 `;
- src=src.slice(0,safety)+recovery+src.slice(safety);
 
- const blob=new Blob([src],{type:'text/javascript'});
- const url=URL.createObjectURL(blob);
- const s=document.createElement('script');
- s.src=url;
+  src=src.slice(0,p1)+payloadFn+src.slice(p2);
 
- s.onload=()=>{
-   URL.revokeObjectURL(url);
-   const c=[...document.querySelectorAll('.card')]
-     .find(x=>x.querySelector('#competition'))||document.querySelector('.card');
-   if(c){
-     const n=document.createElement('div');
-     n.className='notice ok';
-     n.innerHTML=
-       '<b>V9.9.60 GENERATORE GENERALE ATTIVO:</b> motore unico per Campionati, Coppa Italia e competizioni future. '+
-       'Giornate dinamiche, ritorno non speculare, conflitti reali e recuperi PRO automatici sul successivo slot della stessa competizione. '+
-       'Vincolo Via Balla/EDEN attivo fino al 31/10/2026.';
-     c.appendChild(n);
-   }
- };
- s.onerror=()=>errorBox('errore caricamento motore');
- document.body.appendChild(s);
+  const blob=new Blob([src],{type:'text/javascript'});
+  const url=URL.createObjectURL(blob);
+  const s=document.createElement('script');
+  s.src=url;
+
+  s.onload=()=>{
+    URL.revokeObjectURL(url);
+
+    const c=[...document.querySelectorAll('.card')]
+      .find(x=>x.querySelector('#competition'))||document.querySelector('.card');
+
+    if(c){
+      const n=document.createElement('div');
+      n.className='notice ok';
+      n.innerHTML=
+        '<b>V9.9.61 CODA RECUPERI REALE ATTIVA:</b> '+
+        'una gara che non entra nel calendario naturale non blocca più la generazione: '+
+        'viene accodata e spostata nei successivi slot PRO della stessa competizione.';
+      c.appendChild(n);
+    }
+  };
+
+  s.onerror=()=>errorBox('errore caricamento motore');
+  document.body.appendChild(s);
 
 }catch(e){
- errorBox(e?.message||String(e));
+  errorBox(e?.message||String(e));
 }
 })();

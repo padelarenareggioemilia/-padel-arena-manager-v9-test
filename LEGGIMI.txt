@@ -1,38 +1,27 @@
-V9.9.60 - GENERATORE GENERALE CALENDARI
+V9.9.61 - CODA RECUPERI REALE
 
-NON è specifico per Coppa Italia.
+CORREZIONE MIRATA DELLA 9.9.60
 
-Vale per:
-- Serie A
-- Serie B
-- Serie C
-- Coppa Italia
-- competizioni future
+Problema precedente:
+il ritorno faceva throw prima che la gestione PRO potesse partire.
 
-REGOLE GENERALI
-1. Numero giornate dinamico in base al girone.
-2. Formula singola o andata/ritorno.
-3. Cadenza scelta dall'Admin.
-4. Ritorno non obbligatoriamente speculare.
-5. Una casa e una fuori per ogni coppia nell'andata/ritorno.
-6. Giorno, ora e campo sempre della squadra di casa.
-7. Conflitti solo reali di data/ora/impianto.
-8. Gare su blackout accodate ai recuperi senza far fallire tutto.
-9. Recuperi PRO nel successivo slot DELLA STESSA COMPETIZIONE.
-10. Se il primo PRO non basta, usa il secondo.
-11. Max una partita per squadra nello stesso weekend PRO.
-12. Vincoli speciali di disponibilità casa indipendenti dalla competizione.
+Ora:
+1. il ritorno prova le gare sullo slot naturale;
+2. una gara che non entra NON blocca il motore;
+3. viene messa in recoveryQueue;
+4. il calendario continua;
+5. alla fine la recoveryQueue viene distribuita:
+   - primo successivo slot della stessa competizione
+   - secondo successivo slot, se necessario
+6. massimo una gara per squadra per weekend PRO;
+7. nessun conflitto reale impianto/data/ora;
+8. EDEN mai casa prima 01/11/2026.
 
-VINCOLO ATTUALE
-Le tre squadre EDEN non possono giocare in casa prima del 01/11/2026.
-Il vincolo vale qualunque sia la competizione.
-
-INSTALLAZIONE
 Sostituire:
 - calendar-v9-eden-loader.js
 - config.js
 
-TEST
-Aprire calendar.html?v=9960
+Test:
+calendar.html?v=9961
 Deve comparire:
-V9.9.60 GENERATORE GENERALE ATTIVO
+V9.9.61 CODA RECUPERI REALE ATTIVA
