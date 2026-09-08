@@ -1,15 +1,19 @@
-/* V9.9.52 - EDEN + RITORNO NON SPECULARE VELOCE
-   Ottimizzazione prestazioni:
-   - NON genera più tutti gli accoppiamenti possibili del ritorno;
-   - riusa i blocchi di giornata dell'andata e li RIORDINA liberamente;
-   - ogni coppia gioca comunque 2 volte, una in casa e una fuori;
-   - il ritorno può avere ordine diverso dall'andata;
-   - mantiene vincolo EDEN, sospensioni, impianti e conflitti.
+/* V9.9.53 - CALENDARIO ULTRA FAST
+   Obiettivo: eliminare i blocchi del browser.
+
+   Strategia:
+   - niente ricerca combinatoria di TUTTI gli accoppiamenti;
+   - accoppiamenti round-robin deterministici (metodo "cerchio");
+   - per ogni giornata si provano SOLO le orientazioni CASA/TRASFERTA;
+   - le giornate di ritorno possono essere riordinate liberamente;
+   - ogni coppia gioca sempre 2 volte: una in casa e una fuori;
+   - EDEN solo in trasferta fino al 31/10/2026;
+   - sospensioni, conflitti impianto, giorno/ora/campo restano vincolanti.
 */
 (async function(){
 'use strict';
 
-const SOURCE='calendar-v9-clean.js?v=9952fast';
+const SOURCE='calendar-v9-clean.js?v=9953ultrafast';
 const EDEN_IDS=[
   '3371654b-99ca-4135-b28a-582bdc0a41f1',
   'e4939c59-9670-4706-8abc-abb88a60a18f',
@@ -22,40 +26,172 @@ try{
   if(!res.ok) throw Error('Motore calendario non disponibile: '+res.status);
   let src=await res.text();
 
-  /* VINCOLO EDEN */
+  /* =========================
+     VINCOLO EDEN
+     ========================= */
   const m1="const pad=n=>String(n).padStart(2,'0');";
   const p1=`
 const V9_EDEN_HOME_TEAM_IDS=new Set(${JSON.stringify(EDEN_IDS)});
 const V9_EDEN_HOME_AVAILABLE_FROM='${AVAILABLE_FROM}';
+
 function v9SpecialHomeConstraintViolation(f){
   if(!f) return false;
   if(!V9_EDEN_HOME_TEAM_IDS.has(String(f.home_team_id))) return false;
   const d=String(f._local_date||'').slice(0,10);
   return !!d && d<V9_EDEN_HOME_AVAILABLE_FROM;
 }
+
+function v9RoundRobinRounds(inputNodes){
+  const nodes=[...inputNodes];
+  if(nodes.length%2){
+    nodes.push({id:'BYE-'+Math.random().toString(36).slice(2),name:'RIPOSO',__bye:true});
+  }
+
+  const n=nodes.length;
+  const arr=[...nodes];
+  const rounds=[];
+
+  for(let r=0;r<n-1;r++){
+    const pairs=[];
+    for(let i=0;i<n/2;i++){
+      pairs.push([arr[i],arr[n-1-i]]);
+    }
+    rounds.push(pairs);
+
+    /* rotazione: primo fisso, gli altri ruotano */
+    const fixed=arr[0];
+    const rest=arr.slice(1);
+    rest.unshift(rest.pop());
+    arr.splice(0,arr.length,fixed,...rest);
+  }
+
+  return rounds;
+}
 `;
   if(!src.includes(m1)) throw Error('Marker base non trovato');
   src=src.replace(m1,m1+p1);
 
-  const m2="    /* 10.11 - BLOCCO PREVENTIVO:";
-  const p2=`    /* V9.9.52 EDEN: prima del 01/11/2026 le tre squadre EDEN sono solo ospiti. */
-    if(fixtures.some(v9SpecialHomeConstraintViolation)){
-      continue;
+  /* =========================
+     SOLVER ANDATA ULTRA FAST
+     ========================= */
+  const s1=src.indexOf('function solveFirstLeg({');
+  const s2=src.indexOf('/* Costruisce il ritorno speculare.', s1);
+  if(s1<0 || s2<0) throw Error('Blocco solveFirstLeg non trovato');
+
+  const fastFirst=`function solveFirstLeg({
+  group,
+  groupTeams,
+  start,
+  intervalWeeks,
+  code,
+  external
+}){
+  const roundTemplates=v9RoundRobinRounds(groupTeams);
+  const totalRounds=roundTemplates.length;
+  const chosen=[];
+
+  /* equilibrio casa/trasferta semplice:
+     penalizza chi ha già troppe gare consecutive dello stesso tipo */
+  const homeCount=new Map();
+  const awayCount=new Map();
+
+  function count(map,id){ return map.get(String(id))||0; }
+  function inc(map,id){ map.set(String(id),count(map,id)+1); }
+  function dec(map,id){ map.set(String(id),Math.max(0,count(map,id)-1)); }
+
+  function optionScore(pairs){
+    let score=0;
+    for(const [h,a] of pairs){
+      score+=Math.abs((count(homeCount,h.id)+1)-count(awayCount,h.id));
+      score+=Math.abs(count(homeCount,a.id)-(count(awayCount,a.id)+1));
+    }
+    return score;
+  }
+
+  function orientationsForTemplate(template,roundNo,anchor){
+    const realPairs=template.filter(([a,b])=>!a.__bye&&!b.__bye);
+    const out=[];
+    const max=1<<realPairs.length;
+
+    /* Solo orientazioni; niente ricalcolo degli accoppiamenti. */
+    for(let mask=0;mask<max;mask++){
+      const pairs=realPairs.map(([a,b],i)=>(mask&(1<<i))?[b,a]:[a,b]);
+      const fixtures=pairs.map(([home,away])=>
+        makeFixture(group,roundNo,home,away,anchor,code)
+      );
+
+      if(fixtures.some(v9SpecialHomeConstraintViolation)) continue;
+      if(roundTouchesExcludedDate(fixtures,code)) continue;
+
+      let ok=true;
+      for(let i=0;i<fixtures.length;i++){
+        if(conflictsAny(fixtures[i],fixtures.filter((_,j)=>j!==i))){
+          ok=false; break;
+        }
+      }
+      if(!ok) continue;
+      if(!compatibleWithExternal(fixtures,external)) continue;
+
+      out.push({pairs,fixtures,score:optionScore(pairs)});
     }
 
+    out.sort((a,b)=>a.score-b.score);
+    return out;
+  }
+
+  let nextBase=new Date(start);
+
+  for(let i=0;i<roundTemplates.length;i++){
+    const roundNo=i+1;
+    let placed=false;
+
+    for(let shift=0;shift<20;shift++){
+      const anchor=addDays(nextBase,shift*7);
+      const opts=orientationsForTemplate(roundTemplates[i],roundNo,anchor);
+
+      if(!opts.length) continue;
+
+      const opt=opts[0];
+      chosen.push({
+        roundNo,
+        pairs:opt.pairs,
+        firstFixtures:opt.fixtures,
+        firstAnchor:anchor
+      });
+
+      for(const [h,a] of opt.pairs){
+        inc(homeCount,h.id);
+        inc(awayCount,a.id);
+      }
+
+      nextBase=addDays(anchor,intervalWeeks*7);
+      placed=true;
+      break;
+    }
+
+    if(!placed){
+      throw new Error(
+        'Non riesco a collocare la giornata di andata G'+roundNo+
+        ' rispettando sospensioni, impianti e vincolo EDEN.'
+      );
+    }
+  }
+
+  return {chosen,totalRounds};
+}
+
 `;
-  if(!src.includes(m2)) throw Error('Marker orientazioni non trovato');
-  src=src.replace(m2,p2+m2);
 
-  /* RITORNO NON SPECULARE - VERSIONE VELOCE
-     Si riordinano le giornate dell'andata, non si ricalcolano tutti i matching. */
-  const startMarker='function buildReturnLeg({';
-  const endMarker='window.buildCalendarPayload=async function(){';
-  const a=src.indexOf(startMarker);
-  const b=src.indexOf(endMarker);
-  if(a<0 || b<0 || b<=a) throw Error('Blocco ritorno non trovato');
+  src=src.slice(0,s1)+fastFirst+src.slice(s2);
 
-  const newReturn=`function buildReturnLeg({
+  /* =========================
+     RITORNO NON SPECULARE ULTRA FAST
+     ========================= */
+  const r1=src.indexOf('function buildReturnLeg({');
+  const r2=src.indexOf('window.buildCalendarPayload=async function(){', r1);
+  if(r1<0 || r2<0) throw Error('Blocco buildReturnLeg non trovato');
+
+  const fastReturn=`function buildReturnLeg({
   group,
   firstLeg,
   startAnchor,
@@ -69,19 +205,14 @@ function v9SpecialHomeConstraintViolation(f){
     pairs:r.pairs
   }));
 
-  const placed=[];
-  const used=new Set();
-  const memo=new Set();
-  let states=0;
-  const MAX_STATES=5000;
-  const MAX_WEEK_SHIFTS=20;
+  const remaining=[...sourceRounds];
+  const returns=[];
+  let nextBase=new Date(startAnchor);
 
-  function buildReverseFixtures(sourceRound,returnRoundNo,anchor){
-    const fixtures=sourceRound.pairs
-      .filter(([home,away])=>!home.__bye&&!away.__bye)
-      .map(([home,away])=>
-        makeFixture(group,returnRoundNo,away,home,anchor,code)
-      );
+  function tryRound(sr,returnRoundNo,anchor){
+    const fixtures=sr.pairs
+      .filter(([h,a])=>!h.__bye&&!a.__bye)
+      .map(([h,a])=>makeFixture(group,returnRoundNo,a,h,anchor,code));
 
     if(fixtures.some(v9SpecialHomeConstraintViolation)) return null;
     if(roundTouchesExcludedDate(fixtures,code)) return null;
@@ -91,83 +222,64 @@ function v9SpecialHomeConstraintViolation(f){
         return null;
       }
     }
-
     if(!compatibleWithExternal(fixtures,external)) return null;
+
     return fixtures;
   }
 
-  function stateKey(roundIndex,nextBaseAnchor){
-    return roundIndex+'|'+[...used].sort((x,y)=>x-y).join(',')+'|'+dateKeyLocal(nextBaseAnchor);
-  }
+  for(let ri=0;ri<sourceRounds.length;ri++){
+    const returnRoundNo=firstLeg.totalRounds+ri+1;
+    let selectedIndex=-1;
+    let selectedAnchor=null;
+    let selectedFixtures=null;
 
-  function rec(roundIndex,nextBaseAnchor){
-    states++;
-    if(states>MAX_STATES) return false;
-    if(roundIndex===sourceRounds.length) return true;
+    /* prova le giornate di andata rimaste in ordine diverso.
+       È un greedy limitato: massimo R * 20 tentativi, niente esplosione combinatoria. */
+    outer:
+    for(let shift=0;shift<20;shift++){
+      const anchor=addDays(nextBase,shift*7);
 
-    const key=stateKey(roundIndex,nextBaseAnchor);
-    if(memo.has(key)) return false;
-
-    const returnRoundNo=firstLeg.totalRounds+roundIndex+1;
-    const candidates=[];
-
-    /* Per ogni giornata di andata non ancora usata,
-       cerca la prima collocazione utile del relativo ritorno. */
-    for(const sr of sourceRounds){
-      if(used.has(sr.sourceIndex)) continue;
-
-      for(let shift=0;shift<MAX_WEEK_SHIFTS;shift++){
-        const anchor=addDays(nextBaseAnchor,shift*7);
-        const fixtures=buildReverseFixtures(sr,returnRoundNo,anchor);
+      for(let j=0;j<remaining.length;j++){
+        const fixtures=tryRound(remaining[j],returnRoundNo,anchor);
         if(!fixtures) continue;
 
-        candidates.push({sr,anchor,fixtures,shift});
-        break; // per questa giornata basta la prima data valida
+        selectedIndex=j;
+        selectedAnchor=anchor;
+        selectedFixtures=fixtures;
+        break outer;
       }
     }
 
-    /* Euristica: prima le soluzioni che non richiedono rinvii,
-       poi quelle con minor numero di settimane spostate. */
-    candidates.sort((x,y)=>x.shift-y.shift);
-
-    for(const c of candidates){
-      used.add(c.sr.sourceIndex);
-      placed.push({
-        roundNo:returnRoundNo,
-        fixtures:c.fixtures,
-        anchor:c.anchor,
-        sourceRoundNo:c.sr.sourceRoundNo
-      });
-
-      const next=addDays(c.anchor,intervalWeeks*7);
-      if(rec(roundIndex+1,next)) return true;
-
-      placed.pop();
-      used.delete(c.sr.sourceIndex);
+    if(selectedIndex<0){
+      throw new Error(
+        'Non riesco a collocare la giornata di ritorno G'+returnRoundNo+
+        ' con il metodo veloce rispettando i vincoli.'
+      );
     }
 
-    memo.add(key);
-    return false;
+    const sr=remaining.splice(selectedIndex,1)[0];
+    returns.push({
+      roundNo:returnRoundNo,
+      fixtures:selectedFixtures,
+      anchor:selectedAnchor,
+      sourceRoundNo:sr.sourceRoundNo
+    });
+
+    nextBase=addDays(selectedAnchor,intervalWeeks*7);
   }
 
-  if(!rec(0,new Date(startAnchor))){
-    throw new Error(
-      'Non riesco a costruire il ritorno non speculare rispettando '+
-      'sospensioni, impianti e vincolo EDEN. '+
-      'Ricerca veloce esaurita ('+states+' stati analizzati).'
-    );
-  }
-
-  console.info('[V9.9.52] Ritorno non speculare generato in '+states+' stati.');
-  return placed;
+  return returns;
 }
 
 `;
-  src=src.slice(0,a)+newReturn+src.slice(b);
 
-  /* SICUREZZE FINALI */
-  const m4="  /* SICUREZZA FINALE:\n     nessuna gara può essere su una data esclusa.\n  */";
-  const p4=`  /* V9.9.52 - CONTROLLO FINALE EDEN */
+  src=src.slice(0,r1)+fastReturn+src.slice(r2);
+
+  /* =========================
+     SICUREZZE FINALI
+     ========================= */
+  const m4="  /* SICUREZZA FINALE:\\n     nessuna gara può essere su una data esclusa.\\n  */";
+  const p4=`  /* V9.9.53 - SICUREZZA EDEN */
   for(const f of payload){
     if(v9SpecialHomeConstraintViolation(f)){
       throw new Error(
@@ -176,7 +288,6 @@ function v9SpecialHomeConstraintViolation(f){
     }
   }
 
-  /* Ogni coppia, se formula andata/ritorno, deve avere una casa per parte. */
   if(isDouble){
     const pairStats=new Map();
     for(const f of payload){
@@ -184,6 +295,7 @@ function v9SpecialHomeConstraintViolation(f){
       if(!pairStats.has(k)) pairStats.set(k,[]);
       pairStats.get(k).push(f);
     }
+
     for(const list of pairStats.values()){
       if(list.length!==2){
         throw new Error('Errore interno: una coppia non ha esattamente 2 incontri.');
@@ -202,25 +314,30 @@ function v9SpecialHomeConstraintViolation(f){
 
   const blob=new Blob([src],{type:'text/javascript'});
   const url=URL.createObjectURL(blob);
-  const s=document.createElement('script');
-  s.src=url;
-  s.onload=()=>{
+  const script=document.createElement('script');
+  script.src=url;
+
+  script.onload=()=>{
     URL.revokeObjectURL(url);
     installNotice();
-    console.info('[V9.9.52] Motore FAST attivo');
+    console.info('[V9.9.53] ULTRA FAST attivo');
   };
-  s.onerror=()=>{
+
+  script.onerror=()=>{
     URL.revokeObjectURL(url);
     showError('Errore avvio motore calendario');
   };
-  document.body.appendChild(s);
 
-}catch(e){showError(e?.message||String(e));}
+  document.body.appendChild(script);
+
+}catch(e){
+  showError(e?.message||String(e));
+}
 
 function showError(t){
   const b=document.createElement('div');
   b.style.cssText='position:fixed;left:15px;right:15px;bottom:15px;z-index:99999;padding:14px;border-radius:12px;background:#fdecef;border:1px solid #ce2b37;color:#7b1722;font:600 14px system-ui';
-  b.textContent='Calendario: impossibile attivare V9.9.52 FAST. '+t;
+  b.textContent='Calendario: impossibile attivare V9.9.53 ULTRA FAST. '+t;
   document.body.appendChild(b);
 }
 
@@ -232,8 +349,8 @@ function installNotice(){
   n.id='v9EdenConstraintNotice';
   n.className='notice ok';
   n.innerHTML=
-    '<b>V9.9.52 FAST ATTIVA:</b> ritorno non speculare ottimizzato. '+
-    'Ogni coppia gioca una volta in casa e una fuori, ma le giornate del ritorno possono essere riordinate. '+
+    '<b>V9.9.53 ULTRA FAST ATTIVA:</b> accoppiamenti round-robin deterministici, nessuna ricerca combinatoria globale. '+
+    'Ritorno non speculare con una gara in casa e una fuori per ogni coppia. '+
     'Vincolo EDEN attivo su Serie B, Serie C e Coppa Italia: solo trasferta fino al 31/10/2026.';
   card.appendChild(n);
 }

@@ -1,25 +1,26 @@
-V9.9.52 FAST
+V9.9.53 ULTRA FAST
 
-CORREZIONE:
-La V9.9.51 era troppo lenta perché, per ogni giornata di ritorno, generava TUTTI i possibili accoppiamenti del girone e tutte le combinazioni successive. Con molti club il numero di combinazioni cresceva in modo enorme e poteva bloccare il browser.
+PERCHÉ LA V9.9.52 SI BLOCCAVA
+Il motore base continuava a generare tutti i possibili accoppiamenti della giornata nell'andata.
+Con gironi numerosi, il numero di combinazioni cresce molto rapidamente e può bloccare il browser.
 
-NUOVO METODO:
-- usa gli stessi blocchi di accoppiamenti dell'andata;
-- li può riordinare liberamente nel ritorno;
-- inverte casa/trasferta per ogni coppia;
-- cerca solo la collocazione temporale valida;
-- memoizzazione e limite massimo di ricerca.
+COSA CAMBIA
+- accoppiamenti round-robin deterministici (metodo cerchio);
+- niente enumerazione globale degli accoppiamenti;
+- si provano solo le orientazioni casa/trasferta;
+- ritorno non speculare riordinando le giornate disponibili;
+- nessuna ricerca ricorsiva pesante;
+- EDEN solo trasferta fino al 31/10/2026;
+- sospensioni e conflitti impianto rispettati;
+- ogni coppia gioca una volta in casa e una fuori.
 
-RISULTATO:
-- ritorno NON speculare;
-- una gara in casa e una fuori per ogni coppia;
-- molto più veloce;
-- vincolo EDEN invariato;
-- sospensioni e conflitti impianto invariati.
+INSTALLAZIONE
+Sostituire nella root GitHub:
+1) calendar-v9-eden-loader.js
+2) config.js
 
-INSTALLAZIONE:
-Sostituire in root GitHub:
-1. calendar-v9-eden-loader.js
-2. config.js
+Poi aprire:
+calendar.html?v=9953
 
-Poi aprire calendar.html?v=9952 e verificare il riquadro "V9.9.52 FAST ATTIVA".
+Deve comparire:
+V9.9.53 ULTRA FAST ATTIVA
