@@ -1,24 +1,25 @@
-V9.9.51 - RITORNO NON SPECULARE + VINCOLO EDEN
+V9.9.52 FAST
 
-Sostituire nella root GitHub:
-- calendar-v9-eden-loader.js
-- config.js
+CORREZIONE:
+La V9.9.51 era troppo lenta perché, per ogni giornata di ritorno, generava TUTTI i possibili accoppiamenti del girone e tutte le combinazioni successive. Con molti club il numero di combinazioni cresceva in modo enorme e poteva bloccare il browser.
 
-NUOVA REGOLA ANDATA/RITORNO
-- ogni coppia si incontra 2 volte;
-- una partita in casa per ciascuna squadra;
-- il ritorno NON deve avere lo stesso ordine dell'andata;
-- esempio valido: incontro di andata alla G1 e ritorno alla G4 del girone di ritorno;
-- il secondo giro viene ricostruito con un GLOBAL SORT indipendente.
+NUOVO METODO:
+- usa gli stessi blocchi di accoppiamenti dell'andata;
+- li può riordinare liberamente nel ritorno;
+- inverte casa/trasferta per ogni coppia;
+- cerca solo la collocazione temporale valida;
+- memoizzazione e limite massimo di ricerca.
 
-RESTANO ATTIVI
-- EDEN solo in trasferta fino al 31/10/2026;
-- vale Serie B, Serie C, Coppa Italia e future competizioni;
-- date escluse/sospensioni;
-- conflitti impianti;
-- giorno, ora e campo della squadra di casa.
+RISULTATO:
+- ritorno NON speculare;
+- una gara in casa e una fuori per ogni coppia;
+- molto più veloce;
+- vincolo EDEN invariato;
+- sospensioni e conflitti impianto invariati.
 
-TEST
-Aprire calendar.html?v=9951
-Il riquadro verde deve dire V9.9.51 ATTIVA e “Andata e ritorno non speculari”.
-Generare in anteprima senza salvare.
+INSTALLAZIONE:
+Sostituire in root GitHub:
+1. calendar-v9-eden-loader.js
+2. config.js
+
+Poi aprire calendar.html?v=9952 e verificare il riquadro "V9.9.52 FAST ATTIVA".

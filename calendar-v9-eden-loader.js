@@ -1,16 +1,15 @@
-/* V9.9.51 - EDEN + RITORNO NON SPECULARE
-   Regole:
-   1) Le tre squadre EDEN sono solo in trasferta fino al 31/10/2026
-      su Serie B, Serie C, Coppa Italia e future competizioni.
-   2) Andata e ritorno NON devono essere speculari per giornata.
-      Ogni coppia di squadre si incontra comunque due volte:
-      una volta in casa per A e una volta in casa per B.
-      Il ritorno viene ricostruito con un secondo GLOBAL SORT indipendente.
+/* V9.9.52 - EDEN + RITORNO NON SPECULARE VELOCE
+   Ottimizzazione prestazioni:
+   - NON genera più tutti gli accoppiamenti possibili del ritorno;
+   - riusa i blocchi di giornata dell'andata e li RIORDINA liberamente;
+   - ogni coppia gioca comunque 2 volte, una in casa e una fuori;
+   - il ritorno può avere ordine diverso dall'andata;
+   - mantiene vincolo EDEN, sospensioni, impianti e conflitti.
 */
 (async function(){
 'use strict';
 
-const SOURCE='calendar-v9-clean.js?v=9951eden';
+const SOURCE='calendar-v9-clean.js?v=9952fast';
 const EDEN_IDS=[
   '3371654b-99ca-4135-b28a-582bdc0a41f1',
   'e4939c59-9670-4706-8abc-abb88a60a18f',
@@ -23,9 +22,7 @@ try{
   if(!res.ok) throw Error('Motore calendario non disponibile: '+res.status);
   let src=await res.text();
 
-  /* =========================
-     VINCOLO EDEN
-     ========================= */
+  /* VINCOLO EDEN */
   const m1="const pad=n=>String(n).padStart(2,'0');";
   const p1=`
 const V9_EDEN_HOME_TEAM_IDS=new Set(${JSON.stringify(EDEN_IDS)});
@@ -41,7 +38,7 @@ function v9SpecialHomeConstraintViolation(f){
   src=src.replace(m1,m1+p1);
 
   const m2="    /* 10.11 - BLOCCO PREVENTIVO:";
-  const p2=`    /* V9.9.51 EDEN: prima del 01/11/2026 le tre squadre EDEN sono solo ospiti. */
+  const p2=`    /* V9.9.52 EDEN: prima del 01/11/2026 le tre squadre EDEN sono solo ospiti. */
     if(fixtures.some(v9SpecialHomeConstraintViolation)){
       continue;
     }
@@ -50,9 +47,8 @@ function v9SpecialHomeConstraintViolation(f){
   if(!src.includes(m2)) throw Error('Marker orientazioni non trovato');
   src=src.replace(m2,p2+m2);
 
-  /* =========================
-     RITORNO NON SPECULARE
-     ========================= */
+  /* RITORNO NON SPECULARE - VERSIONE VELOCE
+     Si riordinano le giornate dell'andata, non si ricalcolano tutti i matching. */
   const startMarker='function buildReturnLeg({';
   const endMarker='window.buildCalendarPayload=async function(){';
   const a=src.indexOf(startMarker);
@@ -67,56 +63,27 @@ function v9SpecialHomeConstraintViolation(f){
   code,
   external
 }){
-  /* V9.9.51
-     Il ritorno NON è più speculare per numero di giornata.
-     Costruiamo un secondo round robin indipendente.
-     Per ogni coppia l'orientamento è obbligatoriamente l'opposto
-     della gara di andata: chi era in casa all'andata va fuori al ritorno.
-  */
+  const sourceRounds=firstLeg.chosen.map((r,idx)=>({
+    sourceIndex:idx,
+    sourceRoundNo:r.roundNo,
+    pairs:r.pairs
+  }));
 
-  const firstHomeByPair=new Map();
-  const teamMap=new Map();
+  const placed=[];
+  const used=new Set();
+  const memo=new Set();
+  let states=0;
+  const MAX_STATES=5000;
+  const MAX_WEEK_SHIFTS=20;
 
-  for(const r of firstLeg.chosen){
-    for(const [home,away] of r.pairs){
-      if(!home||!away||home.__bye||away.__bye) continue;
-      firstHomeByPair.set(pairKeyIds(home.id,away.id),String(home.id));
-      teamMap.set(String(home.id),home);
-      teamMap.set(String(away.id),away);
-    }
-  }
+  function buildReverseFixtures(sourceRound,returnRoundNo,anchor){
+    const fixtures=sourceRound.pairs
+      .filter(([home,away])=>!home.__bye&&!away.__bye)
+      .map(([home,away])=>
+        makeFixture(group,returnRoundNo,away,home,anchor,code)
+      );
 
-  let nodes=[...teamMap.values()];
-  if(nodes.length%2){
-    nodes.push({id:\`BYE-R-\${group.id}\`,name:'RIPOSO',__bye:true});
-  }
-
-  const totalRounds=nodes.length-1;
-  const usedReturnPairs=new Set();
-  const returns=[];
-
-  function orientationForReturn(matching,roundNo,anchor){
-    const fixtures=[];
-    const pairs=[];
-
-    for(const [x,y] of matching){
-      if(x.__bye||y.__bye) continue;
-
-      const key=pairKeyIds(x.id,y.id);
-      const firstHome=firstHomeByPair.get(key);
-      if(!firstHome) return null;
-
-      /* Orientamento obbligatorio opposto all'andata */
-      const home=String(x.id)===firstHome ? y : x;
-      const away=String(x.id)===firstHome ? x : y;
-
-      const f=makeFixture(group,roundNo,home,away,anchor,code);
-      if(v9SpecialHomeConstraintViolation(f)) return null;
-
-      fixtures.push(f);
-      pairs.push([home,away]);
-    }
-
+    if(fixtures.some(v9SpecialHomeConstraintViolation)) return null;
     if(roundTouchesExcludedDate(fixtures,code)) return null;
 
     for(let i=0;i<fixtures.length;i++){
@@ -126,66 +93,81 @@ function v9SpecialHomeConstraintViolation(f){
     }
 
     if(!compatibleWithExternal(fixtures,external)) return null;
+    return fixtures;
+  }
 
-    return {fixtures,pairs};
+  function stateKey(roundIndex,nextBaseAnchor){
+    return roundIndex+'|'+[...used].sort((x,y)=>x-y).join(',')+'|'+dateKeyLocal(nextBaseAnchor);
   }
 
   function rec(roundIndex,nextBaseAnchor){
-    if(roundIndex===totalRounds) return true;
+    states++;
+    if(states>MAX_STATES) return false;
+    if(roundIndex===sourceRounds.length) return true;
+
+    const key=stateKey(roundIndex,nextBaseAnchor);
+    if(memo.has(key)) return false;
 
     const returnRoundNo=firstLeg.totalRounds+roundIndex+1;
-    const MAX_WEEK_SHIFTS=60;
+    const candidates=[];
 
-    for(let shift=0;shift<MAX_WEEK_SHIFTS;shift++){
-      const anchor=addDays(nextBaseAnchor,shift*7);
-      const matchings=generateMatchings(nodes,usedReturnPairs);
+    /* Per ogni giornata di andata non ancora usata,
+       cerca la prima collocazione utile del relativo ritorno. */
+    for(const sr of sourceRounds){
+      if(used.has(sr.sourceIndex)) continue;
 
-      for(const matching of matchings){
-        const opt=orientationForReturn(matching,returnRoundNo,anchor);
-        if(!opt) continue;
+      for(let shift=0;shift<MAX_WEEK_SHIFTS;shift++){
+        const anchor=addDays(nextBaseAnchor,shift*7);
+        const fixtures=buildReverseFixtures(sr,returnRoundNo,anchor);
+        if(!fixtures) continue;
 
-        const added=[];
-        for(const [x,y] of matching){
-          if(x.__bye||y.__bye) continue;
-          const key=pairKeyIds(x.id,y.id);
-          usedReturnPairs.add(key);
-          added.push(key);
-        }
-
-        returns.push({
-          roundNo:returnRoundNo,
-          fixtures:opt.fixtures,
-          anchor,
-          pairs:opt.pairs
-        });
-
-        const next=addDays(anchor,intervalWeeks*7);
-        if(rec(roundIndex+1,next)) return true;
-
-        returns.pop();
-        added.forEach(k=>usedReturnPairs.delete(k));
+        candidates.push({sr,anchor,fixtures,shift});
+        break; // per questa giornata basta la prima data valida
       }
     }
 
+    /* Euristica: prima le soluzioni che non richiedono rinvii,
+       poi quelle con minor numero di settimane spostate. */
+    candidates.sort((x,y)=>x.shift-y.shift);
+
+    for(const c of candidates){
+      used.add(c.sr.sourceIndex);
+      placed.push({
+        roundNo:returnRoundNo,
+        fixtures:c.fixtures,
+        anchor:c.anchor,
+        sourceRoundNo:c.sr.sourceRoundNo
+      });
+
+      const next=addDays(c.anchor,intervalWeeks*7);
+      if(rec(roundIndex+1,next)) return true;
+
+      placed.pop();
+      used.delete(c.sr.sourceIndex);
+    }
+
+    memo.add(key);
     return false;
   }
 
   if(!rec(0,new Date(startAnchor))){
     throw new Error(
       'Non riesco a costruire il ritorno non speculare rispettando '+
-      'sospensioni, impianti, vincolo EDEN e alternanza casa/trasferta.'
+      'sospensioni, impianti e vincolo EDEN. '+
+      'Ricerca veloce esaurita ('+states+' stati analizzati).'
     );
   }
 
-  return returns;
+  console.info('[V9.9.52] Ritorno non speculare generato in '+states+' stati.');
+  return placed;
 }
 
 `;
   src=src.slice(0,a)+newReturn+src.slice(b);
 
-  /* Controllo finale EDEN */
+  /* SICUREZZE FINALI */
   const m4="  /* SICUREZZA FINALE:\n     nessuna gara può essere su una data esclusa.\n  */";
-  const p4=`  /* V9.9.51 - CONTROLLO FINALE EDEN */
+  const p4=`  /* V9.9.52 - CONTROLLO FINALE EDEN */
   for(const f of payload){
     if(v9SpecialHomeConstraintViolation(f)){
       throw new Error(
@@ -194,31 +176,29 @@ function v9SpecialHomeConstraintViolation(f){
     }
   }
 
-  /* V9.9.51 - CONTROLLO DOPPIO INCONTRO CASA/FUORI */
-  const pairStats=new Map();
-  for(const f of payload){
-    const k=pairKeyIds(f.home_team_id,f.away_team_id);
-    if(!pairStats.has(k)) pairStats.set(k,[]);
-    pairStats.get(k).push(f);
-  }
-  for(const [k,list] of pairStats){
-    if(list.length!==2) continue;
-    const a=list[0], b=list[1];
-    if(String(a.home_team_id)!==String(b.away_team_id) ||
-       String(a.away_team_id)!==String(b.home_team_id)){
-      throw new Error('Errore interno ritorno: una coppia non ha una gara in casa e una in trasferta.');
+  /* Ogni coppia, se formula andata/ritorno, deve avere una casa per parte. */
+  if(isDouble){
+    const pairStats=new Map();
+    for(const f of payload){
+      const k=pairKeyIds(f.home_team_id,f.away_team_id);
+      if(!pairStats.has(k)) pairStats.set(k,[]);
+      pairStats.get(k).push(f);
+    }
+    for(const list of pairStats.values()){
+      if(list.length!==2){
+        throw new Error('Errore interno: una coppia non ha esattamente 2 incontri.');
+      }
+      const x=list[0], y=list[1];
+      if(String(x.home_team_id)!==String(y.away_team_id) ||
+         String(x.away_team_id)!==String(y.home_team_id)){
+        throw new Error('Errore interno: una coppia non ha una gara in casa e una fuori.');
+      }
     }
   }
 
 `;
   if(!src.includes(m4)) throw Error('Marker controllo finale non trovato');
   src=src.replace(m4,p4+m4);
-
-  /* Testo diagnosi */
-  src=src.replace(
-    "'GLOBAL SORT + sospensioni originali: '+\n      'se una giornata tocca una data esclusa, viene spostata interamente.'",
-    "'GLOBAL SORT + ritorno non speculare + sospensioni originali: '+\n      'ogni coppia gioca una volta in casa e una fuori; le giornate di ritorno possono avere ordine diverso.'"
-  );
 
   const blob=new Blob([src],{type:'text/javascript'});
   const url=URL.createObjectURL(blob);
@@ -227,7 +207,7 @@ function v9SpecialHomeConstraintViolation(f){
   s.onload=()=>{
     URL.revokeObjectURL(url);
     installNotice();
-    console.info('[V9.9.51] EDEN + ritorno non speculare attivi');
+    console.info('[V9.9.52] Motore FAST attivo');
   };
   s.onerror=()=>{
     URL.revokeObjectURL(url);
@@ -235,14 +215,12 @@ function v9SpecialHomeConstraintViolation(f){
   };
   document.body.appendChild(s);
 
-}catch(e){
-  showError(e?.message||String(e));
-}
+}catch(e){showError(e?.message||String(e));}
 
 function showError(t){
   const b=document.createElement('div');
   b.style.cssText='position:fixed;left:15px;right:15px;bottom:15px;z-index:99999;padding:14px;border-radius:12px;background:#fdecef;border:1px solid #ce2b37;color:#7b1722;font:600 14px system-ui';
-  b.textContent='Calendario: impossibile attivare V9.9.51. '+t;
+  b.textContent='Calendario: impossibile attivare V9.9.52 FAST. '+t;
   document.body.appendChild(b);
 }
 
@@ -254,9 +232,9 @@ function installNotice(){
   n.id='v9EdenConstraintNotice';
   n.className='notice ok';
   n.innerHTML=
-    '<b>V9.9.51 ATTIVA:</b> EDEN solo in trasferta fino al 31/10/2026 su tutte le competizioni. '+
-    '<b>Andata e ritorno non speculari:</b> ogni coppia gioca comunque una volta in casa e una fuori, '+
-    'ma l’ordine delle giornate di ritorno può essere diverso dall’andata.';
+    '<b>V9.9.52 FAST ATTIVA:</b> ritorno non speculare ottimizzato. '+
+    'Ogni coppia gioca una volta in casa e una fuori, ma le giornate del ritorno possono essere riordinate. '+
+    'Vincolo EDEN attivo su Serie B, Serie C e Coppa Italia: solo trasferta fino al 31/10/2026.';
   card.appendChild(n);
 }
 })();
