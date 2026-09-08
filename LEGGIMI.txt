@@ -1,19 +1,16 @@
-V9.9.45 - INVIO AICS FINALE
+V9.9.46 - SITUAZIONE TESSERAMENTI
 
-Caricare nella ROOT:
-admin-tesseramenti.html
+Supabase:
+la funzione admin_tesseramenti_overview è già stata installata.
 
-Funzioni:
-- richieste TEST e REALI
-- TEST non possono essere inviate
-- richiesta REALE: Admin seleziona giocatori
-- Capitano carica ricevuta unica
-- Admin prepara CSV + XLSX + PDF
-- pulsante finale esclusivo Admin
-- conferma testuale obbligatoria "INVIA AICS"
-- invio a reggioemilia@aics.it, CC aicspadeltour@gmail.com
-- dopo invio riuscito: giocatori -> Tesserato
-- doppio invio bloccato
+Caricare nella ROOT GitHub questi 3 file:
+1) config.js (SOSTITUISCI quello esistente)
+2) tesseramenti-overview.js (NUOVO)
+3) situazione-tesseramenti.html (NUOVO)
 
-NOTA:
-Il collegamento Apps Script/Supabase deve avere lo stesso V9_SECRET.
+Risultato:
+- HOME ADMIN: nuova sezione separata “Situazione tesseramenti”
+- DIAGNOSTICA: la stessa situazione viene mostrata anche nel Centro diagnostico
+- PAGINA COMPLETA: dettaglio di tutte le squadre con filtri e stati
+- evidenza immediata di ricevute da verificare e richieste pronte da inviare
+- accesso rapido al modulo Admin Tesseramenti
