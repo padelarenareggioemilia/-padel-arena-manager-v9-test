@@ -1,26 +1,25 @@
-V9.9.53 ULTRA FAST
+V9.9.54 PATCH CHIRURGICA EDEN
 
-PERCHÉ LA V9.9.52 SI BLOCCAVA
-Il motore base continuava a generare tutti i possibili accoppiamenti della giornata nell'andata.
-Con gironi numerosi, il numero di combinazioni cresce molto rapidamente e può bloccare il browser.
+Questa versione ABBANDONA le modifiche generali 9.9.51/52/53.
 
-COSA CAMBIA
-- accoppiamenti round-robin deterministici (metodo cerchio);
-- niente enumerazione globale degli accoppiamenti;
-- si provano solo le orientazioni casa/trasferta;
-- ritorno non speculare riordinando le giornate disponibili;
-- nessuna ricerca ricorsiva pesante;
-- EDEN solo trasferta fino al 31/10/2026;
-- sospensioni e conflitti impianto rispettati;
-- ogni coppia gioca una volta in casa e una fuori.
+NON cambia:
+- accoppiamenti dell'andata;
+- regole normali casa/trasferta delle altre squadre;
+- date delle singole partite con anticipi/posticipi artificiali;
+- motore impianti;
+- sospensioni.
 
-INSTALLAZIONE
-Sostituire nella root GitHub:
-1) calendar-v9-eden-loader.js
-2) config.js
+Cambia SOLO:
+1. EDEN PADEL CLUB, EDEN ACADEMY SERIE C, EDEN NEXT GEN:
+   mai in casa prima del 01/11/2026.
+2. Il ritorno riusa esattamente gli accoppiamenti dell'andata invertiti casa/fuori.
+   Se necessario può cambiare SOLO l'ordine delle giornate del ritorno.
 
-Poi aprire:
-calendar.html?v=9953
+INSTALLAZIONE:
+sostituire in root GitHub:
+- calendar-v9-eden-loader.js
+- config.js
 
-Deve comparire:
-V9.9.53 ULTRA FAST ATTIVA
+TEST:
+calendar.html?v=9954
+Deve apparire: V9.9.54 PATCH CHIRURGICA ATTIVA.
