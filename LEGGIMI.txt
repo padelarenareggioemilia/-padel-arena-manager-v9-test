@@ -1,4 +1,30 @@
-V9.9.49 FIX EDEN
-Sostituire in root GitHub: calendar-v9-eden-loader.js e config.js.
-Corregge errore "Can't find variable: fixture" della V9.9.48.
-Poi aprire calendar.html?v=9949 e verificare il riquadro verde VINCOLO EDEN ATTIVO.
+V9.9.50 - VINCOLO EDEN SU TUTTE LE COMPETIZIONI
+
+SOSTITUIRE nella root GitHub:
+- calendar-v9-eden-loader.js
+- config.js
+
+Regola:
+- EDEN PADEL CLUB - Serie B
+- EDEN ACADEMY SERIE C
+- EDEN NEXT GEN PADEL CLUB - Serie C
+
+fino al 31/10/2026 possono essere calendarizzate SOLO IN TRASFERTA.
+
+Dal 01/11/2026 possono tornare a giocare in casa a Via Balla 6.
+
+IMPORTANTE:
+Il vincolo non controlla il tipo di competizione.
+Quindi vale automaticamente per:
+- SERIE_B
+- SERIE_C
+- COPPA_ITALIA
+- eventuali altre competizioni future in cui una delle tre squadre venga utilizzata.
+
+TEST:
+1. aprire calendar.html?v=9950
+2. verificare il riquadro verde
+3. generare Serie B
+4. generare Serie C
+5. generare Coppa Italia
+6. non salvare finché non è verificato che nessuna EDEN sia in casa prima del 01/11/2026
