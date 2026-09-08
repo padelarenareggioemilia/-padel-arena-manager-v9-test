@@ -1,1 +1,11 @@
-V9.9.56: sostituire calendar-v9-eden-loader.js e config.js. Il ritorno usa backtracking limitato e sceglie prima le gare con meno collocazioni possibili. Andata invariata salvo EDEN. Aprire calendar.html?v=9956.
+V9.9.57 - DUE BINARI + PRO
+
+Coppa Italia: weekend iniziale 01/10/2026.
+Campionato: weekend iniziale 08/10/2026.
+Cadenza: ogni 2 settimane per ciascuna competizione.
+Numero giornate: dinamico in base al girone.
+PRO: solo dopo fallimento del tentativo con tutte le giornate naturali; viene aggiunto nel successivo slot della stessa competizione, quindi non invade il weekend dell’altra.
+EDEN: mai casa prima 01/11/2026 in entrambe le competizioni.
+
+Sostituire calendar-v9-eden-loader.js e config.js.
+Aprire calendar.html?v=9957.
