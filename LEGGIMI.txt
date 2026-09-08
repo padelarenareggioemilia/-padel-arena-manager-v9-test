@@ -1,27 +1,27 @@
-V9.9.61 - CODA RECUPERI REALE
+V9.9.62 - PRO GLOBALE
 
-CORREZIONE MIRATA DELLA 9.9.60
+Correzione mirata della 9.9.61.
 
-Problema precedente:
-il ritorno faceva throw prima che la gestione PRO potesse partire.
+NON modifica:
+- gironi
+- andata
+- logica casa/trasferta
+- vincolo EDEN
 
-Ora:
-1. il ritorno prova le gare sullo slot naturale;
-2. una gara che non entra NON blocca il motore;
-3. viene messa in recoveryQueue;
-4. il calendario continua;
-5. alla fine la recoveryQueue viene distribuita:
-   - primo successivo slot della stessa competizione
-   - secondo successivo slot, se necessario
-6. massimo una gara per squadra per weekend PRO;
-7. nessun conflitto reale impianto/data/ora;
-8. EDEN mai casa prima 01/11/2026.
+Modifica solo la gestione delle gare residue.
+
+Le residue vengono considerate TUTTE INSIEME e distribuite tramite backtracking:
+PRO1 = 19-20-21 febbraio 2027
+PRO2 = 05-06-07 marzo 2027
+
+Regole:
+- massimo una partita per squadra per weekend PRO
+- nessun conflitto reale di impianto/data/ora
+- se una scelta iniziale blocca una gara successiva, torna indietro e scambia weekend
 
 Sostituire:
 - calendar-v9-eden-loader.js
 - config.js
 
 Test:
-calendar.html?v=9961
-Deve comparire:
-V9.9.61 CODA RECUPERI REALE ATTIVA
+calendar.html?v=9962
