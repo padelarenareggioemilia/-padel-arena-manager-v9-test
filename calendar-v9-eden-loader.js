@@ -1,4 +1,4 @@
-/* V9.9.62 - GENERATORE GENERALE + DISTRIBUZIONE PRO GLOBALE
+/* V9.9.62B - GENERATORE GENERALE + PRO BINARIA VELOCE
    Correzione della 9.9.61:
    - NON tocca andata, ritorno, gironi o vincolo EDEN;
    - raccoglie TUTTE le gare residue;
@@ -174,7 +174,9 @@ function v9SameTeam(a,b){
  }
 
  /* =========================================================
-    SOLVER GLOBALE PRO
+    PRO 62B - ASSEGNAZIONE BINARIA DETERMINISTICA
+    Nessun backtracking massivo: con due weekend il problema
+    viene trattato come grafo a 2 colori con vincoli unari.
     ========================================================= */
  const buckets=V9_PRO_ANCHORS.map((k,i)=>({
    index:i,
@@ -182,89 +184,135 @@ function v9SameTeam(a,b){
    fixtures:[]
  }));
 
- function candidatesFor(item){
-   const out=[];
+ /* Candidato di ogni gara nei due weekend */
+ const nodes=recoveryQueue.map((item,idx)=>{
    const original=item.fixture;
    const home=teams.find(t=>String(t.id)===String(original.home_team_id));
    const away=teams.find(t=>String(t.id)===String(original.away_team_id));
-   if(!home||!away) return out;
+   if(!home||!away) throw new Error('Dati mancanti per una gara residua.');
 
-   for(let bi=0;bi<buckets.length;bi++){
-     const bucket=buckets[bi];
-     const candidate=makeFixture(
-       item.group,
-       original.round_number,
-       home,
-       away,
-       bucket.anchor,
-       code
+   const candidates=buckets.map(bucket=>
+     makeFixture(item.group,original.round_number,home,away,bucket.anchor,code)
+   );
+
+   const allowed=candidates.map(candidate=>{
+     if(v9ForbiddenHome(candidate)) return false;
+     if(fixtureFallsOnExcludedDate(candidate,code)) return false;
+     if(!compatibleWithExternal([candidate],external)) return false;
+     if(conflictsAny(candidate,payload)) return false;
+     return true;
+   });
+
+   if(!allowed[0]&&!allowed[1]){
+     throw new Error(
+       'Nessuno slot PRO disponibile per '+
+       original._home_name+' – '+original._away_name
      );
-
-     if(v9ForbiddenHome(candidate)) continue;
-     if(fixtureFallsOnExcludedDate(candidate,code)) continue;
-
-     let bad=false;
-     for(const x of bucket.fixtures){
-       if(v9SameTeam(candidate,x)){bad=true;break;}
-       if(realFacilityConflict(candidate,x)){bad=true;break;}
-     }
-     if(bad) continue;
-
-     if(!compatibleWithExternal([candidate],external)) continue;
-     if(conflictsAny(candidate,payload)) continue;
-
-     out.push({bi,candidate});
    }
-   return out;
- }
 
- let states=0;
- const MAX_STATES=100000;
+   return {idx,item,candidates,allowed,edges:new Set()};
+ });
 
- function solveRecovery(remaining){
-   if(!remaining.length) return true;
-   if(++states>MAX_STATES) return false;
-
-   /* Most constrained first */
-   let bestIndex=-1;
-   let bestOptions=null;
-
-   for(let i=0;i<remaining.length;i++){
-     const opts=candidatesFor(remaining[i]);
-     if(!opts.length) return false;
-     if(bestOptions===null || opts.length<bestOptions.length){
-       bestIndex=i;
-       bestOptions=opts;
-       if(opts.length===1) break;
+ /* Due gare non possono stare nello stesso weekend se:
+    - condividono una squadra;
+    - usano realmente lo stesso impianto in sovrapposizione.
+    Il test viene fatto sul primo weekend: giorno/ora/campo
+    restano identici anche nel secondo. */
+ for(let i=0;i<nodes.length;i++){
+   for(let j=i+1;j<nodes.length;j++){
+     const a=nodes[i].candidates[0];
+     const b=nodes[j].candidates[0];
+     if(v9SameTeam(a,b)||realFacilityConflict(a,b)){
+       nodes[i].edges.add(j);
+       nodes[j].edges.add(i);
      }
    }
+ }
 
-   const item=remaining[bestIndex];
-   const next=remaining.slice(0,bestIndex).concat(remaining.slice(bestIndex+1));
+ const color=new Array(nodes.length).fill(-1);
 
-   /* Bilancia i due weekend, ma il backtracking può cambiare scelta */
-   bestOptions.sort((x,y)=>
-     buckets[x.bi].fixtures.length-buckets[y.bi].fixtures.length
-   );
+ function forceColor(i,c){
+   if(!nodes[i].allowed[c]) return false;
+   if(color[i]!==-1) return color[i]===c;
 
-   for(const opt of bestOptions){
-     buckets[opt.bi].fixtures.push(opt.candidate);
+   const q=[[i,c]];
+   while(q.length){
+     const [n,cl]=q.shift();
+     if(!nodes[n].allowed[cl]) return false;
+     if(color[n]!==-1){
+       if(color[n]!==cl) return false;
+       continue;
+     }
+     color[n]=cl;
 
-     if(solveRecovery(next)) return true;
-
-     buckets[opt.bi].fixtures.pop();
+     for(const e of nodes[n].edges){
+       const other=1-cl;
+       if(color[e]!==-1 && color[e]===cl) return false;
+       if(color[e]===-1) q.push([e,other]);
+     }
    }
-
-   return false;
+   return true;
  }
 
- if(!solveRecovery(recoveryQueue)){
-   throw new Error(
-     'Le gare residue non sono distribuibili nei due weekend PRO configurati. '+
-     'Residue: '+recoveryQueue.length+' · tentativi: '+states
-   );
+ /* Prima applica i vincoli obbligati da calendario esterno */
+ for(let i=0;i<nodes.length;i++){
+   if(nodes[i].allowed[0]&&!nodes[i].allowed[1]){
+     if(!forceColor(i,0)){
+       throw new Error('Conflitto PRO obbligato su '+nodes[i].item.fixture._home_name);
+     }
+   }else if(!nodes[i].allowed[0]&&nodes[i].allowed[1]){
+     if(!forceColor(i,1)){
+       throw new Error('Conflitto PRO obbligato su '+nodes[i].item.fixture._home_name);
+     }
+   }
  }
 
+ /* Componenti libere: prova il colore che bilancia meglio i due weekend.
+    In un grafo bipartito basta una propagazione per componente. */
+ for(let i=0;i<nodes.length;i++){
+   if(color[i]!==-1) continue;
+
+   const snapshot=color.slice();
+   const c0=color.filter(x=>x===0).length;
+   const c1=color.filter(x=>x===1).length;
+   const prefer=c0<=c1?0:1;
+
+   if(!forceColor(i,prefer)){
+     for(let k=0;k<color.length;k++) color[k]=snapshot[k];
+     if(!forceColor(i,1-prefer)){
+       const f=nodes[i].item.fixture;
+       throw new Error(
+         'Le residue creano un conflitto reale non bipartibile attorno a '+
+         f._home_name+' – '+f._away_name
+       );
+     }
+   }
+ }
+
+ /* Verifica e assegnazione finale */
+ for(let i=0;i<nodes.length;i++){
+   const c=color[i];
+   if(c<0||!nodes[i].allowed[c]){
+     throw new Error('Assegnazione PRO incompleta.');
+   }
+   buckets[c].fixtures.push(nodes[i].candidates[c]);
+ }
+
+ /* Controllo esplicito dentro ogni weekend */
+ for(const bucket of buckets){
+   for(let i=0;i<bucket.fixtures.length;i++){
+     for(let j=i+1;j<bucket.fixtures.length;j++){
+       if(v9SameTeam(bucket.fixtures[i],bucket.fixtures[j])){
+         throw new Error('Doppio impegno squadra nel weekend PRO.');
+       }
+       if(realFacilityConflict(bucket.fixtures[i],bucket.fixtures[j])){
+         throw new Error('Conflitto reale impianto nel weekend PRO.');
+       }
+     }
+   }
+ }
+
+ const states=nodes.length;
  for(const b of buckets) payload.push(...b.fixtures);
 
  /* Controllo finale */
@@ -302,7 +350,7 @@ function v9SameTeam(a,b){
    conflictsUnresolved:0,
    progression:'OK',
    rule:
-     'V9.9.62: distribuzione globale delle residue sui weekend PRO 19-21/02 e 05-07/03/2027.'
+     'V9.9.62B: assegnazione binaria deterministica sui weekend PRO 19-21/02 e 05-07/03/2027.'
  };
 
  return payload;
@@ -325,9 +373,7 @@ function v9SameTeam(a,b){
      const n=document.createElement('div');
      n.className='notice ok';
      n.innerHTML=
-       '<b>V9.9.62 PRO GLOBALE ATTIVA:</b> tutte le gare residue vengono distribuite insieme, '+
-       'con scambi automatici, tra 19-20-21 febbraio e 5-6-7 marzo 2027. '+
-       'Nessuna squadra può giocare due volte nello stesso weekend PRO.';
+       '<b>V9.9.62B PRO BINARIA VELOCE ATTIVA:</b> le gare residue vengono assegnate ai due weekend PRO con un controllo deterministico dei soli conflitti reali. Niente ricerca da 100.000 tentativi.';
      c.appendChild(n);
    }
  };

@@ -1,27 +1,13 @@
-V9.9.62 - PRO GLOBALE
+V9.9.62B - PRO BINARIA VELOCE
 
-Correzione mirata della 9.9.61.
+Stesso motore 9.9.62, ma viene sostituito SOLO il solver dei recuperi PRO.
 
-NON modifica:
-- gironi
-- andata
-- logica casa/trasferta
-- vincolo EDEN
+- niente 100.000 tentativi
+- due weekend = assegnazione binaria
+- stessa squadra -> weekend opposto
+- stesso impianto con reale sovrapposizione -> weekend opposto
+- calendario esterno può vietare uno dei due weekend alla singola gara
+- errore immediato e specifico se esiste un conflitto reale
 
-Modifica solo la gestione delle gare residue.
-
-Le residue vengono considerate TUTTE INSIEME e distribuite tramite backtracking:
-PRO1 = 19-20-21 febbraio 2027
-PRO2 = 05-06-07 marzo 2027
-
-Regole:
-- massimo una partita per squadra per weekend PRO
-- nessun conflitto reale di impianto/data/ora
-- se una scelta iniziale blocca una gara successiva, torna indietro e scambia weekend
-
-Sostituire:
-- calendar-v9-eden-loader.js
-- config.js
-
-Test:
-calendar.html?v=9962
+PRO1: 19-20-21 febbraio 2027
+PRO2: 05-06-07 marzo 2027

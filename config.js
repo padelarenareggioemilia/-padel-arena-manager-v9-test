@@ -1,7 +1,7 @@
 window.PAM_V9_CONFIG={
   supabaseUrl:"https://ggnmpzfuqchcwzgaxxzx.supabase.co",
   supabasePublishableKey:"sb_publishable_JJUF1lt3lob4r0z2UBTOiw_2YUjk18m",
-  version:"9.9.62-global-pro-solver"
+  version:"9.9.62B-fast-binary-pro"
 };
 (function(){
  function add(src){
@@ -10,11 +10,11 @@ window.PAM_V9_CONFIG={
    s.async=false;
    document.body.appendChild(s);
  }
- if(/(^|\/)calendar\.html$/i.test(location.pathname)){
-   window.addEventListener('load',()=>add('calendar-v9-eden-loader.js?v=9962'));
+ if(/(^|\\/)calendar\\.html$/i.test(location.pathname)){
+   window.addEventListener('load',()=>add('calendar-v9-eden-loader.js?v=9962b'));
    return;
  }
- if(/(^|\/)diagnostics\.html$/i.test(location.pathname)){
+ if(/(^|\\/)diagnostics\\.html$/i.test(location.pathname)){
    window.addEventListener('load',()=>{
      add('diagnostics-calendar-fix.js?v=921diag1');
      add('tesseramenti-overview.js?v=9947');
@@ -22,7 +22,7 @@ window.PAM_V9_CONFIG={
    });
    return;
  }
- if(/(^|\/)index\.html$/i.test(location.pathname)||/\/$/.test(location.pathname)){
+ if(/(^|\\/)index\\.html$/i.test(location.pathname)||/\\/$/.test(location.pathname)){
    window.addEventListener('load',()=>add('tesseramenti-overview.js?v=9947'));
  }
 })();
