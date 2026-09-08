@@ -1,10 +1,151 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>V9 Admin Tesseramenti</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><style>body{font-family:system-ui;background:#f4f8fc;color:#0a2e5e;margin:0}body:before{content:"";display:block;height:6px;background:linear-gradient(90deg,#009246 33%,#fff 33% 66%,#ce2b37 66%)}main{max-width:1000px;margin:auto;padding:16px}.card{background:#fff;border:1px solid #b9cde3;border-radius:18px;padding:16px;margin:12px 0}.hero{background:#164a95;color:white}.btn{padding:11px 13px;border-radius:10px;border:0;font-weight:900;cursor:pointer}.primary{background:#164a95;color:white}.secondary{background:white;color:#164a95;border:1px solid #164a95}select,textarea{width:100%;padding:11px;border:1px solid #b9cde3;border-radius:10px}.player{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:10px;border-bottom:1px solid #b9cde3;align-items:center}.notice{padding:11px;border:1px solid #b9cde3;border-radius:11px;background:#edf4fb;margin:10px 0}.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none}.badge{font-size:12px;font-weight:800}</style></head><body><main><section class="card hero"><h1>Admin · Tesseramenti V9.9.42</h1><b>MODALITÀ TEST — nessun invio esterno</b></section><section class="card"><button class="btn secondary" onclick="location.href='index.html?v=9942'">← Dashboard Admin</button></section><section class="card"><b>Squadra</b><select id="team"></select><div id="status" class="notice">Caricamento…</div></section><section id="work" class="hidden"><section class="card"><h2 id="title"></h2><div id="meta"></div></section><section class="card"><h2>Giocatori da includere</h2><div class="actions"><button class="btn secondary" onclick="toggleAll(true)">Seleziona tutti</button><button class="btn secondary" onclick="toggleAll(false)">Deseleziona tutti</button></div><div id="players"></div><div class="notice"><b>Selezionati:</b> <span id="count">0</span> · <b>Totale:</b> € <span id="amount">0.00</span></div><textarea id="notes" placeholder="Note facoltative"></textarea><br><br><button class="btn primary" onclick="createRequest()">Genera richiesta pagamento TEST</button></section><section class="card"><h2>Storico</h2><div id="history"></div></section></section></main><script>
-const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=x=>document.getElementById(x);let d=null;
-async function start(){const s=(await sb.auth.getSession()).data.session;if(!s){location='login.html';return}const p=await sb.from('profiles').select('role').eq('id',s.user.id).maybeSingle();if(p.data?.role!=='admin')throw Error('Accesso riservato Admin');const r=await sb.from('teams').select('id,name,series,club_name').order('name');if(r.error)throw r.error;$('team').innerHTML='<option value="">Seleziona squadra</option>'+r.data.map(t=>`<option value="${t.id}" ${t.name==='EDEN NEXT GEN PADEL CLUB'?'selected':''}>${t.name}</option>`).join('');$('team').onchange=load;if($('team').value)await load();$('status').textContent='Admin riconosciuto.'}
-async function load(){const id=$('team').value;if(!id)return;const r=await sb.rpc('admin_get_tesseramento_dashboard',{p_team_id:id});if(r.error)throw r.error;d=r.data;$('title').textContent=d.team.name;$('meta').textContent=[d.team.club_name,d.team.series,'Capitano: '+(d.team.captain_name||''),d.team.captain_email].filter(Boolean).join(' · ');render();$('work').classList.remove('hidden')}
-function render(){$('players').innerHTML=(d.players||[]).map(p=>`<div class="player"><input class="pick" type="checkbox" value="${p.id}" ${p.registration_status==='da_tesserare'?'checked':'disabled'} onchange="calc()"><div><b>${p.first_name} ${p.last_name}</b><br><small>${p.email||''}</small></div><span class="badge">${p.registration_status}</span></div>`).join('');$('history').innerHTML=(d.requests||[]).map(q=>`<div class="notice"><b>${q.request_number}</b> · ${q.status} · ${q.player_count} giocatori · € ${Number(q.amount).toFixed(2)} ${q.test_mode?'· TEST':''}</div>`).join('')||'<div class="notice">Nessuna richiesta.</div>';calc()}
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>V9 · Admin Tesseramenti</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--t:#0a2e5e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui;color:var(--t)}
+body:before{content:"";display:block;height:6px;background:linear-gradient(90deg,var(--g) 33%,#fff 33% 66%,var(--r) 66%)}
+main{max-width:1050px;margin:auto;padding:16px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}
+.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.btn{padding:11px 13px;border-radius:10px;border:0;font-weight:900;cursor:pointer}
+.primary{background:var(--b);color:#fff}.success{background:var(--g);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}
+select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px}.player{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:10px;border-bottom:1px solid var(--line);align-items:center}
+.notice{padding:11px;border:1px solid var(--line);border-radius:11px;background:#edf4fb;margin:10px 0}.ok{background:#eaf8f0}.warn{background:#fff7dc}.err{background:#fdecef}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.hidden{display:none}.pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#edf4fb;font-size:12px;font-weight:900}
+.request{border:1px solid var(--line);border-radius:14px;padding:13px;margin:10px 0}
+.request a{color:var(--b);font-weight:800}.files a{display:inline-block;margin-right:12px}
+@media(max-width:650px){.actions{display:grid}.btn{width:100%}}
+</style></head>
+<body><main>
+<section class="card hero"><h1>Admin · Tesseramenti V9.9.44</h1><b>MODALITÀ TEST — prepara documenti, nessun invio ad AICS</b></section>
+<section class="card"><button class="btn secondary" onclick="location.href='index.html?v=9944'">← Dashboard Admin</button></section>
+<section class="card"><b>Squadra</b><select id="team"></select><div id="status" class="notice">Caricamento…</div></section>
+
+<section id="work" class="hidden">
+<section class="card"><h2 id="title"></h2><div id="meta"></div></section>
+
+<section class="card">
+<h2>Nuova richiesta di pagamento</h2>
+<div class="actions"><button class="btn secondary" onclick="toggleAll(true)">Seleziona tutti</button><button class="btn secondary" onclick="toggleAll(false)">Deseleziona tutti</button></div>
+<div id="players"></div>
+<div class="notice"><b>Selezionati:</b> <span id="count">0</span> · <b>Totale:</b> € <span id="amount">0.00</span></div>
+<textarea id="notes" placeholder="Note facoltative"></textarea><br><br>
+<button class="btn primary" onclick="createRequest()">Genera richiesta pagamento TEST</button>
+</section>
+
+<section class="card">
+<h2>Richieste e verifica Admin</h2>
+<div id="history"></div>
+</section>
+</section>
+</main>
+
+<script>
+const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=x=>document.getElementById(x);
+let d=null;
+
+async function start(){
+ const s=(await sb.auth.getSession()).data.session;
+ if(!s){location='login.html';return}
+ const p=await sb.from('profiles').select('role').eq('id',s.user.id).maybeSingle();
+ if(p.data?.role!=='admin')throw Error('Accesso riservato Admin');
+ const r=await sb.from('teams').select('id,name,series,club_name').order('name');
+ if(r.error)throw r.error;
+ $('team').innerHTML='<option value="">Seleziona squadra</option>'+r.data.map(t=>`<option value="${t.id}" ${t.name==='EDEN NEXT GEN PADEL CLUB'?'selected':''}>${t.name}</option>`).join('');
+ $('team').onchange=load;
+ if($('team').value)await load();
+ $('status').textContent='Admin riconosciuto.';
+}
+async function load(){
+ const id=$('team').value;if(!id)return;
+ const r=await sb.rpc('admin_get_tesseramento_dashboard',{p_team_id:id});
+ if(r.error)throw r.error;
+ d=r.data;
+ $('title').textContent=d.team.name;
+ $('meta').textContent=[d.team.club_name,d.team.series,'Capitano: '+(d.team.captain_name||''),d.team.captain_email].filter(Boolean).join(' · ');
+ render();$('work').classList.remove('hidden');
+}
+function render(){
+ $('players').innerHTML=(d.players||[]).map(p=>`<div class="player"><input class="pick" type="checkbox" value="${p.id}" ${p.registration_status==='da_tesserare'?'checked':'disabled'} onchange="calc()"><div><b>${p.first_name} ${p.last_name}</b><br><small>${p.email||''}</small></div><span class="pill">${p.registration_status}</span></div>`).join('');
+ $('history').innerHTML=(d.requests||[]).map(q=>{
+   const receipt=q.receipt_url?`<div class="notice ok">Ricevuta: <a href="${q.receipt_url}" target="_blank">Apri ricevuta</a></div>`:'';
+   const prep=q.status==='receipt_uploaded'?`<button class="btn success" onclick="prepare('${q.id}')">Approva e prepara CSV + Excel + PDF</button>`:'';
+   const files=q.status==='admin_approved'?`<div class="notice ok files"><b>Documenti preparati:</b><br>${q.csv_file_url?`<a href="${q.csv_file_url}" target="_blank">CSV</a>`:''}${q.xlsx_file_url?`<a href="${q.xlsx_file_url}" target="_blank">Excel</a>`:''}${q.pdf_file_url?`<a href="${q.pdf_file_url}" target="_blank">PDF</a>`:''}<br><b>Nessuna email inviata perché TEST.</b></div>`:'';
+   return `<div class="request"><b>${q.request_number}</b> <span class="pill">${q.status}</span> ${q.test_mode?'<span class="pill">TEST</span>':''}<div>${q.player_count} giocatori · € ${Number(q.amount).toFixed(2)}</div>${receipt}${prep}${files}</div>`;
+ }).join('')||'<div class="notice">Nessuna richiesta.</div>';
+ calc();
+}
 function calc(){const n=document.querySelectorAll('.pick:checked').length;$('count').textContent=n;$('amount').textContent=(n*Number(d.settings.fee_per_player||15)).toFixed(2)}
 function toggleAll(v){document.querySelectorAll('.pick:not(:disabled)').forEach(x=>x.checked=v);calc()}
-async function createRequest(){const ids=[...document.querySelectorAll('.pick:checked')].map(x=>x.value);if(!ids.length)return alert('Seleziona almeno un giocatore.');if(!confirm(`Creare richiesta TEST per ${ids.length} giocatori? Nessuna email verrà inviata.`))return;const r=await sb.rpc('admin_create_tesseramento_request',{p_team_id:$('team').value,p_player_ids:ids,p_notes:$('notes').value.trim()||null,p_test_mode:true});if(r.error)return alert(r.error.message);alert(`Richiesta TEST ${r.data.request_number} creata. Totale € ${Number(r.data.amount).toFixed(2)}.`);await load()}
-window.load=load;window.toggleAll=toggleAll;window.createRequest=createRequest;start().catch(e=>$('status').textContent='Errore: '+e.message);
-</script></body></html>
+async function createRequest(){
+ const ids=[...document.querySelectorAll('.pick:checked')].map(x=>x.value);
+ if(!ids.length)return alert('Seleziona almeno un giocatore.');
+ if(!confirm(`Creare richiesta TEST per ${ids.length} giocatori?`))return;
+ const r=await sb.rpc('admin_create_tesseramento_request',{p_team_id:$('team').value,p_player_ids:ids,p_notes:$('notes').value.trim()||null,p_test_mode:true});
+ if(r.error)return alert(r.error.message);
+ alert(`Richiesta TEST ${r.data.request_number} creata. Totale € ${Number(r.data.amount).toFixed(2)}.`);
+ await load();
+}
+
+function csvEscape(v){const s=String(v??'');return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+function rowsFor(detail){
+ return (detail.players||[]).map(p=>({
+   'Club affiliato':detail.team.club_name||'',
+   'Nome squadra':detail.team.name||'',
+   'Nome':p.first_name||'',
+   'Cognome':p.last_name||'',
+   'Data di nascita':p.birth_date||'',
+   'Luogo di nascita':p.birth_place||'',
+   'Comune di residenza':p.residence_town||'',
+   'Telefono':p.phone||'',
+   'Email':p.email||''
+ }));
+}
+async function uploadBlob(path,blob,type){
+ const up=await sb.storage.from('team-documents').upload(path,blob,{contentType:type,upsert:true});
+ if(up.error)throw up.error;
+ return sb.storage.from('team-documents').getPublicUrl(path).data.publicUrl;
+}
+async function prepare(id){
+ if(!confirm('Approvi la ricevuta e vuoi preparare CSV, Excel e PDF? In TEST non verrà inviata nessuna email.'))return;
+ try{
+   const rr=await sb.rpc('admin_get_tesseramento_request_detail',{p_request_id:id}); if(rr.error)throw rr.error;
+   const detail=rr.data, rows=rowsFor(detail), req=detail.request;
+   if(req.status!=='receipt_uploaded')throw Error('La richiesta non è nello stato corretto.');
+   const headers=Object.keys(rows[0]||{});
+   const csv='\uFEFF'+headers.map(csvEscape).join(';')+'\n'+rows.map(r=>headers.map(h=>csvEscape(r[h])).join(';')).join('\n');
+   const csvBlob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+
+   const ws=XLSX.utils.json_to_sheet(rows);
+   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Tesseramenti');
+   const xlsxArr=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+   const xlsxBlob=new Blob([xlsxArr],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+
+   const {jsPDF}=window.jspdf; const doc=new jsPDF({orientation:'landscape'});
+   doc.setFontSize(14);doc.text('AICS Padel Championship - Richiesta tesseramenti',14,15);
+   doc.setFontSize(10);doc.text(`Club: ${detail.team.club_name||''}`,14,23);doc.text(`Squadra: ${detail.team.name||''}`,14,29);doc.text(`Richiesta: ${req.request_number||''}`,14,35);
+   doc.text(`Giocatori: ${rows.length} - Importo: EUR ${Number(req.amount||0).toFixed(2)}`,14,41);
+   let y=50;doc.setFontSize(8);
+   rows.forEach((r,i)=>{if(y>190){doc.addPage();y=15}doc.text(`${i+1}. ${r.Nome} ${r.Cognome} | ${r['Data di nascita']} | ${r['Luogo di nascita']} | ${r['Comune di residenza']} | ${r.Telefono} | ${r.Email}`,14,y);y+=6});
+   const pdfBlob=doc.output('blob');
+
+   const base=`${detail.team.id}/tesseramenti/${id}`;
+   const csvUrl=await uploadBlob(`${base}/${req.request_number}.csv`,csvBlob,'text/csv');
+   const xlsxUrl=await uploadBlob(`${base}/${req.request_number}.xlsx`,xlsxBlob,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+   const pdfUrl=await uploadBlob(`${base}/${req.request_number}.pdf`,pdfBlob,'application/pdf');
+
+   const save=await sb.rpc('admin_mark_tesseramento_prepared',{p_request_id:id,p_csv_url:csvUrl,p_xlsx_url:xlsxUrl,p_pdf_url:pdfUrl});
+   if(save.error)throw save.error;
+   alert('Verifica completata. CSV, Excel e PDF preparati. Nessuna email inviata perché siamo in TEST.');
+   await load();
+ }catch(e){alert('Errore: '+(e.message||e))}
+}
+window.toggleAll=toggleAll;window.createRequest=createRequest;window.prepare=prepare;
+start().catch(e=>$('status').textContent='Errore: '+e.message);
+</script>
+</body></html>

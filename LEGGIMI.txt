@@ -1,18 +1,23 @@
-V9.9.43 - BLOCCO CAPITANO / RICEVUTA UNICA
+V9.9.44 - ADMIN VERIFICA E PREPARAZIONE DOCUMENTI TEST
 
 Supabase: migrazione già applicata.
 
 GitHub:
 Sostituisci nella ROOT:
-captain-tesseramenti.html
+admin-tesseramenti.html
 
-Test:
-1. Accedi con l'account Capitano di EDEN NEXT GEN PADEL CLUB.
-2. Da Il mio account / Area Capitano apri Tesseramenti.
-3. Vedrai la richiesta TEST creata dall'Admin: 12 giocatori, €180.
-4. Carica un file di prova come ricevuta.
-5. La richiesta passa a receipt_uploaded / in attesa verifica Admin.
-6. Nessuna email viene inviata ad AICS.
+Cosa fa:
+- vede la ricevuta caricata dal Capitano
+- Admin può approvare
+- genera CSV
+- genera Excel XLSX
+- genera PDF riepilogativo
+- salva i 3 file nello storico della richiesta
+- NON invia email ad AICS in modalità TEST
 
-Il prossimo blocco sarà:
-verifica Admin + generazione CSV/XLSX/PDF + allegati, sempre prima in modalità TEST.
+Test consigliato:
+1. Accedi Admin.
+2. Apri Eden Next Gen.
+3. Nella richiesta TESS-20260908-115506-33A195 apri la ricevuta.
+4. Premi "Approva e prepara CSV + Excel + PDF".
+5. Apri i 3 file generati e controllali.
