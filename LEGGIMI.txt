@@ -1,8 +1,1 @@
-V9.9.55 - RITORNO A PARTITE LIBERE
-
-Sostituire calendar-v9-eden-loader.js e config.js.
-
-Andata: motore originale; unica eccezione EDEN mai casa prima 01/11/2026.
-Ritorno: ogni singola gara inversa può finire in qualunque giornata di ritorno disponibile. Non esiste più obbligo G1->G1, G2->G2 ecc. Ogni squadra gioca al massimo una volta per giornata e ogni coppia ha una gara casa e una fuori.
-
-Aprire calendar.html?v=9955.
+V9.9.56: sostituire calendar-v9-eden-loader.js e config.js. Il ritorno usa backtracking limitato e sceglie prima le gare con meno collocazioni possibili. Andata invariata salvo EDEN. Aprire calendar.html?v=9956.
