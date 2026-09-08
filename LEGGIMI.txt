@@ -1,30 +1,24 @@
-V9.9.50 - VINCOLO EDEN SU TUTTE LE COMPETIZIONI
+V9.9.51 - RITORNO NON SPECULARE + VINCOLO EDEN
 
-SOSTITUIRE nella root GitHub:
+Sostituire nella root GitHub:
 - calendar-v9-eden-loader.js
 - config.js
 
-Regola:
-- EDEN PADEL CLUB - Serie B
-- EDEN ACADEMY SERIE C
-- EDEN NEXT GEN PADEL CLUB - Serie C
+NUOVA REGOLA ANDATA/RITORNO
+- ogni coppia si incontra 2 volte;
+- una partita in casa per ciascuna squadra;
+- il ritorno NON deve avere lo stesso ordine dell'andata;
+- esempio valido: incontro di andata alla G1 e ritorno alla G4 del girone di ritorno;
+- il secondo giro viene ricostruito con un GLOBAL SORT indipendente.
 
-fino al 31/10/2026 possono essere calendarizzate SOLO IN TRASFERTA.
+RESTANO ATTIVI
+- EDEN solo in trasferta fino al 31/10/2026;
+- vale Serie B, Serie C, Coppa Italia e future competizioni;
+- date escluse/sospensioni;
+- conflitti impianti;
+- giorno, ora e campo della squadra di casa.
 
-Dal 01/11/2026 possono tornare a giocare in casa a Via Balla 6.
-
-IMPORTANTE:
-Il vincolo non controlla il tipo di competizione.
-Quindi vale automaticamente per:
-- SERIE_B
-- SERIE_C
-- COPPA_ITALIA
-- eventuali altre competizioni future in cui una delle tre squadre venga utilizzata.
-
-TEST:
-1. aprire calendar.html?v=9950
-2. verificare il riquadro verde
-3. generare Serie B
-4. generare Serie C
-5. generare Coppa Italia
-6. non salvare finché non è verificato che nessuna EDEN sia in casa prima del 01/11/2026
+TEST
+Aprire calendar.html?v=9951
+Il riquadro verde deve dire V9.9.51 ATTIVA e “Andata e ritorno non speculari”.
+Generare in anteprima senza salvare.
