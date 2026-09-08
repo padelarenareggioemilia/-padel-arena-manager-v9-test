@@ -1,13 +1,6 @@
-V9.9.64 - CALENDARIO CAMPIONE COPPA ITALIA
+V9.9.65
+Corregge esclusivamente l'errore JavaScript:
+Can't find variable: CAMPIONE
 
-Per COPPA ITALIA l'anteprima usa direttamente le 240 righe validate
-di Calendario_Coppa_Italia_RECUPERI_2027.xlsx.
-
-Controlli incorporati:
-- 240 gare totali
-- 197 ordinarie
-- 43 recuperi
-- 22 recuperi a febbraio
-- 21 recuperi a marzo
-
-Per le altre competizioni resta il motore precedente.
+Il calendario campione viene ora incorporato nello stesso scope del motore eseguito.
+Nessuna modifica alle 240 gare o alle regole.

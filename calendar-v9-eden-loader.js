@@ -1,4 +1,4 @@
-/* V9.9.64 - COPPA ITALIA: CALENDARIO CAMPIONE VALIDATO
+/* V9.9.65 - COPPA ITALIA: CALENDARIO CAMPIONE VALIDATO
    Fonte: Calendario_Coppa_Italia_RECUPERI_2027.xlsx
    240 gare = 197 ordinarie + 43 recuperi (22 + 21).
    Per le altre competizioni resta attivo il motore precedente.
@@ -12,7 +12,7 @@ const CAMPIONE=[{"r":1,"g":"A","d":"2026-10-04","t":"11:00","h":"HORMIGA PADEL C
 function fail(msg){
   const b=document.createElement('div');
   b.style.cssText='position:fixed;left:15px;right:15px;bottom:15px;z-index:99999;padding:14px;border-radius:12px;background:#fdecef;border:1px solid #ce2b37;color:#7b1722;font:600 14px system-ui';
-  b.textContent='V9.9.64 non attivata: '+msg;
+  b.textContent='V9.9.65 non attivata: '+msg;
   document.body.appendChild(b);
 }
 
@@ -25,6 +25,7 @@ try{
   if(close<0) throw Error('chiusura motore base non trovata');
 
   const patch=`
+  const __V9964_CAMPIONE=${JSON.stringify(CAMPIONE)};
   const __v9964OriginalBuild=window.buildCalendarPayload;
 
   window.buildCalendarPayload=async function(){
@@ -66,7 +67,7 @@ try{
     }
 
     const payload=[];
-    for(const x of CAMPIONE){
+    for(const x of __V9964_CAMPIONE){
       const home=findTeam(x.h);
       const away=findTeam(x.a);
       const group=groupFor(home,away);
@@ -121,7 +122,7 @@ try{
       conflictsDetected:0,
       conflictsUnresolved:0,
       progression:'OK',
-      rule:'V9.9.64: Coppa Italia caricata dal calendario campione validato.'
+      rule:'V9.9.65: Coppa Italia caricata dal calendario campione validato.'
     };
 
     return payload;
@@ -139,7 +140,7 @@ try{
     const b=document.createElement('div');
     b.id='v9964-status';
     b.style.cssText='margin:12px 0;padding:12px 14px;border:1px solid #009246;border-radius:12px;background:#eaf8f0;color:#0a2e5e;font:600 14px system-ui';
-    b.innerHTML='<b>V9.9.64 CALENDARIO CAMPIONE ATTIVO:</b> Coppa Italia = 240 gare validate · 197 ordinarie · 43 recuperi · 22 febbraio + 21 marzo.';
+    b.innerHTML='<b>V9.9.65 CALENDARIO CAMPIONE ATTIVO:</b> Coppa Italia = 240 gare validate · 197 ordinarie · 43 recuperi · 22 febbraio + 21 marzo.';
     host.appendChild(b);
   };
   setTimeout(show,400);
