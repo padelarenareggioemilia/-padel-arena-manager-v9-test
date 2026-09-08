@@ -1,1 +1,18 @@
-V9.9.42 PRIMO BLOCCO TESTABILE\n\nSupabase: migrazione già applicata.\nCarica admin-tesseramenti.html nella ROOT GitHub.\nApri admin-tesseramenti.html?v=9942 con account Admin.\nEden Next Gen è preselezionata.\nPuoi selezionare/deselezionare giocatori e generare una richiesta TEST.\nNESSUNA EMAIL viene inviata.
+V9.9.43 - BLOCCO CAPITANO / RICEVUTA UNICA
+
+Supabase: migrazione già applicata.
+
+GitHub:
+Sostituisci nella ROOT:
+captain-tesseramenti.html
+
+Test:
+1. Accedi con l'account Capitano di EDEN NEXT GEN PADEL CLUB.
+2. Da Il mio account / Area Capitano apri Tesseramenti.
+3. Vedrai la richiesta TEST creata dall'Admin: 12 giocatori, €180.
+4. Carica un file di prova come ricevuta.
+5. La richiesta passa a receipt_uploaded / in attesa verifica Admin.
+6. Nessuna email viene inviata ad AICS.
+
+Il prossimo blocco sarà:
+verifica Admin + generazione CSV/XLSX/PDF + allegati, sempre prima in modalità TEST.
