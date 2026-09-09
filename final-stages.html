@@ -1,0 +1,24 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS Padel Championship · Fasi finali</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><link rel="stylesheet" href="app-theme.css?v=980stable">
+<style>:root{--b:#164a95;--bd:#082f68;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,#009246 33%,#fff 33% 66%,#ce2b37 66%)}.shell{max-width:1180px;margin:auto;padding:20px 12px 80px}.card,.top{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff;border-radius:20px;padding:20px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}.event{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#fff7dd;border:1px solid #e4c96c;font-size:12px;font-weight:900}.pub{background:#eaf8f0;border-color:#8fcba9}.date{font-size:20px;font-weight:950;margin:8px 0}.super{border:2px solid #d3aa37}.btn{border:1px solid var(--b);background:#fff;color:var(--b);border-radius:11px;padding:11px 13px;font-weight:900}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:12px 0}</style></head>
+<body><main class="shell"><div class="top"><button class="btn" onclick="history.back()">← Indietro</button> <button class="btn" onclick="location.href='calendar.html'">Calendario</button></div>
+<header class="hero"><h1>🏆 Centro Fasi Finali 2027</h1><div>Playoff · Playout · Coppa Italia · Serie C · Supercoppa</div></header>
+<div class="notice"><b>Automatico:</b> le date sono pianificate; le squadre vengono inserite quando i gironi risultano conclusi e omologati. Date e sedi restano modificabili dall'Admin senza rigenerare il tabellone.</div>
+<h2>Calendario ufficiale</h2><div id="events" class="grid"><div class="event">Caricamento…</div></div>
+<section class="card"><h2>Criteri sportivi</h2>
+<p><b>Serie A:</b> 1ª Campione; 2ª e 3ª Supercoppa; 4ª salva; 5ª–6ª playout; 7ª retrocessa.</p>
+<p><b>Serie B:</b> 3 prime promosse; 3 seconde + migliore terza alla Final Four playoff per la quarta promozione. 3 settime retrocesse; 2 peggiori seste al playout per la quarta retrocessione.</p>
+<p><b>Serie C:</b> le 4 prime saltano il preliminare; seconde contro terze; vincenti contro le prime nei quarti/promozione. Le 4 vincitrici sono promosse e accedono alla Final Four.</p>
+<p><b>Coppa Italia:</b> prime 2 degli 8 gironi → ottavi → quarti → Final Four EDEN.</p>
+<p><b>Supercoppa:</b> Campione Serie A + 2ª + 3ª + vincitrice Coppa Italia; duplicazione: finalista Coppa Italia, poi 4ª Serie A.</p></section>
+<script>
+const c=window.PAM_V9_CONFIG,sb=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey),$=x=>document.getElementById(x);
+const n={COPPA_ITALIA:'Coppa Italia',SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',SUPERCOPPA:'Supercoppa'};
+const f=d=>new Date(d+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+async function init(){let s=await sb.auth.getSession();if(!s.data.session)return location.href='login.html';
+let [e,p]=await Promise.all([sb.from('final_stage_events').select('*').order('scheduled_start').order('sort_order'),sb.from('championship_publication').select('competition_code,is_published')]);
+if(e.error){$('events').textContent=e.error.message;return}let pm=Object.fromEntries((p.data||[]).map(x=>[x.competition_code,x.is_published]));
+$('events').innerHTML=(e.data||[]).map(x=>{let pub=!!pm[x.competition_code],same=x.scheduled_start===x.scheduled_end,sc=x.competition_code==='SUPERCOPPA';
+return `<article class="event ${sc?'super':''}"><span class="badge ${pub?'pub':''}">${pub?'PUBBLICATA':(x.status==='WAITING_GROUPS'?'IN ATTESA GIRONI':x.status)}</span><h3>${n[x.competition_code]||x.competition_code}</h3><div>${x.stage_name}</div><div class="date">${same?f(x.scheduled_start):f(x.scheduled_start)+' – '+f(x.scheduled_end)}</div>${sc&&x.scheduled_start==='2027-05-01'?'<div><b>🕙 Ore 10:00</b></div>':''}<div><b>📍 ${x.venue||'Sede da definire'}</b></div></article>`}).join('')}
+init();</script></main></body></html>
