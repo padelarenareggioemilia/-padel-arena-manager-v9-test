@@ -21,7 +21,7 @@ select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radi
 @media(max-width:650px){.actions{display:grid}.btn{width:100%}}
 </style></head>
 <body><main>
-<section class="card hero"><h1>Admin · Tesseramenti V9.9.66</h1><b>Flusso definitivo Admin → Capitano → Admin → AICS · SOLO REALE</b></section>
+<section class="card hero"><h1>Admin · Tesseramenti V9.9.67</h1><b>Flusso definitivo Admin → Capitano → Admin → AICS · SOLO REALE</b></section>
 <section class="card"><button class="btn secondary" onclick="location.href='index.html?v=9966'">← Dashboard Admin</button></section>
 <section class="card"><b>Squadra</b><select id="team"></select><div id="status" class="notice">Caricamento…</div></section>
 
@@ -136,7 +136,19 @@ async function sendAics(id,num){
    if(!r.data?.ok)throw Error(r.data?.error||'Invio non riuscito');
    alert(`Invio riuscito ad AICS Reggio Emilia.\n${r.data.playerCount} giocatori aggiornati a Tesserato.`);
    await load();
- }catch(e){alert('Invio NON eseguito: '+(e.message||e))}
+ }catch(e){
+   // La funzione può avere completato l'invio anche se il browser non riceve la risposta finale.
+   // Prima di mostrare un errore, verifichiamo sempre lo stato reale salvato in Supabase.
+   try{
+     const check=await sb.from('tesseramento_requests').select('status,sent_at').eq('id',id).maybeSingle();
+     if(!check.error && check.data?.status==='submitted' && check.data?.sent_at){
+       alert('Invio eseguito correttamente ad AICS.\nIl database conferma l’invio; la risposta finale della funzione non è arrivata al browser.');
+       await load();
+       return;
+     }
+   }catch(_verifyError){}
+   alert('Invio NON eseguito: '+(e.message||e));
+ }
 }
 window.toggleAll=toggleAll;window.createRequest=createRequest;window.prepare=prepare;window.sendAics=sendAics;
 start().catch(e=>$('status').textContent='Errore: '+e.message);
