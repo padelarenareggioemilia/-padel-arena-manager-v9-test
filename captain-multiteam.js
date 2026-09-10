@@ -276,3 +276,76 @@
     app.classList.add('hidden');
   }
 })();
+// V9.9.43 - FIX DISTINTA: selezione automatica giocatore
+
+document.addEventListener('change', function (event) {
+
+  // Se assegno un ruolo, il giocatore viene selezionato automaticamente
+  const position = event.target.closest?.('.lp-position');
+
+  if (position) {
+    const playerId = position.dataset.player;
+
+    if (playerId && position.value) {
+      const checkbox = document.querySelector(
+        `.lp-check[data-player="${playerId}"]`
+      );
+
+      if (checkbox) {
+        checkbox.checked = true;
+      }
+    }
+  }
+
+  // Se seleziono manualmente il giocatore ma non ha ancora un ruolo,
+  // porto subito il cursore sul menu ruolo
+  const checkbox = event.target.closest?.('.lp-check');
+
+  if (checkbox && checkbox.checked) {
+    const playerId = checkbox.dataset.player;
+
+    const position = document.querySelector(
+      `.lp-position[data-player="${playerId}"]`
+    );
+
+    if (position && !position.value) {
+      position.focus();
+    }
+  }
+});// V9.9.43 - FIX DISTINTA: selezione automatica giocatore
+
+document.addEventListener('change', function (event) {
+
+  // Se assegno un ruolo, il giocatore viene selezionato automaticamente
+  const position = event.target.closest?.('.lp-position');
+
+  if (position) {
+    const playerId = position.dataset.player;
+
+    if (playerId && position.value) {
+      const checkbox = document.querySelector(
+        `.lp-check[data-player="${playerId}"]`
+      );
+
+      if (checkbox) {
+        checkbox.checked = true;
+      }
+    }
+  }
+
+  // Se seleziono manualmente il giocatore ma non ha ancora un ruolo,
+  // porto subito il cursore sul menu ruolo
+  const checkbox = event.target.closest?.('.lp-check');
+
+  if (checkbox && checkbox.checked) {
+    const playerId = checkbox.dataset.player;
+
+    const position = document.querySelector(
+      `.lp-position[data-player="${playerId}"]`
+    );
+
+    if (position && !position.value) {
+      position.focus();
+    }
+  }
+});
