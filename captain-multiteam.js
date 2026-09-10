@@ -346,3 +346,292 @@ document.addEventListener('change', function (event) {
     }
   }
 });
+// ======================================================
+// V9.9.44 - DISTINTA CON MASSIMO 2 INCONTRI PER GIOCATORE
+// ======================================================
+
+window.openLineup = function (fixtureId) {
+
+  const f = arr(data.fixtures)
+    .find(x => x.id === fixtureId);
+
+  const lineup = arr(data.lineups)
+    .find(x =>
+      x.fixture_id === fixtureId &&
+      x.team_id === data.team_id
+    );
+
+  const saved = arr(data.lineup_players)
+    .filter(x => x.lineup_id === lineup?.id);
+
+  const roles = [
+    'M1',
+    'M2',
+    'Misto',
+    'Femminile',
+    'Riserva'
+  ];
+
+  const roleOptions = (selected = '') =>
+    `<option value="">—</option>` +
+    roles.map(role =>
+      `<option value="${role}" ${
+        selected === role ? 'selected' : ''
+      }>${role}</option>`
+    ).join('');
+
+  const rows = arr(data.players)
+    .filter(p => p.status === 'approved')
+    .map(p => {
+
+      const playerRoles = saved
+        .filter(x => x.player_id === p.id)
+        .map(x => x.position)
+        .filter(Boolean);
+
+      const role1 = playerRoles[0] || '';
+      const role2 = playerRoles[1] || '';
+
+      return `
+        <div class="lineup-player lineup-player-v9944"
+             data-player="${p.id}">
+
+          <div>
+            <b>${esc(p.first_name)} ${esc(p.last_name)}</b>
+
+            <div class="muted">
+              ${esc(p.fitp_ranking || '')}
+            </div>
+          </div>
+
+          <div class="lineup-role-box">
+
+            <label style="font-size:11px;font-weight:900">
+              1° incontro
+            </label>
+
+            <select
+              class="lp-role-v9944"
+              data-player="${p.id}"
+              data-slot="1">
+              ${roleOptions(role1)}
+            </select>
+
+            <label style="font-size:11px;font-weight:900;margin-top:6px">
+              2° incontro
+            </label>
+
+            <select
+              class="lp-role-v9944"
+              data-player="${p.id}"
+              data-slot="2">
+              ${roleOptions(role2)}
+            </select>
+
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  openModal(
+    'Distinta squadra',
+    `
+      <div class="notice">
+        <b>
+          ${esc(tn(f.home_team_id))}
+          -
+          ${esc(tn(f.away_team_id))}
+        </b>
+        <br>
+        ${esc(fmtDate(f.scheduled_at))}
+        ·
+        ${esc(stage(f))}
+      </div>
+
+      <div class="notice ok">
+        <b>Come compilare la distinta</b><br>
+        Ogni giocatore può disputare
+        <b>massimo 2 incontri</b>.<br>
+        Lascia vuoto il secondo incontro se il giocatore
+        deve disputare una sola partita.
+      </div>
+
+      <div id="lineupRows">
+        ${rows}
+      </div>
+
+      <div class="field">
+        <label>Note distinta</label>
+
+        <textarea id="lineupNotes">${
+          esc(lineup?.notes || '')
+        }</textarea>
+      </div>
+
+      <div class="actions">
+
+        <button
+          class="btn primary"
+          onclick="saveLineupV9944('${fixtureId}', false)">
+          Salva bozza
+        </button>
+
+        <button
+          class="btn success"
+          onclick="saveLineupV9944('${fixtureId}', true)">
+          Conferma distinta
+        </button>
+
+      </div>
+    `
+  );
+};
+
+
+// ------------------------------------------------------
+// SALVATAGGIO NUOVA DISTINTA
+// ------------------------------------------------------
+
+window.saveLineupV9944 = async function (
+  fixtureId,
+  confirmLineup
+) {
+
+  try {
+
+    const players = [];
+
+    const rows =
+      document.querySelectorAll(
+        '.lineup-player-v9944'
+      );
+
+    rows.forEach(row => {
+
+      const playerId =
+        row.dataset.player;
+
+      const selects =
+        row.querySelectorAll(
+          '.lp-role-v9944'
+        );
+
+      const chosen = [];
+
+      selects.forEach(select => {
+
+        const role =
+          select.value.trim();
+
+        if (role) {
+
+          if (chosen.includes(role)) {
+            throw new Error(
+              'Lo stesso giocatore non può avere due volte lo stesso incontro.'
+            );
+          }
+
+          chosen.push(role);
+
+          players.push({
+            player_id: playerId,
+            position: role
+          });
+        }
+      });
+    });
+
+    if (!players.length) {
+      alert(
+        'Seleziona almeno un giocatore e assegna almeno un incontro.'
+      );
+      return;
+    }
+
+    const response =
+      await sb.rpc(
+        'captain_save_lineup',
+        {
+          p_fixture_id: fixtureId,
+          p_team_id: data.team_id,
+          p_players: players,
+          p_notes:
+            document
+              .getElementById('lineupNotes')
+              .value
+              .trim(),
+          p_confirm: confirmLineup
+        }
+      );
+
+    if (response.error) {
+      alert(response.error.message);
+      return;
+    }
+
+    closeModal();
+
+    await loadAll();
+
+    setView('lineups');
+
+    alert(
+      confirmLineup
+        ? 'Distinta confermata correttamente.'
+        : 'Bozza salvata correttamente.'
+    );
+
+  } catch (error) {
+
+    alert(
+      error?.message ||
+      String(error)
+    );
+  }
+};
+
+
+// ------------------------------------------------------
+// CONTROLLO IMMEDIATO DELLE DUE SCELTE
+// ------------------------------------------------------
+
+document.addEventListener(
+  'change',
+  function (event) {
+
+    const select =
+      event.target.closest?.(
+        '.lp-role-v9944'
+      );
+
+    if (!select) return;
+
+    const playerId =
+      select.dataset.player;
+
+    const row =
+      document.querySelector(
+        `.lineup-player-v9944[data-player="${playerId}"]`
+      );
+
+    if (!row) return;
+
+    const values =
+      [...row.querySelectorAll('.lp-role-v9944')]
+        .map(x => x.value)
+        .filter(Boolean);
+
+    if (
+      values.length === 2 &&
+      values[0] === values[1]
+    ) {
+
+      alert(
+        'Non puoi assegnare due volte lo stesso incontro allo stesso giocatore.'
+      );
+
+      select.value = '';
+    }
+  }
+);
