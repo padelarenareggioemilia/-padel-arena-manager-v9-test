@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Centro gara amichevole · AICS Padel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--txt:#0a2e5e;--muted:#627b97}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--txt)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.3%,#fff 33.3% 66.6%,var(--r) 66.6%);z-index:9}
+.shell{max-width:1150px;margin:auto;padding:22px 14px 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0}
+.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:0;border-radius:12px;padding:12px 15px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}
+.notice{padding:12px;border-radius:13px;background:#edf4fb;border:1px solid var(--line);margin:10px 0}.muted{color:var(--muted)}.hidden{display:none!important}
+.badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eaf2fb;border:1px solid var(--line);font-size:12px;font-weight:900}
+.player{padding:12px;border:1px solid var(--line);border-radius:14px;margin:8px 0}.roles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field{margin:10px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}select,input,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit}
+.score{display:grid;grid-template-columns:150px repeat(4,1fr);gap:7px;align-items:center;margin:7px 0}
+#reader{width:100%;max-width:500px;margin:12px 0;border-radius:14px;overflow:hidden}
+@media(max-width:800px){.roles,.score{grid-template-columns:1fr}.actions .btn{flex:1}}
+</style></head><body><main class="shell">
+<div class="actions">
+  <button class="btn secondary" onclick="location.href='friendly.html?v=9947'">← Amichevoli</button>
+  <button class="btn secondary" onclick="location.href='account-home.html?v=9947'">🏠 Home Capitano</button>
+</div>
+<header class="hero"><span class="badge">AMICHEVOLE · FUORI CLASSIFICA</span><h1 style="margin:8px 0 0">Centro gara</h1><div>Distinta, appello QR e risultato con lo stesso flusso operativo del campionato.</div></header>
+<section id="summary" class="card">Caricamento…</section><section id="chooser" class="card hidden"></section><section id="lineup" class="card hidden"></section><section id="appeal" class="card hidden"></section><section id="result" class="card hidden"></section>
+</main><script>
+const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),id=new URLSearchParams(location.search).get('id');let d={},m={},myTeamId=null,mySide=null,scanner=null;
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+const opts=s=>['','M1','M2','Misto','Femminile','Riserva'].map(v=>`<option value="${v}" ${v===s?'selected':''}>${v||'—'}</option>`).join('');
+
+async function init(){const s=await sb.auth.getSession();if(!s.data.session){location.href='login.html';return}
+const [h,r]=await Promise.all([sb.rpc('friendly_get_hub'),sb.rpc('friendly_get_match_detail',{p_friendly_match_id:id})]);
+if(r.error)return summary.textContent='Errore: '+r.error.message;d=Array.isArray(r.data)?r.data[0]:r.data;m=d.match;
+const hub=Array.isArray(h.data)?h.data[0]:(h.data||{}),mine=new Set((hub.my_teams||[]).map(x=>String(x.id))),allowed=[m.source_home_team_id,m.source_away_team_id].filter(x=>mine.has(String(x)));
+summary.innerHTML=`<h2>${esc(m.home_team_name)} – ${esc(m.away_team_name)}</h2><div><b>${m.scheduled_at?new Date(m.scheduled_at).toLocaleString('it-IT'):'Data da definire'}</b></div><div class="muted">${esc(m.venue||'')}</div><div class="notice"><b>Questa gara non produce alcun effetto sulla classifica ufficiale.</b></div>`;
+if(!allowed.length){chooser.innerHTML='<div class="notice">Non sei autorizzato a gestire questa amichevole.</div>';chooser.classList.remove('hidden');return}
+if(allowed.length===1)return choose(allowed[0]);chooser.innerHTML='<h2>Scegli la squadra da gestire</h2><div class="actions">'+allowed.map(t=>`<button class="btn primary" onclick="choose('${t}')">${String(t)===String(m.source_home_team_id)?esc(m.home_team_name):esc(m.away_team_name)}</button>`).join('')+'</div>';chooser.classList.remove('hidden')}
+
+function choose(t){myTeamId=t;mySide=String(t)===String(m.source_home_team_id)?'home':'away';chooser.classList.add('hidden');renderLineup();renderAppeal();renderResult()}
+
+function renderLineup(){const players=(d.players||[]).filter(p=>p.side===mySide),lu=(d.lineups||[]).find(x=>x.side===mySide),saved=(d.lineup_players||[]).filter(x=>x.lineup_id===lu?.id);
+lineup.innerHTML=`<h2>Formazione e distinta</h2><div class="muted">Stesso schema del campionato: M1, M2, Misto, Femminile. Massimo 2 incontri per giocatore.</div>`+
+players.map(p=>{let rr=saved.filter(x=>x.friendly_player_id===p.id).map(x=>x.position);return `<div class="player" data-player="${p.id}"><b>${esc(p.last_name)} ${esc(p.first_name)}</b><div class="muted">${esc(p.fitp_ranking||'')}</div><div class="roles"><div><label>1° incontro</label><select class="r1">${opts(rr[0])}</select></div><div><label>2° incontro</label><select class="r2">${opts(rr[1])}</select></div></div></div>`}).join('')+
+`<div class="field"><label>Note</label><textarea id="notes">${esc(lu?.notes||'')}</textarea></div><div class="actions"><button class="btn secondary" onclick="saveLineup(false)">Salva bozza</button><button class="btn success" onclick="saveLineup(true)">Conferma distinta</button></div>`;lineup.classList.remove('hidden')}
+
+async function saveLineup(confirmLineup){const ps=[];for(const row of lineup.querySelectorAll('.player')){const roles=[row.querySelector('.r1').value,row.querySelector('.r2').value].filter(Boolean);if(roles.length===2&&roles[0]===roles[1])return alert('Lo stesso giocatore non può avere due volte lo stesso incontro.');roles.forEach(position=>ps.push({player_id:row.dataset.player,position}))}
+const r=await sb.rpc('friendly_save_lineup',{p_friendly_match_id:id,p_team_id:myTeamId,p_players:ps,p_notes:notes.value.trim(),p_confirm:confirmLineup});if(r.error)return alert(r.error.message);
+alert(confirmLineup?'Distinta confermata.':'Bozza salvata.');const q=await sb.rpc('friendly_get_match_detail',{p_friendly_match_id:id});d=Array.isArray(q.data)?q.data[0]:q.data;renderLineup();renderAppeal()}
+
+function renderAppeal(){appeal.innerHTML=`<h2>Appello e verifica QR</h2>
+<div class="notice"><b>Scanner QR compatibile iPhone / Android / Safari / Chrome.</b><br>In alternativa puoi sempre inserire il codice manuale presente sotto la tessera.</div>
+<div id="reader"></div>
+<div class="actions"><button class="btn primary" onclick="startScan()">Avvia scanner QR</button><button class="btn secondary" onclick="stopScan()">Ferma scanner</button></div>
+<div class="field"><label>Codice manuale / URL QR</label><input id="qr" placeholder="Incolla qui il codice della tessera"></div>
+<button class="btn success" onclick="verifyQr()">Verifica tessera</button><div id="qrMsg"></div>`;appeal.classList.remove('hidden')}
+
+async function ensureQrScanner(){
+ if(window.Html5Qrcode)return;
+ await new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+   script.onload=resolve;
+   script.onerror=()=>reject(new Error('Impossibile caricare lo scanner QR.'));
+   document.head.appendChild(script);
+ });
+}
+
+async function startScan(){
+ try{
+   await stopScan();
+   await ensureQrScanner();
+   scanner=new Html5Qrcode('reader');
+   const cameras=await Html5Qrcode.getCameras();
+   if(!cameras?.length)throw new Error('Nessuna fotocamera disponibile.');
+   const preferred=cameras.find(c=>/back|rear|environment|posteriore/i.test(c.label))||cameras[cameras.length-1];
+   await scanner.start(
+     preferred.id,
+     {fps:10,qrbox:{width:250,height:250},aspectRatio:1},
+     async decodedText=>{
+       const input=document.getElementById('qr');
+       if(input)input.value=decodedText;
+       await verifyQr();
+       await stopScan();
+     },
+     ()=>{}
+   );
+ }catch(e){
+   alert('Scanner QR non disponibile: '+(e?.message||String(e))+' Puoi usare il codice manuale.');
+ }
+}
+
+async function stopScan(){
+ if(scanner){
+   try{if(scanner.isScanning)await scanner.stop()}catch(e){}
+   try{await scanner.clear()}catch(e){}
+   scanner=null;
+ }
+ const reader=document.getElementById('reader');
+ if(reader)reader.innerHTML='';
+}
+
+function normalizeQr(raw){
+ const v=String(raw||'').trim();
+ if(!v)return '';
+ try{
+   const u=new URL(v,location.href);
+   return u.searchParams.get('token')||u.searchParams.get('code')||v;
+ }catch(e){}
+ return v;
+}
+
+async function verifyQr(){
+ const raw=document.getElementById('qr')?.value||'';
+ if(!raw.trim())return alert('Inserisci o scansiona un QR.');
+ const value=normalizeQr(raw);
+ const r=await sb.rpc('friendly_verify_qr',{p_friendly_match_id:id,p_team_id:myTeamId,p_qr:value});
+ if(r.error)return qrMsg.innerHTML=`<div class="notice">${esc(r.error.message)}</div>`;
+ const x=Array.isArray(r.data)?r.data[0]:r.data;
+ qrMsg.innerHTML=x.valid?`<div class="notice" style="border-color:#009246"><b>VALIDO</b> · ${esc(x.first_name)} ${esc(x.last_name)} · ${esc(x.card_number||'')}</div>`:`<div class="notice" style="border-color:#ce2b37"><b>NON VALIDO</b> · ${esc(x.reason||'')}</div>`;
+}
+
+function renderResult(){const labs=['Maschile 1','Maschile 2','Misto','Femminile'];result.innerHTML=`<h2>Risultato e referto</h2><div class="muted">Inserimento separato dal campionato.</div>`+labs.map((l,i)=>`<div class="score"><b>${l}</b><input type="number" min="0" data-r="${i}" data-k="h1" placeholder="Casa S1"><input type="number" min="0" data-r="${i}" data-k="a1" placeholder="Osp. S1"><input type="number" min="0" data-r="${i}" data-k="h2" placeholder="Casa S2"><input type="number" min="0" data-r="${i}" data-k="a2" placeholder="Osp. S2"></div>`).join('')+`<div class="actions"><button class="btn primary" onclick="saveResult()">Salva risultato</button></div><div id="resMsg"></div>`;result.classList.remove('hidden')}
+
+async function saveResult(){const matches=[0,1,2,3].map(i=>{let o={};result.querySelectorAll(`[data-r="${i}"]`).forEach(x=>o[x.dataset.k]=x.value===''?null:Number(x.value));return o});const r=await sb.rpc('friendly_save_result',{p_friendly_match_id:id,p_result:{matches}});if(r.error)return resMsg.innerHTML=`<div class="notice">${esc(r.error.message)}</div>`;resMsg.innerHTML='<div class="notice" style="border-color:#009246"><b>Risultato amichevole salvato.</b> Nessun effetto sulla classifica.</div>'}
+
+window.choose=choose;window.saveLineup=saveLineup;window.startScan=startScan;window.stopScan=stopScan;window.verifyQr=verifyQr;window.saveResult=saveResult;init();
+</script></body></html>
