@@ -1,6 +1,11 @@
-V9.9.65
-Corregge esclusivamente l'errore JavaScript:
-Can't find variable: CAMPIONE
+PACCHETTO COMPLETO V9.9.50
 
-Il calendario campione viene ora incorporato nello stesso scope del motore eseguito.
-Nessuna modifica alle 240 gare o alle regole.
+NESSUN CODICE DA INCOLLARE.
+
+Sostituisci su GitHub:
+- match-center.html con il file match-center.html presente nello ZIP
+- friendly-match-center.html con il file friendly-match-center.html presente nello ZIP
+
+Il file amichevoli mantiene anche lo scanner QR aggiornato e il codice manuale.
+Entrambi hanno il motore risultato completo:
+2 set, tie-break decisivo sull'1-1, spareggio finale Misto 1 set ai 6 sul 2-2.
