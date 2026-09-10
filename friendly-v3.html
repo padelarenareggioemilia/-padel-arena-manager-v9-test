@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Partite amichevoli · AICS Padel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--txt:#0a2e5e;--muted:#627b97}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--txt)}
+body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.3%,#fff 33.3% 66.6%,var(--r) 66.6%);z-index:9}
+.shell{max-width:1150px;margin:auto;padding:22px 14px 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:18px;margin:12px 0}
+.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:0;border-radius:12px;padding:12px 15px;font:inherit;font-weight:900;cursor:pointer}
+.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}.danger{background:var(--r);color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:10px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff;color:var(--txt)}.notice{padding:12px;border-radius:13px;background:#edf4fb;border:1px solid var(--line);margin:10px 0}
+.muted{color:var(--muted)}.hidden{display:none!important}.match{border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0;background:#fff}
+.badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eaf2fb;border:1px solid var(--line);font-size:12px;font-weight:900}.pending{background:#fff7dc}.accepted{background:#eaf8f0}.declined{background:#fdecef}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.actions .btn{flex:1}}
+</style></head>
+<body><main class="shell">
+<div class="actions">
+  <button class="btn secondary" onclick="location.href='account-home.html?v=3'">← Torna alla Home Capitano</button>
+</div>
+
+<header class="hero">
+  <h1 style="margin:0">Partite amichevoli</h1>
+  <div>Stesso flusso operativo del campionato. Nessun effetto su classifiche, playoff, playout o Coppa Italia.</div>
+</header>
+
+<section id="status" class="card">Caricamento…</section>
+
+<section id="app" class="hidden">
+<section class="card">
+  <h2 style="margin-top:0">Organizza un'amichevole</h2>
+  <div class="grid">
+    <div class="field"><label>La tua squadra</label><select id="myTeam"></select></div>
+    <div class="field"><label>Squadra avversaria</label><select id="otherTeam"></select></div>
+    <div class="field"><label>Data e ora</label><input id="when" type="datetime-local"></div>
+    <div class="field"><label>Luogo</label><input id="venue" placeholder="Impianto / indirizzo"></div>
+  </div>
+  <div class="field"><label>Messaggio facoltativo</label><textarea id="msg" placeholder="Es. Ti va di fare un'amichevole pre-campionato?"></textarea></div>
+  <button class="btn primary" onclick="sendInvite()">Invia invito</button>
+</section>
+
+<div class="grid">
+  <section class="card"><h2>Richieste ricevute</h2><div id="received"></div></section>
+  <section class="card"><h2>Richieste inviate</h2><div id="sent"></div></section>
+</div>
+
+<section class="card">
+  <div class="actions" style="justify-content:space-between;align-items:center">
+    <h2 style="margin:0">Calendario amichevoli</h2>
+    <span class="badge accepted">FUORI CLASSIFICA</span>
+  </div>
+  <div id="matches"></div>
+</section>
+</section>
+</main>
+
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const requestedTeam=new URLSearchParams(location.search).get('team');
+let hub={};
+const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
+const tn=id=>(hub.teams||[]).find(t=>String(t.id)===String(id))?.name||'Squadra';
+const statusLabel=s=>({pending:'In attesa',accepted:'Accettata',declined:'Rifiutata'}[String(s||'').toLowerCase()]||s||'—');
+const statusClass=s=>['pending','accepted','declined'].includes(String(s||'').toLowerCase())?String(s).toLowerCase():'';
+
+async function load(){
+ const s=await sb.auth.getSession();
+ if(!s.data.session){location.href='login.html';return}
+ const r=await sb.rpc('friendly_get_hub');
+ if(r.error){status.textContent='Errore: '+r.error.message;return}
+ hub=Array.isArray(r.data)?r.data[0]:(r.data||{});
+ render();
+ status.innerHTML='<b>Sezione amichevoli attiva.</b> Tutto ciò che avviene qui resta separato dal campionato ufficiale.';
+ app.classList.remove('hidden');
+}
+
+function render(){
+ const my=hub.my_teams||[],mine=new Set(my.map(x=>String(x.id)));
+ myTeam.innerHTML=my.map(t=>`<option value="${t.id}">${esc(t.name)} · ${esc(t.series||'')} · ${esc(t.role||'')}</option>`).join('');
+ if(requestedTeam && my.some(t=>String(t.id)===String(requestedTeam))) myTeam.value=requestedTeam;
+
+ otherTeam.innerHTML=(hub.teams||[])
+   .filter(t=>String(t.id)!==String(myTeam.value))
+   .map(t=>`<option value="${t.id}">${esc(t.name)} · ${esc(t.series||'')}</option>`).join('');
+
+ myTeam.onchange=()=>render();
+
+ received.innerHTML=(hub.invitations||[])
+ .filter(i=>mine.has(String(i.invited_team_id)))
+ .map(i=>`<div class="match">
+   <b>${esc(tn(i.inviter_team_id))}</b>
+   <div>${i.proposed_at?new Date(i.proposed_at).toLocaleString('it-IT'):'Data da definire'}</div>
+   <div class="muted">${esc(i.venue||'')}</div>
+   ${i.message?`<div class="notice">${esc(i.message)}</div>`:''}
+   <span class="badge ${statusClass(i.status)}">${esc(statusLabel(i.status))}</span>
+   ${i.status==='pending'?`<div class="actions" style="margin-top:8px">
+     <button class="btn success" onclick="respond('${i.id}',true)">Accetta</button>
+     <button class="btn danger" onclick="respond('${i.id}',false)">Rifiuta</button>
+   </div>`:''}
+ </div>`).join('')||'<div class="notice">Nessuna richiesta ricevuta.</div>';
+
+ sent.innerHTML=(hub.invitations||[])
+ .filter(i=>mine.has(String(i.inviter_team_id)))
+ .map(i=>`<div class="match">
+   <b>${esc(tn(i.invited_team_id))}</b>
+   <div>${i.proposed_at?new Date(i.proposed_at).toLocaleString('it-IT'):'Data da definire'}</div>
+   <div class="muted">${esc(i.venue||'')}</div>
+   <span class="badge ${statusClass(i.status)}">${esc(statusLabel(i.status))}</span>
+ </div>`).join('')||'<div class="notice">Nessuna richiesta inviata.</div>';
+
+ matches.innerHTML=(hub.matches||[])
+ .filter(m=>mine.has(String(m.source_home_team_id))||mine.has(String(m.source_away_team_id)))
+ .sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at))
+ .map(m=>`<div class="match">
+   <span class="badge accepted">AMICHEVOLE · FUORI CLASSIFICA</span>
+   <h3 style="margin:8px 0 4px">${esc(m.home_team_name)} – ${esc(m.away_team_name)}</h3>
+   <div><b>${m.scheduled_at?new Date(m.scheduled_at).toLocaleString('it-IT'):'Data da definire'}</b></div>
+   <div class="muted">${esc(m.venue||'')}</div>
+   <div class="actions" style="margin-top:10px">
+     <button class="btn primary" onclick="location.href='friendly-match-center.html?id=${m.id}&team=${encodeURIComponent(myTeam.value)}&v=3'">Apri centro gara</button>
+   </div>
+ </div>`).join('')||'<div class="notice">Nessuna amichevole calendarizzata.</div>';
+}
+
+async function sendInvite(){
+ if(!myTeam.value||!otherTeam.value)return alert('Seleziona entrambe le squadre.');
+ if(myTeam.value===otherTeam.value)return alert('Scegli una squadra diversa.');
+ if(!when.value)return alert('Inserisci data e ora.');
+ const r=await sb.rpc('friendly_create_invitation',{
+   p_inviter_team_id:myTeam.value,p_invited_team_id:otherTeam.value,
+   p_proposed_at:new Date(when.value).toISOString(),p_venue:venue.value.trim(),p_message:msg.value.trim()
+ });
+ if(r.error)return alert(r.error.message);
+ alert('Invito inviato.');
+ await load();
+}
+async function respond(id,ok){
+ const r=await sb.rpc('friendly_respond_invitation',{p_invitation_id:id,p_accept:ok});
+ if(r.error)return alert(r.error.message);
+ alert(ok?'Invito accettato: amichevole calendarizzata.':'Invito rifiutato.');
+ await load();
+}
+window.sendInvite=sendInvite;window.respond=respond;load();
+</script></body></html>

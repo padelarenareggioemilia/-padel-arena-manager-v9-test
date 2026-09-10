@@ -1,0 +1,24 @@
+PACCHETTO AMICHEVOLI - V9
+
+Contenuto:
+1) friendly-v3.html
+   -> Su GitHub deve sostituire il file esistente "friendly.html"
+
+2) friendly-match-center-v3.html
+   -> Su GitHub deve sostituire il file esistente "friendly-match-center.html"
+
+3) captain-friendly-integration.js
+   -> NON va caricato come file separato.
+   -> Apri "captain-multiteam.js" su GitHub
+   -> vai in fondo al file
+   -> incolla tutto il contenuto di "captain-friendly-integration.js"
+   -> Commit changes
+
+Funzioni aggiunte:
+- Pulsante "Amichevoli" nella Home Capitano/Segretario
+- Prossima partita: confronto tra gara ufficiale e amichevole
+- Etichetta "AMICHEVOLE · FUORI CLASSIFICA"
+- Storico richieste inviate/ricevute: in attesa, accettate, rifiutate
+- Calendario amichevoli separato
+- Centro gara amichevole con distinta, QR e risultato
+- Nessun effetto su classifica, playoff, playout, Coppa Italia o statistiche ufficiali
