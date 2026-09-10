@@ -1,5 +1,4 @@
-// ======================================================
-// V9.9.45 - PACCHETTO UNICO HOME CAPITANO + AMICHEVOLI
+V9.9.45 - PACCHETTO UNICO HOME CAPITANO + AMICHEVOLI
 // ======================================================
 
 (function () {
@@ -169,4 +168,23 @@
   };
 
   document.head.appendChild(legacy);
+})();
+
+// V9.9.51 - Solo pulizia visiva del falso errore multi-squadra.
+// Non modifica selezione squadra, permessi, amichevoli o altre funzioni.
+(function(){
+  const target='Account collegato a piÃ¹ squadre: seleziona la squadra dalla schermata Il mio account.';
+  function clean(){
+    const s=document.getElementById('status');
+    const app=document.getElementById('app');
+    const selected=new URLSearchParams(location.search).get('team');
+    if(s && selected && app && !app.classList.contains('hidden') &&
+       String(s.textContent||'').includes(target)){
+      s.textContent='Accesso attivo Â· '+(document.getElementById('teamName')?.textContent?.trim()||'Squadra');
+      s.className='notice ok';
+    }
+  }
+  const o=new MutationObserver(clean);
+  o.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true});
+  [300,700,1200,2000].forEach(t=>setTimeout(clean,t));
 })();
