@@ -1,4 +1,4 @@
-// V9.9.42 - FIX definitivo selezione multi-squadra
+// V9.9.43 - FIX multi-squadra + distinta
 
 (async function () {
   const selectedTeam = new URLSearchParams(location.search).get('team');
@@ -7,7 +7,7 @@
     const session = await sb.auth.getSession();
 
     if (!session.data.session) {
-      location.replace('login.html?v=9942');
+      location.replace('login.html?v=9943');
       return;
     }
 
@@ -27,7 +27,7 @@
     // torna automaticamente alla schermata "Il mio account".
     if (!selectedTeam) {
       if (teams.length > 1) {
-        location.replace('account-home.html?v=9942');
+        location.replace('account-home.html?v=9943');
         return;
       }
 
@@ -36,7 +36,7 @@
         location.replace(
           'captain-home.html?team=' +
           encodeURIComponent(teams[0].team_id) +
-          '&v=9942'
+          '&v=9943'
         );
         return;
       }
@@ -47,7 +47,7 @@
     // Attende il caricamento della pagina principale.
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Verifica che l'account abbia davvero accesso
+    // Verifica che l'account abbia accesso
     // alla squadra selezionata.
     const access = teams.find(
       x => String(x.team_id) === String(selectedTeam)
@@ -81,7 +81,7 @@
       );
     }
 
-    // Sicurezza: il server non deve poter restituire
+    // Protezione: il server non deve restituire
     // una squadra diversa da quella selezionata.
     if (
       data.team_id &&
@@ -249,12 +249,12 @@
 
       button.onclick = () =>
         location.href =
-          'account-home.html?v=9942';
+          'account-home.html?v=9943';
 
       hero.appendChild(button);
     }
 
-    // "Aggiorna" deve mantenere la squadra selezionata.
+    // "Aggiorna" mantiene la squadra selezionata.
     const refresh =
       document.querySelector(
         '.identity button[onclick="loadAll()"]'
@@ -276,76 +276,73 @@
     app.classList.add('hidden');
   }
 })();
-// V9.9.43 - FIX DISTINTA: selezione automatica giocatore
+
+
+// ======================================================
+// V9.9.43 - FIX DISTINTA
+// Se viene assegnato un ruolo,
+// il giocatore viene selezionato automaticamente.
+// ======================================================
 
 document.addEventListener('change', function (event) {
 
-  // Se assegno un ruolo, il giocatore viene selezionato automaticamente
-  const position = event.target.closest?.('.lp-position');
+  const position =
+    event.target.closest?.('.lp-position');
 
   if (position) {
-    const playerId = position.dataset.player;
+    const playerId =
+      position.dataset.player;
 
-    if (playerId && position.value) {
-      const checkbox = document.querySelector(
+    const checkbox =
+      document.querySelector(
         `.lp-check[data-player="${playerId}"]`
       );
 
-      if (checkbox) {
+    if (checkbox) {
+
+      // Se assegno un ruolo,
+      // seleziono automaticamente il giocatore.
+      if (position.value) {
         checkbox.checked = true;
+      }
+
+      // Se tolgo completamente il ruolo,
+      // tolgo anche la selezione.
+      if (!position.value) {
+        checkbox.checked = false;
       }
     }
   }
 
-  // Se seleziono manualmente il giocatore ma non ha ancora un ruolo,
-  // porto subito il cursore sul menu ruolo
-  const checkbox = event.target.closest?.('.lp-check');
+  const checkbox =
+    event.target.closest?.('.lp-check');
 
-  if (checkbox && checkbox.checked) {
-    const playerId = checkbox.dataset.player;
+  if (checkbox) {
+    const playerId =
+      checkbox.dataset.player;
 
-    const position = document.querySelector(
-      `.lp-position[data-player="${playerId}"]`
-    );
-
-    if (position && !position.value) {
-      position.focus();
-    }
-  }
-});// V9.9.43 - FIX DISTINTA: selezione automatica giocatore
-
-document.addEventListener('change', function (event) {
-
-  // Se assegno un ruolo, il giocatore viene selezionato automaticamente
-  const position = event.target.closest?.('.lp-position');
-
-  if (position) {
-    const playerId = position.dataset.player;
-
-    if (playerId && position.value) {
-      const checkbox = document.querySelector(
-        `.lp-check[data-player="${playerId}"]`
+    const positionSelect =
+      document.querySelector(
+        `.lp-position[data-player="${playerId}"]`
       );
 
-      if (checkbox) {
-        checkbox.checked = true;
-      }
+    // Se spunto manualmente un giocatore,
+    // porto subito il cursore sul ruolo.
+    if (
+      checkbox.checked &&
+      positionSelect &&
+      !positionSelect.value
+    ) {
+      positionSelect.focus();
     }
-  }
 
-  // Se seleziono manualmente il giocatore ma non ha ancora un ruolo,
-  // porto subito il cursore sul menu ruolo
-  const checkbox = event.target.closest?.('.lp-check');
-
-  if (checkbox && checkbox.checked) {
-    const playerId = checkbox.dataset.player;
-
-    const position = document.querySelector(
-      `.lp-position[data-player="${playerId}"]`
-    );
-
-    if (position && !position.value) {
-      position.focus();
+    // Se deseleziono il giocatore,
+    // elimino anche il ruolo assegnato.
+    if (
+      !checkbox.checked &&
+      positionSelect
+    ) {
+      positionSelect.value = '';
     }
   }
 });
