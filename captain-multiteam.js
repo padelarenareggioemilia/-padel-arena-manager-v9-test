@@ -1,637 +1,172 @@
-// V9.9.43 - FIX multi-squadra + distinta
-
-(async function () {
-  const selectedTeam = new URLSearchParams(location.search).get('team');
-
-  try {
-    const session = await sb.auth.getSession();
-
-    if (!session.data.session) {
-      location.replace('login.html?v=9943');
-      return;
-    }
-
-    const ar = await sb.rpc('get_my_account_accesses');
-
-    if (ar.error) throw ar.error;
-
-    const ctx = Array.isArray(ar.data)
-      ? (ar.data[0] || {})
-      : (ar.data || {});
-
-    const teams = Array.isArray(ctx.staff_teams)
-      ? ctx.staff_teams
-      : [];
-
-    // Se gestisce più squadre e non ne è stata scelta una,
-    // torna automaticamente alla schermata "Il mio account".
-    if (!selectedTeam) {
-      if (teams.length > 1) {
-        location.replace('account-home.html?v=9943');
-        return;
-      }
-
-      // Se gestisce una sola squadra, entra direttamente.
-      if (teams.length === 1) {
-        location.replace(
-          'captain-home.html?team=' +
-          encodeURIComponent(teams[0].team_id) +
-          '&v=9943'
-        );
-        return;
-      }
-
-      return;
-    }
-
-    // Attende il caricamento della pagina principale.
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Verifica che l'account abbia accesso
-    // alla squadra selezionata.
-    const access = teams.find(
-      x => String(x.team_id) === String(selectedTeam)
-    );
-
-    if (!access) {
-      throw new Error(
-        'Questa squadra non risulta associata al tuo account.'
-      );
-    }
-
-    staffRole = access.role || 'captain';
-
-    // Carica ESATTAMENTE la squadra scelta.
-    const rr = await sb.rpc(
-      'get_my_captain_portal_for_team',
-      {
-        p_team_id: selectedTeam
-      }
-    );
-
-    if (rr.error) throw rr.error;
-
-    data = Array.isArray(rr.data)
-      ? rr.data[0]
-      : rr.data;
-
-    if (!data?.ok) {
-      throw new Error(
-        data?.message || 'Squadra non collegata.'
-      );
-    }
-
-    // Protezione: il server non deve restituire
-    // una squadra diversa da quella selezionata.
-    if (
-      data.team_id &&
-      String(data.team_id) !== String(selectedTeam)
-    ) {
-      throw new Error(
-        'Il server ha restituito una squadra diversa da quella selezionata.'
-      );
-    }
-
-    let ed = {};
-    teamEditEnabled = false;
-
-    if (staffRole === 'captain') {
-      const es = await sb.rpc(
-        'captain_get_own_team_edit_state',
-        {
-          p_team_id: selectedTeam
-        }
-      );
-
-      if (!es.error) {
-        ed = Array.isArray(es.data)
-          ? (es.data[0] || {})
-          : (es.data || {});
-
-        teamEditEnabled =
-          ed?.captain_team_edit_enabled === true;
-      }
-    }
-
-    data.team = {
-      ...(data.team || {}),
-      ...(ed || {})
-    };
-
-    await loadTeamHub();
-    await loadTeamDocuments();
-
-    const t = data.team || {};
-
-    teamName.textContent =
-      t.name || 'Squadra';
-
-    teamMeta.textContent = [
-      t.series,
-      t.club_name,
-      t.club_city
-    ]
-      .filter(Boolean)
-      .join(' · ');
-
-    captainMeta.textContent =
-      `Capitano: ${t.captain_name || ''}`;
-
-    heroTitle.textContent =
-      staffRole === 'secretary'
-        ? 'Area Segretario'
-        : 'Area Capitano';
-
-    heroSub.textContent =
-      t.name || 'AICS Padel Championship';
-
-    teamLogo.src =
-      t.logo_url || '';
-
-    teamLogo.style.visibility =
-      t.logo_url ? 'visible' : 'hidden';
-
-    playersKpi.textContent =
-      arr(data.players)
-        .filter(x => x.status === 'approved')
-        .length;
-
-    pendingKpi.textContent =
-      arr(data.players)
-        .filter(x => x.status === 'pending')
-        .length;
-
-    lineupsKpi.textContent =
-      arr(data.lineups).length;
-
-    futureKpi.textContent =
-      arr(data.fixtures)
-        .filter(x => !done(x))
-        .length;
-
-    const firstGroup =
-      arr(data.groups)[0];
-
-    const rows =
-      firstGroup
-        ? standings(firstGroup)
-        : [];
-
-    const pos =
-      rows.findIndex(
-        x => String(x.id) === String(selectedTeam)
-      );
-
-    positionKpi.textContent =
-      pos >= 0
-        ? `${pos + 1}°`
-        : '–';
-
-    pointsKpi.textContent =
-      pos >= 0
-        ? rows[pos].pt
-        : 0;
-
-    status.textContent =
-      (
-        staffRole === 'secretary'
-          ? 'Accesso segretario'
-          : 'Accesso capitano'
-      ) +
-      ' · ' +
-      (t.name || 'Squadra');
-
-    status.className =
-      'notice ok';
-
-    app.classList.remove('hidden');
-
-    // Permessi segretario.
-    if (staffRole === 'secretary') {
-      document
-        .querySelector('[data-view="secretaries"]')
-        ?.remove();
-
-      document
-        .querySelector('[data-view="management"]')
-        ?.remove();
-
-      if (
-        typeof staffModeBtn !== 'undefined' &&
-        staffModeBtn
-      ) {
-        staffModeBtn.textContent =
-          'Modalità Segretario';
-      }
-    }
-
-    render();
-
-    // Pulsante per tornare alla scelta squadra.
-    const hero =
-      document.querySelector('.hero');
-
-    if (
-      hero &&
-      !document.getElementById('accountChooserBtn')
-    ) {
-      const button =
-        document.createElement('button');
-
-      button.id =
-        'accountChooserBtn';
-
-      button.className =
-        'btn secondary';
-
-      button.textContent =
-        'Cambia squadra / modalità';
-
-      button.onclick = () =>
-        location.href =
-          'account-home.html?v=9943';
-
-      hero.appendChild(button);
-    }
-
-    // "Aggiorna" mantiene la squadra selezionata.
-    const refresh =
-      document.querySelector(
-        '.identity button[onclick="loadAll()"]'
-      );
-
-    if (refresh) {
-      refresh.onclick = () =>
-        location.reload();
-    }
-
-  } catch (error) {
-    status.textContent =
-      'Errore selezione squadra: ' +
-      (error?.message || String(error));
-
-    status.className =
-      'notice err';
-
-    app.classList.add('hidden');
-  }
-})();
-
-
 // ======================================================
-// V9.9.43 - FIX DISTINTA
-// Se viene assegnato un ruolo,
-// il giocatore viene selezionato automaticamente.
+// V9.9.45 - PACCHETTO UNICO HOME CAPITANO + AMICHEVOLI
 // ======================================================
 
-document.addEventListener('change', function (event) {
+(function () {
+  const legacy = document.createElement('script');
+  legacy.src = 'https://cdn.jsdelivr.net/gh/padelarenareggioemilia/-padel-arena-manager-v9-test@97e19c37ac4413b9ccc7ca7958a5ed4b01716241/captain-multiteam.js';
+  legacy.async = false;
 
-  const position =
-    event.target.closest?.('.lp-position');
-
-  if (position) {
-    const playerId =
-      position.dataset.player;
-
-    const checkbox =
-      document.querySelector(
-        `.lp-check[data-player="${playerId}"]`
-      );
-
-    if (checkbox) {
-
-      // Se assegno un ruolo,
-      // seleziono automaticamente il giocatore.
-      if (position.value) {
-        checkbox.checked = true;
+  legacy.onload = function () {
+    // ======================================================
+    // V9.9.45 - INTEGRAZIONE AMICHEVOLI NELLA HOME CAPITANO
+    // ======================================================
+    
+    (function () {
+      const currentTeamId = () =>
+        (window.data && data.team_id) ||
+        new URLSearchParams(location.search).get('team');
+    
+      function addFriendlyTab() {
+        const tabs = document.querySelector('.tabs');
+        if (!tabs || document.getElementById('friendlySectionBtn')) return;
+    
+        const btn = document.createElement('button');
+        btn.id = 'friendlySectionBtn';
+        btn.className = 'tab';
+        btn.textContent = 'Amichevoli';
+        btn.onclick = () => {
+          const team = currentTeamId();
+          location.href =
+            'friendly.html' +
+            (team ? '?team=' + encodeURIComponent(team) + '&v=9945' : '?v=9945');
+        };
+    
+        const regulationBtn = [...tabs.querySelectorAll('.tab')]
+          .find(x => (x.textContent || '').trim() === 'Assistente Regolamento');
+    
+        if (regulationBtn) tabs.insertBefore(btn, regulationBtn);
+        else tabs.appendChild(btn);
       }
-
-      // Se tolgo completamente il ruolo,
-      // tolgo anche la selezione.
-      if (!position.value) {
-        checkbox.checked = false;
-      }
-    }
-  }
-
-  const checkbox =
-    event.target.closest?.('.lp-check');
-
-  if (checkbox) {
-    const playerId =
-      checkbox.dataset.player;
-
-    const positionSelect =
-      document.querySelector(
-        `.lp-position[data-player="${playerId}"]`
-      );
-
-    // Se spunto manualmente un giocatore,
-    // porto subito il cursore sul ruolo.
-    if (
-      checkbox.checked &&
-      positionSelect &&
-      !positionSelect.value
-    ) {
-      positionSelect.focus();
-    }
-
-    // Se deseleziono il giocatore,
-    // elimino anche il ruolo assegnato.
-    if (
-      !checkbox.checked &&
-      positionSelect
-    ) {
-      positionSelect.value = '';
-    }
-  }
-});
-// ======================================================
-// V9.9.44 - DISTINTA CON MASSIMO 2 INCONTRI PER GIOCATORE
-// ======================================================
-
-window.openLineup = function (fixtureId) {
-
-  const f = arr(data.fixtures)
-    .find(x => x.id === fixtureId);
-
-  const lineup = arr(data.lineups)
-    .find(x =>
-      x.fixture_id === fixtureId &&
-      x.team_id === data.team_id
-    );
-
-  const saved = arr(data.lineup_players)
-    .filter(x => x.lineup_id === lineup?.id);
-
-  const roles = [
-    'M1',
-    'M2',
-    'Misto',
-    'Femminile',
-    'Riserva'
-  ];
-
-  const roleOptions = (selected = '') =>
-    `<option value="">—</option>` +
-    roles.map(role =>
-      `<option value="${role}" ${
-        selected === role ? 'selected' : ''
-      }>${role}</option>`
-    ).join('');
-
-  const rows = arr(data.players)
-    .filter(p => p.status === 'approved')
-    .map(p => {
-
-      const playerRoles = saved
-        .filter(x => x.player_id === p.id)
-        .map(x => x.position)
-        .filter(Boolean);
-
-      const role1 = playerRoles[0] || '';
-      const role2 = playerRoles[1] || '';
-
-      return `
-        <div class="lineup-player lineup-player-v9944"
-             data-player="${p.id}">
-
-          <div>
-            <b>${esc(p.first_name)} ${esc(p.last_name)}</b>
-
-            <div class="muted">
-              ${esc(p.fitp_ranking || '')}
+    
+      function friendlyCard(match) {
+        const when = match.scheduled_at
+          ? new Date(match.scheduled_at).toLocaleString('it-IT', {
+              weekday: 'short',
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })
+          : 'Data da definire';
+    
+        return `
+          <article class="fixture future" style="border-left-color:#009246">
+            <div>
+              <b>${esc(when)}</b>
+              <div class="muted">
+                <span class="badge good">AMICHEVOLE Â· FUORI CLASSIFICA</span>
+              </div>
             </div>
+            <div>
+              <b>${esc(match.home_team_name || 'Squadra')}</b><br>
+              <b>${esc(match.away_team_name || 'Squadra')}</b>
+              <div class="muted">${esc(match.venue || 'Impianto da definire')}</div>
+            </div>
+            <div class="score">Da giocare</div>
+          </article>
+          <div class="actions" style="margin-top:8px">
+            <button class="btn primary"
+              onclick="location.href='friendly-match-center.html?id=${encodeURIComponent(match.id)}&team=${encodeURIComponent(currentTeamId() || '')}&v=9945'">
+              Prepara distinta
+            </button>
           </div>
-
-          <div class="lineup-role-box">
-
-            <label style="font-size:11px;font-weight:900">
-              1° incontro
-            </label>
-
-            <select
-              class="lp-role-v9944"
-              data-player="${p.id}"
-              data-slot="1">
-              ${roleOptions(role1)}
-            </select>
-
-            <label style="font-size:11px;font-weight:900;margin-top:6px">
-              2° incontro
-            </label>
-
-            <select
-              class="lp-role-v9944"
-              data-player="${p.id}"
-              data-slot="2">
-              ${roleOptions(role2)}
-            </select>
-
-          </div>
-        </div>
-      `;
-    })
-    .join('');
-
-  openModal(
-    'Distinta squadra',
-    `
-      <div class="notice">
-        <b>
-          ${esc(tn(f.home_team_id))}
-          -
-          ${esc(tn(f.away_team_id))}
-        </b>
-        <br>
-        ${esc(fmtDate(f.scheduled_at))}
-        ·
-        ${esc(stage(f))}
-      </div>
-
-      <div class="notice ok">
-        <b>Come compilare la distinta</b><br>
-        Ogni giocatore può disputare
-        <b>massimo 2 incontri</b>.<br>
-        Lascia vuoto il secondo incontro se il giocatore
-        deve disputare una sola partita.
-      </div>
-
-      <div id="lineupRows">
-        ${rows}
-      </div>
-
-      <div class="field">
-        <label>Note distinta</label>
-
-        <textarea id="lineupNotes">${
-          esc(lineup?.notes || '')
-        }</textarea>
-      </div>
-
-      <div class="actions">
-
-        <button
-          class="btn primary"
-          onclick="saveLineupV9944('${fixtureId}', false)">
-          Salva bozza
-        </button>
-
-        <button
-          class="btn success"
-          onclick="saveLineupV9944('${fixtureId}', true)">
-          Conferma distinta
-        </button>
-
-      </div>
-    `
-  );
-};
-
-
-// ------------------------------------------------------
-// SALVATAGGIO NUOVA DISTINTA
-// ------------------------------------------------------
-
-window.saveLineupV9944 = async function (
-  fixtureId,
-  confirmLineup
-) {
-
-  try {
-
-    const players = [];
-
-    const rows =
-      document.querySelectorAll(
-        '.lineup-player-v9944'
-      );
-
-    rows.forEach(row => {
-
-      const playerId =
-        row.dataset.player;
-
-      const selects =
-        row.querySelectorAll(
-          '.lp-role-v9944'
-        );
-
-      const chosen = [];
-
-      selects.forEach(select => {
-
-        const role =
-          select.value.trim();
-
-        if (role) {
-
-          if (chosen.includes(role)) {
-            throw new Error(
-              'Lo stesso giocatore non può avere due volte lo stesso incontro.'
-            );
+        `;
+      }
+    
+      async function refreshFriendlyDashboard() {
+        try {
+          addFriendlyTab();
+    
+          if (!window.data || !data?.team_id) return;
+          if (typeof view !== 'undefined' && view !== 'dashboard') return;
+    
+          const dashboard = document.querySelector('#content .dashboard');
+          if (!dashboard) return;
+    
+          const firstTile = dashboard.querySelector('.tile');
+          if (!firstTile) return;
+    
+          const r = await sb.rpc('friendly_get_hub');
+          if (r.error) return;
+    
+          const fh = Array.isArray(r.data)
+            ? (r.data[0] || {})
+            : (r.data || {});
+    
+          const now = Date.now();
+          const teamId = String(data.team_id);
+    
+          const friendly = (fh.matches || [])
+            .filter(m =>
+              (String(m.source_home_team_id) === teamId ||
+               String(m.source_away_team_id) === teamId) &&
+              m.scheduled_at &&
+              new Date(m.scheduled_at).getTime() >= now &&
+              String(m.status || 'programmata').toLowerCase() !== 'annullata'
+            )
+            .sort((a, b) =>
+              new Date(a.scheduled_at) - new Date(b.scheduled_at)
+            )[0];
+    
+          if (!friendly) return;
+    
+          const official = typeof nextFixture === 'function'
+            ? nextFixture()
+            : null;
+    
+          const officialTime =
+            official?.scheduled_at
+              ? new Date(official.scheduled_at).getTime()
+              : Number.POSITIVE_INFINITY;
+    
+          const friendlyTime =
+            new Date(friendly.scheduled_at).getTime();
+    
+          if (friendlyTime < officialTime) {
+            firstTile.innerHTML =
+              '<h3>Prossima partita</h3>' +
+              friendlyCard(friendly);
           }
-
-          chosen.push(role);
-
-          players.push({
-            player_id: playerId,
-            position: role
-          });
+        } catch (e) {
+          console.warn('Amichevoli dashboard:', e);
         }
+      }
+    
+      const originalSetView = window.setView;
+      if (typeof originalSetView === 'function') {
+        window.setView = function (v) {
+          originalSetView(v);
+          if (v === 'dashboard') {
+            setTimeout(refreshFriendlyDashboard, 80);
+          }
+        };
+      }
+    
+      const observer = new MutationObserver(() => addFriendlyTab());
+    
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
       });
-    });
+    
+      setTimeout(() => {
+        addFriendlyTab();
+        refreshFriendlyDashboard();
+      }, 900);
+    
+      setTimeout(refreshFriendlyDashboard, 1800);
+    })();
+  };
 
-    if (!players.length) {
-      alert(
-        'Seleziona almeno un giocatore e assegna almeno un incontro.'
-      );
-      return;
+  legacy.onerror = function () {
+    const box = document.getElementById('status');
+    if (box) {
+      box.textContent = 'Errore caricamento modulo Capitano stabile.';
+      box.className = 'notice err';
     }
+  };
 
-    const response =
-      await sb.rpc(
-        'captain_save_lineup',
-        {
-          p_fixture_id: fixtureId,
-          p_team_id: data.team_id,
-          p_players: players,
-          p_notes:
-            document
-              .getElementById('lineupNotes')
-              .value
-              .trim(),
-          p_confirm: confirmLineup
-        }
-      );
-
-    if (response.error) {
-      alert(response.error.message);
-      return;
-    }
-
-    closeModal();
-
-    await loadAll();
-
-    setView('lineups');
-
-    alert(
-      confirmLineup
-        ? 'Distinta confermata correttamente.'
-        : 'Bozza salvata correttamente.'
-    );
-
-  } catch (error) {
-
-    alert(
-      error?.message ||
-      String(error)
-    );
-  }
-};
-
-
-// ------------------------------------------------------
-// CONTROLLO IMMEDIATO DELLE DUE SCELTE
-// ------------------------------------------------------
-
-document.addEventListener(
-  'change',
-  function (event) {
-
-    const select =
-      event.target.closest?.(
-        '.lp-role-v9944'
-      );
-
-    if (!select) return;
-
-    const playerId =
-      select.dataset.player;
-
-    const row =
-      document.querySelector(
-        `.lineup-player-v9944[data-player="${playerId}"]`
-      );
-
-    if (!row) return;
-
-    const values =
-      [...row.querySelectorAll('.lp-role-v9944')]
-        .map(x => x.value)
-        .filter(Boolean);
-
-    if (
-      values.length === 2 &&
-      values[0] === values[1]
-    ) {
-
-      alert(
-        'Non puoi assegnare due volte lo stesso incontro allo stesso giocatore.'
-      );
-
-      select.value = '';
-    }
-  }
-);
+  document.head.appendChild(legacy);
+})();
