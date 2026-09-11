@@ -26,4 +26,4 @@ function render(){const my=hub.my_teams||[],mine=new Set(my.map(x=>x.id));myTeam
 async function sendInvite(){if(!myTeam.value||!otherTeam.value)return alert('Seleziona entrambe le squadre.');if(myTeam.value===otherTeam.value)return alert('Scegli una squadra avversaria diversa.');if(!when.value)return alert('Inserisci data e ora.');const r=await sb.rpc('friendly_create_invitation',{p_inviter_team_id:myTeam.value,p_invited_team_id:otherTeam.value,p_proposed_at:new Date(when.value).toISOString(),p_venue:venue.value.trim(),p_message:msg.value.trim()});if(r.error)return alert(r.error.message);alert('Invito inviato.');await load()}
 async function respond(id,ok){const r=await sb.rpc('friendly_respond_invitation',{p_invitation_id:id,p_accept:ok});if(r.error)return alert(r.error.message);alert(ok?'Invito accettato: amichevole calendarizzata.':'Invito rifiutato.');await load()}
 window.sendInvite=sendInvite;window.respond=respond;load();
-</script></body></html>
+</script><script src="captain-print-share.js?v=9954"></script></body></html>

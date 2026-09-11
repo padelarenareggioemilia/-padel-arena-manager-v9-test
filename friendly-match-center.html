@@ -147,4 +147,4 @@ async function saveResult(){
  const r=await sb.rpc('friendly_save_result',{p_friendly_match_id:id,p_result:payload});if(r.error)return resMsg.innerHTML=`<div class="notice" style="border-color:#ce2b37"><b>Partita non chiusa.</b><br>${esc(r.error.message)}</div>`;resMsg.innerHTML='<div class="notice" style="border-color:#009246"><b>Partita completata e chiusa correttamente.</b><br>Amichevole fuori classifica.</div>';
 }
 window.choose=choose;window.saveLineup=saveLineup;window.startScan=startScan;window.stopScan=stopScan;window.verifyQr=verifyQr;window.saveResult=saveResult;init();
-</script></body></html>
+</script><script src="captain-print-share.js?v=9954"></script></body></html>
