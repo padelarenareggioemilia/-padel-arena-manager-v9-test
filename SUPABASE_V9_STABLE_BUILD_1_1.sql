@@ -66,6 +66,8 @@ begin
   return jsonb_build_object('success',true,'message','Squadra eliminata correttamente: '||n);
 end $$;
 
+revoke execute on function public.delete_player_safely(uuid) from public;
+revoke execute on function public.delete_player_safely(uuid) from anon;
 grant execute on function public.delete_player_safely(uuid) to authenticated;
 grant execute on function public.delete_empty_team_safely_v11(uuid) to authenticated;
 

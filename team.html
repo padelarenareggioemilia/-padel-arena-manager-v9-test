@@ -587,7 +587,7 @@ function renderAdminRoster(items){
       <div class="admin-player-actions">
         <button class="btn secondary btn-mini" onclick="openAdminPlayerEditor('${p.id}')">Modifica</button>
         <button class="btn primary btn-mini" onclick="location.href='digital-card.html?player=${p.id}'">Tessera QR</button>
-        <button class="btn danger btn-mini" onclick="deleteAdminPlayer('${p.id}',${JSON.stringify(((p.first_name||'')+' '+(p.last_name||'')).trim())})">Elimina</button>
+        <button class="btn danger btn-mini" onclick="deleteAdminPlayer('${p.id}')">Elimina</button>
       </div>
     </div>`).join('')||'<div class="notice">Nessun giocatore presente.</div>';
 }
@@ -682,7 +682,9 @@ async function saveAdminPlayer(){
   }catch(e){editPlayerMessage(e.message||String(e),true)}
   finally{saveAdminPlayerBtn.disabled=false;saveAdminPlayerBtn.textContent='Salva modifiche'}
 }
-async function deleteAdminPlayer(playerId,playerName){
+async function deleteAdminPlayer(playerId){
+  const player=adminRosterCache.find(x=>x.id===playerId);
+  const playerName=((player?.first_name||'')+' '+(player?.last_name||'')).trim()||'questo giocatore';
   if(!confirm(`Eliminare definitivamente ${playerName} dalla squadra?\n\nL’operazione non può essere annullata.`))return;
   try{
     const r=await sb.rpc('delete_player_safely',{p_player_id:playerId});
@@ -739,6 +741,17 @@ async function init() {
   if (!sessionResult.data.session) {
     const returnUrl = encodeURIComponent(window.location.href);
     window.location.href = 'login.html?return=' + returnUrl;
+    return;
+  }
+
+  const adminResult=await sb.rpc('is_admin');
+  if(adminResult.error||adminResult.data!==true){
+    box.innerHTML=`
+      <div class="notice err">
+        <b>Accesso riservato all’amministratore.</b><br>
+        La gestione e la cancellazione dei giocatori non sono disponibili per capitani, segretari o giocatori.
+      </div>
+      <button class="btn primary" onclick="location.href='login.html'">Torna all’accesso</button>`;
     return;
   }
 
