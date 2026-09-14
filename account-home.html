@@ -32,11 +32,11 @@ async function start(){
  if(!h)h='<section class="card"><h2>Nessuna area collegata</h2><p>Questo account non risulta ancora associato a un giocatore, capitano o segretario.</p></section>';
  $('content').innerHTML=h;$('status').textContent='Account riconosciuto: '+(d.email||sess.user.email);
 }
-function openTeam(id){location.href='captain-home.html?team='+encodeURIComponent(id)+'&v=9941'}
+function openTeam(id){location.href='captain-home.html?team='+encodeURIComponent(id)+'&v=9970'}
 function openRegistrations(id){location.href='captain-tesseramenti.html?team='+encodeURIComponent(id)+'&v=9968'}
-function openClubs(){location.href='captain-club-rosters.html?v=9969'}
+function openClubs(){location.href='captain-club-rosters.html?v=9970'}
 async function logout(){await sb.auth.signOut({scope:'local'});location.replace('login.html?change=1')}
 start().catch(e=>$('status').textContent='Errore: '+(e.message||e));
 </script>
-<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.69 CONTATTI E ROSE CLUB</div>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.70 CONTATTI NEL CAMPIONATO</div>
 </body></html>
