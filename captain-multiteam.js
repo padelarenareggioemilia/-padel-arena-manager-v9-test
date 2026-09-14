@@ -1,5 +1,5 @@
 // ======================================================
-// V9.9.45 - PACCHETTO UNICO HOME CAPITANO + AMICHEVOLI
+// V9.9.69 - HOME CAPITANO + AMICHEVOLI CON CONTATTI
 // ======================================================
 
 (function () {
@@ -29,7 +29,7 @@
           const team = currentTeamId();
           location.href =
             'friendly.html' +
-            (team ? '?team=' + encodeURIComponent(team) + '&v=9945' : '?v=9945');
+            (team ? '?team=' + encodeURIComponent(team) + '&v=9969' : '?v=9969');
         };
     
         const regulationBtn = [...tabs.querySelectorAll('.tab')]
@@ -68,7 +68,7 @@
           </article>
           <div class="actions" style="margin-top:8px">
             <button class="btn primary"
-              onclick="location.href='friendly-match-center.html?id=${encodeURIComponent(match.id)}&team=${encodeURIComponent(currentTeamId() || '')}&v=9945'">
+              onclick="location.href='friendly-match-center.html?id=${encodeURIComponent(match.id)}&team=${encodeURIComponent(currentTeamId() || '')}&v=9969'">
               Prepara distinta
             </button>
           </div>

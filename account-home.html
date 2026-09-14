@@ -26,7 +26,7 @@ async function start(){
  }
  if((d.staff_teams||[]).length){
    h+=`<section class="card"><h2>🧭 Squadre che puoi gestire</h2><p class="muted">Scegli la squadra. Non serve uscire o cambiare account.</p>`;
-   h+=(d.staff_teams||[]).map(t=>`<div class="choice"><img class="logo" src="${esc(t.logo_url||'assets/aics-logo.png')}"><div><b>${esc(t.team_name)}</b><div class="muted">${esc(t.series||'')} · ${t.role==='captain'?'Capitano':'Segretario'}</div></div><div class="team-actions"><button class="btn secondary" onclick="openTeam('${t.team_id}')">Gestisci</button>${t.role==='captain'?`<button class="btn success" onclick="openRegistrations('${t.team_id}')">Tesseramenti</button>`:''}</div></div>`).join('');
+   h+=(d.staff_teams||[]).map(t=>`<div class="choice"><img class="logo" src="${esc(t.logo_url||'assets/aics-logo.png')}"><div><b>${esc(t.team_name)}</b><div class="muted">${esc(t.series||'')} · ${t.role==='captain'?'Capitano':'Segretario'}</div></div><div class="team-actions"><button class="btn secondary" onclick="openTeam('${t.team_id}')">Gestisci</button><button class="btn secondary" onclick="openClubs()">Club e rose</button>${t.role==='captain'?`<button class="btn success" onclick="openRegistrations('${t.team_id}')">Tesseramenti</button>`:''}</div></div>`).join('');
    h+='</section>';
  }
  if(!h)h='<section class="card"><h2>Nessuna area collegata</h2><p>Questo account non risulta ancora associato a un giocatore, capitano o segretario.</p></section>';
@@ -34,8 +34,9 @@ async function start(){
 }
 function openTeam(id){location.href='captain-home.html?team='+encodeURIComponent(id)+'&v=9941'}
 function openRegistrations(id){location.href='captain-tesseramenti.html?team='+encodeURIComponent(id)+'&v=9968'}
+function openClubs(){location.href='captain-club-rosters.html?v=9969'}
 async function logout(){await sb.auth.signOut({scope:'local'});location.replace('login.html?change=1')}
 start().catch(e=>$('status').textContent='Errore: '+(e.message||e));
 </script>
-<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.68 TESSERAMENTI VISIBILI</div>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.69 CONTATTI E ROSE CLUB</div>
 </body></html>
