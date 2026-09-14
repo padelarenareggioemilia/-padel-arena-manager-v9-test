@@ -17,12 +17,12 @@ window.PAM_V9_CONFIG={
  if(/(^|\/)diagnostics\.html$/i.test(location.pathname)){
    window.addEventListener('load',()=>{
      add('diagnostics-calendar-fix.js?v=921diag1');
-     add('tesseramenti-overview.js?v=9947');
+     add('tesseramenti-overview.js?v=9968');
      add('diagnostics-v9947.js?v=9947');
    });
    return;
  }
  if(/(^|\/)index\.html$/i.test(location.pathname)||/\/$/.test(location.pathname)){
-   window.addEventListener('load',()=>add('tesseramenti-overview.js?v=9947'));
+   window.addEventListener('load',()=>add('tesseramenti-overview.js?v=9968'));
  }
 })();

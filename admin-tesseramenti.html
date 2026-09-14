@@ -21,8 +21,8 @@ select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radi
 @media(max-width:650px){.actions{display:grid}.btn{width:100%}}
 </style></head>
 <body><main>
-<section class="card hero"><h1>Admin · Tesseramenti V9.9.67</h1><b>Flusso definitivo Admin → Capitano → Admin → AICS · SOLO REALE</b></section>
-<section class="card"><button class="btn secondary" onclick="location.href='index.html?v=9966'">← Dashboard Admin</button></section>
+<section class="card hero"><h1>Admin · Tesseramenti V9.9.68</h1><b>Flusso definitivo Admin → Capitano → Admin → AICS · SOLO REALE</b></section>
+<section class="card"><button class="btn secondary" onclick="location.href='index.html?v=9968'">← Dashboard Admin</button></section>
 <section class="card"><b>Squadra</b><select id="team"></select><div id="status" class="notice">Caricamento…</div></section>
 
 <section id="work" class="hidden">
@@ -46,7 +46,7 @@ select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radi
 </main>
 
 <script>
-const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=x=>document.getElementById(x);
+const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=x=>document.getElementById(x),esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 let d=null;
 
 async function start(){
@@ -56,8 +56,9 @@ async function start(){
  if(p.data?.role!=='admin')throw Error('Accesso riservato Admin');
  const r=await sb.from('teams').select('id,name,series,club_name').order('name');
  if(r.error)throw r.error;
- $('team').innerHTML='<option value="">Seleziona squadra</option>'+r.data.map(t=>`<option value="${t.id}" ${t.name==='EDEN NEXT GEN PADEL CLUB'?'selected':''}>${t.name}</option>`).join('');
- $('team').onchange=load;
+ const requestedTeam=new URLSearchParams(location.search).get('team')||'';
+ $('team').innerHTML='<option value="">Seleziona squadra</option>'+r.data.map(t=>`<option value="${t.id}" ${(requestedTeam?t.id===requestedTeam:t.name==='EDEN NEXT GEN PADEL CLUB')?'selected':''}>${esc(t.name)}</option>`).join('');
+ $('team').onchange=()=>{const id=$('team').value;history.replaceState(null,'',id?'admin-tesseramenti.html?team='+encodeURIComponent(id)+'&v=9968':'admin-tesseramenti.html?v=9968');load()};
  if($('team').value)await load();
  $('status').textContent='Admin riconosciuto.';
 }
@@ -73,7 +74,8 @@ async function load(){
 function render(){
  $('players').innerHTML=(d.players||[]).map(p=>`<div class="player"><input class="pick" type="checkbox" value="${p.id}" ${p.registration_status==='da_tesserare'?'checked':'disabled'} onchange="calc()"><div><b>${p.first_name} ${p.last_name}</b><br><small>${p.email||''}</small></div><span class="pill">${p.registration_status}</span></div>`).join('');
  $('history').innerHTML=(d.requests||[]).map(q=>{
-   const receipt=q.receipt_url?`<div class="notice ok">Ricevuta: <a href="${q.receipt_url}" target="_blank">Apri ricevuta</a></div>`:'';
+   const notice=`<div class="actions" style="margin-top:10px"><button class="btn secondary" onclick="openPaymentNotice('${q.id}')">Apri / stampa richiesta pagamento</button><button class="btn secondary" onclick="copyCaptainPaymentMessage('${q.id}')">Copia messaggio per il Capitano</button></div>`;
+   const receipt=q.receipt_url?`<div class="notice ok"><b>Ricevuta caricata dalla squadra:</b><br><a href="${q.receipt_url}" target="_blank">Apri ricevuta ${esc(q.receipt_file_name||'')}</a></div>`:`<div class="notice warn"><b>Ricevuta non ancora caricata.</b><br>La richiesta è in attesa dell’operazione del Capitano.</div>`;
    const prep=q.status==='receipt_uploaded' && !q.test_mode?`<button class="btn success" onclick="prepare('${q.id}')">Approva e prepara CSV + Excel + PDF</button>`:'';
    const files=(q.csv_file_url||q.xlsx_file_url||q.pdf_file_url)?`<div class="notice ok files"><b>Documenti:</b><br>${q.csv_file_url?`<a href="${q.csv_file_url}" target="_blank">CSV</a>`:''}${q.xlsx_file_url?`<a href="${q.xlsx_file_url}" target="_blank">Excel</a>`:''}${q.pdf_file_url?`<a href="${q.pdf_file_url}" target="_blank">PDF</a>`:''}</div>`:'';
    let send='';
@@ -84,7 +86,7 @@ function render(){
    } else if(q.status==='submitted'){
       send=`<div class="notice ok"><b>INVIATA AD AICS</b>${q.sent_at?` · ${new Date(q.sent_at).toLocaleString('it-IT')}`:''}<br>I giocatori inclusi risultano ora Tesserati.</div>`;
    }
-   return `<div class="request"><b>${q.request_number}</b> <span class="pill">${q.status}</span><div>${q.player_count} giocatori · € ${Number(q.amount).toFixed(2)}</div>${receipt}${prep}${files}${send}</div>`;
+   return `<div class="request"><b>${q.request_number}</b> <span class="pill">${q.status}</span><div>${q.player_count} giocatori · € ${Number(q.amount).toFixed(2)}</div>${notice}${receipt}${prep}${files}${send}</div>`;
  }).join('')||'<div class="notice">Nessuna richiesta.</div>';
  calc();
 }
@@ -100,6 +102,33 @@ async function createRequest(){
  if(r.error)return alert(r.error.message);
  alert(`Richiesta ${r.data.request_number} creata. Totale € ${Number(r.data.amount).toFixed(2)}.`);
  await load();
+}
+
+async function getRequestDetail(id){
+ const r=await sb.rpc('admin_get_tesseramento_request_detail',{p_request_id:id});
+ if(r.error)throw r.error;
+ return r.data;
+}
+function paymentCausale(detail){return `TESSERAMENTI AICS PADEL 2027 - ${detail.team.name} - ${detail.request.request_number}`}
+async function openPaymentNotice(id){
+ const win=window.open('','_blank');
+ if(!win)return alert('Il browser ha bloccato l’apertura. Consenti i popup e riprova.');
+ win.document.write('<p style="font-family:system-ui;padding:20px">Preparazione richiesta di pagamento…</p>');
+ try{
+  const detail=await getRequestDetail(id),req=detail.request,team=detail.team,settings=detail.settings,causale=paymentCausale(detail);
+  const players=(detail.players||[]).map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.first_name)} ${esc(p.last_name)}</td><td>${esc(p.email||'')}</td></tr>`).join('');
+  win.document.open();
+  win.document.write(`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(req.request_number)}</title><style>body{font-family:system-ui;color:#0a2e5e;margin:0;padding:28px}.head{border-bottom:5px solid #164a95;padding-bottom:14px}h1{margin:0}.box{border:1px solid #b9cde3;border-radius:14px;padding:14px;margin:14px 0;background:#f4f8fc}.amount{font-size:28px;font-weight:900;color:#164a95}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #d9e3ee;text-align:left}.actions{display:flex;gap:8px;margin-bottom:18px}button{border:0;border-radius:10px;padding:10px 13px;background:#164a95;color:#fff;font-weight:800}@media print{.actions{display:none}body{padding:8px}}</style></head><body><div class="actions"><button onclick="window.print()">Stampa / salva PDF</button><button onclick="window.close()">Chiudi</button></div><div class="head"><h1>Richiesta pagamento tesseramenti</h1><div>AICS Padel Championship 2027</div></div><div class="box"><b>Squadra:</b> ${esc(team.name)}<br><b>Club:</b> ${esc(team.club_name||'')}<br><b>Riferimento:</b> ${esc(req.request_number)}<br><b>Giocatori:</b> ${(detail.players||[]).length}</div><div class="box"><div>Importo totale</div><div class="amount">€ ${Number(req.amount).toFixed(2)}</div><br><b>Intestatario:</b> ${esc(settings.account_holder)}<br><b>IBAN:</b> ${esc(settings.iban)}<br><b>Causale:</b> ${esc(causale)}</div><h2>Giocatori inclusi</h2><table><thead><tr><th>#</th><th>Giocatore</th><th>Email</th></tr></thead><tbody>${players}</tbody></table><div class="box"><b>Istruzioni per il Capitano</b><br>Eseguire un unico bonifico per l’importo totale. Dopo il pagamento entrare nell’Area Capitano, aprire <b>Tesseramenti</b> e caricare una sola ricevuta PDF, JPG o PNG.</div></body></html>`);
+  win.document.close();
+ }catch(e){win.close();alert('Impossibile aprire la richiesta: '+(e.message||e))}
+}
+async function copyCaptainPaymentMessage(id){
+ try{
+  const detail=await getRequestDetail(id),req=detail.request,team=detail.team,settings=detail.settings,causale=paymentCausale(detail);
+  const url=new URL('captain-tesseramenti.html',location.href);url.searchParams.set('team',team.id);url.searchParams.set('v','9968');
+  const text=`Ciao ${team.captain_name||'Capitano'},\n\nè disponibile la richiesta di pagamento tessere ${req.request_number} per la squadra ${team.name}.\n\nGiocatori: ${(detail.players||[]).length}\nImporto totale: € ${Number(req.amount).toFixed(2)}\nIntestatario: ${settings.account_holder}\nIBAN: ${settings.iban}\nCausale: ${causale}\n\nAccedi all’Area Capitano e apri la sezione Tesseramenti per vedere la richiesta e caricare una sola ricevuta del bonifico:\n${url.href}`;
+  try{await navigator.clipboard.writeText(text);alert('Messaggio per il Capitano copiato.')}catch(_e){prompt('Copia il messaggio per il Capitano:',text)}
+ }catch(e){alert('Impossibile preparare il messaggio: '+(e.message||e))}
 }
 
 function csvEscape(v){const s=String(v??'');return /[;"\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
@@ -150,7 +179,7 @@ async function sendAics(id,num){
    alert('Invio NON eseguito: '+(e.message||e));
  }
 }
-window.toggleAll=toggleAll;window.createRequest=createRequest;window.prepare=prepare;window.sendAics=sendAics;
+window.toggleAll=toggleAll;window.createRequest=createRequest;window.openPaymentNotice=openPaymentNotice;window.copyCaptainPaymentMessage=copyCaptainPaymentMessage;window.prepare=prepare;window.sendAics=sendAics;
 start().catch(e=>$('status').textContent='Errore: '+e.message);
 </script>
 </body></html>

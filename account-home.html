@@ -33,9 +33,9 @@ async function start(){
  $('content').innerHTML=h;$('status').textContent='Account riconosciuto: '+(d.email||sess.user.email);
 }
 function openTeam(id){location.href='captain-home.html?team='+encodeURIComponent(id)+'&v=9941'}
-function openRegistrations(id){location.href='captain-tesseramenti.html?team='+encodeURIComponent(id)+'&v=9941'}
+function openRegistrations(id){location.href='captain-tesseramenti.html?team='+encodeURIComponent(id)+'&v=9968'}
 async function logout(){await sb.auth.signOut({scope:'local'});location.replace('login.html?change=1')}
 start().catch(e=>$('status').textContent='Errore: '+(e.message||e));
 </script>
-<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.41 TESSERAMENTI MULTI-SQUADRA</div>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.68 TESSERAMENTI VISIBILI</div>
 </body></html>
