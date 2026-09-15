@@ -220,6 +220,7 @@ label{color:var(--aics-blue-dark)!important}
       <div class="field"><label>Nuova foto tessera con sfondo bianco</label><input id="editPlayerPhoto" type="file" accept="image/jpeg,image/png,image/webp"></div>
       <div class="field"><label>Nome *</label><input id="editPlayerFirstName"></div>
       <div class="field"><label>Cognome *</label><input id="editPlayerLastName"></div>
+      <div class="field"><label>Sesso *</label><select id="editPlayerGender"><option value="">Seleziona</option><option value="M">Maschile</option><option value="F">Femminile</option></select></div>
       <div class="field"><label>Data di nascita *</label><input id="editPlayerBirthDate" type="date"></div>
       <div class="field"><label>Luogo di nascita *</label><input id="editPlayerBirthPlace"></div>
       <div class="field"><label>Comune di residenza *</label><input id="editPlayerResidenceTown"></div>
@@ -611,7 +612,7 @@ async function uploadAdminPlayerPhoto(file){
 
 async function adminAddPlayer(){
   if(!currentTeam?.id)return adminPlayerMessage('Squadra non caricata.',true);
-  const ids=['adminPlayerFirstName','adminPlayerLastName','adminPlayerBirthDate','adminPlayerBirthPlace','adminPlayerResidenceTown','adminPlayerPostalCode','adminPlayerProvince','adminPlayerEmail','adminPlayerPhone','adminPlayerFitp','adminPlayerMedical'];
+  const ids=['adminPlayerFirstName','adminPlayerLastName','adminPlayerGender','adminPlayerBirthDate','adminPlayerBirthPlace','adminPlayerResidenceTown','adminPlayerPostalCode','adminPlayerProvince','adminPlayerEmail','adminPlayerPhone','adminPlayerFitp','adminPlayerMedical'];
   const v=Object.fromEntries(ids.map(id=>[id,document.getElementById(id).value.trim()]));
   if(ids.some(id=>!v[id]))return adminPlayerMessage('Compila tutti i dati obbligatori.',true);
   if(!/^\d{5}$/.test(v.adminPlayerPostalCode))return adminPlayerMessage('Il CAP deve contenere 5 cifre.',true);
@@ -622,6 +623,7 @@ async function adminAddPlayer(){
     const payload={
       team_id:currentTeam.id,photo_url:photoUrl,
       first_name:v.adminPlayerFirstName,last_name:v.adminPlayerLastName,
+      gender:v.adminPlayerGender,
       birth_date:v.adminPlayerBirthDate,birth_place:v.adminPlayerBirthPlace,
       residence_town:v.adminPlayerResidenceTown,residence_postal_code:v.adminPlayerPostalCode,
       residence_province:v.adminPlayerProvince.toUpperCase(),
@@ -645,7 +647,7 @@ async function adminAddPlayer(){
 function openAdminPlayerEditor(playerId){
   const p=adminRosterCache.find(x=>x.id===playerId);
   if(!p)return adminPlayerMessage('Giocatore non trovato. Aggiorna la pagina.',true);
-  editPlayerId.value=p.id;editPlayerFirstName.value=p.first_name||'';editPlayerLastName.value=p.last_name||'';editPlayerBirthDate.value=p.birth_date||'';editPlayerBirthPlace.value=p.birth_place||'';editPlayerResidenceTown.value=p.residence_town||'';editPlayerPostalCode.value=p.residence_postal_code||'';editPlayerProvince.value=p.residence_province||'';editPlayerEmail.value=p.email||'';editPlayerPhone.value=p.phone||'';editPlayerFitp.value=p.fitp_ranking||'';editPlayerMedical.value=p.medical_certificate_expiry||'';editPlayerStatus.value=p.status||'approved';editPlayerPhoto.value='';editPlayerMsg.classList.add('hidden');adminPlayerEditOverlay.classList.remove('hidden');
+  editPlayerId.value=p.id;editPlayerFirstName.value=p.first_name||'';editPlayerLastName.value=p.last_name||'';editPlayerGender.value=p.gender||'';editPlayerBirthDate.value=p.birth_date||'';editPlayerBirthPlace.value=p.birth_place||'';editPlayerResidenceTown.value=p.residence_town||'';editPlayerPostalCode.value=p.residence_postal_code||'';editPlayerProvince.value=p.residence_province||'';editPlayerEmail.value=p.email||'';editPlayerPhone.value=p.phone||'';editPlayerFitp.value=p.fitp_ranking||'';editPlayerMedical.value=p.medical_certificate_expiry||'';editPlayerStatus.value=p.status||'approved';editPlayerPhoto.value='';editPlayerMsg.classList.add('hidden');adminPlayerEditOverlay.classList.remove('hidden');
 }
 function closeAdminPlayerEditor(){adminPlayerEditOverlay.classList.add('hidden')}
 function editPlayerMessage(text,error=false){editPlayerMsg.textContent=text;editPlayerMsg.className='notice '+(error?'err':'ok');editPlayerMsg.classList.remove('hidden')}
@@ -654,6 +656,7 @@ async function saveAdminPlayer(){
   const required={
     first_name:editPlayerFirstName.value.trim(),
     last_name:editPlayerLastName.value.trim(),
+    gender:editPlayerGender.value,
     birth_date:editPlayerBirthDate.value,
     birth_place:editPlayerBirthPlace.value.trim(),
     residence_town:editPlayerResidenceTown.value.trim(),
@@ -850,6 +853,7 @@ async function init() {
         <div class="field"><label>Foto tessera con sfondo bianco *</label><input id="adminPlayerPhoto" type="file" accept="image/jpeg,image/png,image/webp"></div>
         <div class="field"><label>Nome *</label><input id="adminPlayerFirstName"></div>
         <div class="field"><label>Cognome *</label><input id="adminPlayerLastName"></div>
+        <div class="field"><label>Sesso *</label><select id="adminPlayerGender"><option value="">Seleziona</option><option value="M">Maschile</option><option value="F">Femminile</option></select></div>
         <div class="field"><label>Data di nascita *</label><input id="adminPlayerBirthDate" type="date"></div>
         <div class="field"><label>Luogo di nascita *</label><input id="adminPlayerBirthPlace"></div>
         <div class="field"><label>Comune di residenza *</label><input id="adminPlayerResidenceTown"></div>
@@ -994,7 +998,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.25 ATTIVAZIONE CAPITANI</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.73 FIX INSERIMENTO GIOCATORE</div>
 <script src="app-ui.js?v=980stable"></script>
 </body>
 </html>
