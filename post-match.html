@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Post partita · AICS Padel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#637b96}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,var(--g) 0 33.3%,#fff 33.3% 66.6%,var(--r) 66.6%);z-index:20}.shell{max-width:1180px;margin:auto;padding:20px 12px 80px}.hero,.card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:18px;margin:12px 0}.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff}.hero h1,.card h2,.card h3{margin-top:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.field{margin:10px 0}.field label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}input,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;font:inherit;color:var(--text)}textarea{min-height:170px;resize:vertical}.btn{border:0;border-radius:11px;padding:11px 14px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}.danger{background:var(--r);color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:10px 0}.ok{background:#eaf8f0;border-color:#82c99f}.err{background:#fdecef;border-color:#dd7a85}.hidden{display:none!important}.muted{color:var(--muted)}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;background:#e7f0fb;border:1px solid var(--line);font-size:12px;font-weight:900}.teams{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;text-align:center}.team-logo{width:88px;height:88px;object-fit:contain}.big-score{font-size:44px;font-weight:1000}.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.photo{position:relative;border:2px solid transparent;border-radius:14px;overflow:hidden;background:#edf4fb;cursor:pointer}.photo.selected{border-color:var(--g);box-shadow:0 0 0 3px rgba(0,146,70,.16)}.photo img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}.photo .photo-bar{display:flex;justify-content:space-between;gap:6px;align-items:center;padding:7px;font-size:11px;font-weight:800}.photo button{border:0;background:transparent;color:var(--r);font-weight:900;cursor:pointer}.players{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.player-pick{display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fff}.player-pick img{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#edf4fb}.canvas-wrap{max-width:620px;margin:auto}.canvas-wrap canvas{display:block;width:100%;height:auto;border-radius:18px;border:1px solid var(--line);background:var(--bd)}.match-row{display:grid;grid-template-columns:120px 1fr auto;gap:10px;padding:9px 0;border-bottom:1px solid #e3ecf5}.article-preview{white-space:pre-wrap;line-height:1.55}.lock{text-align:center;padding:30px}.upload{border:2px dashed var(--line);border-radius:15px;padding:16px;text-align:center;background:#f8fbff}.upload input{border:0}.small{font-size:12px}@media(max-width:820px){.grid{grid-template-columns:1fr}.gallery,.players{grid-template-columns:repeat(2,1fr)}.teams{grid-template-columns:1fr}.match-row{grid-template-columns:1fr}.team-logo{width:72px;height:72px}.big-score{font-size:36px}.actions .btn{flex:1}}@media print{body{background:#fff}body:before,.no-print,.hero,#matchCard,#photoCard,#socialCard{display:none!important}.shell{max-width:none;padding:0}#articleCard{border:0;margin:0;padding:0}.article-preview{font-size:12pt;color:#111}#articlePrintPhoto{display:block!important;max-width:100%;max-height:12cm;object-fit:contain;margin:0 auto 20px}}
+</style>
+</head>
+<body><main class="shell">
+<div class="actions no-print"><button class="btn secondary" onclick="history.back()">← Centro gara</button></div>
+<header class="hero"><span class="badge">MODULO POST PARTITA</span><h1>Post partita / Comunicazione</h1><div>Foto, grafica social e articolo generati dai dati definitivi della gara.</div></header>
+<section id="status" class="card">Caricamento dati della partita…</section>
+<section id="locked" class="card hidden lock"><h2>Post partita non ancora disponibile</h2><p>Questa sezione si attiva automaticamente soltanto dopo la chiusura definitiva e l’omologazione del risultato.</p></section>
+<div id="app" class="hidden">
+  <section id="matchCard" class="card"></section>
+  <section id="photoCard" class="card">
+    <h2>1. Foto della giornata</h2>
+    <div class="muted">Carica fino a 8 foto JPG, PNG o WEBP. Seleziona quella principale per la grafica e l’articolo.</div>
+    <div class="upload"><input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" multiple><div class="small muted">Massimo 10 MB per immagine.</div></div>
+    <div class="actions" style="margin:10px 0"><button id="uploadBtn" class="btn primary" onclick="uploadPhotos()">Carica foto selezionate</button></div>
+    <div id="gallery" class="gallery"></div>
+  </section>
+  <section id="socialCard" class="card">
+    <h2>2. Grafica social quadrata 1:1</h2>
+    <div class="grid">
+      <div>
+        <div class="notice ok"><b>Modello ufficiale AICS Padel Championship</b><br>La foto selezionata resta protagonista. Loghi, squadre, punteggio, formazioni, risultati, giornata, data e luogo vengono inseriti automaticamente dai dati definitivi.</div>
+        <input id="socialTitle" type="hidden"><input id="socialSubtitle" type="hidden">
+        <h3>Formazioni ufficiali incluse</h3>
+        <div class="muted small">I nominativi arrivano direttamente dalle distinte della gara.</div>
+        <div id="playerPicks" class="players"></div>
+        <div class="actions" style="margin-top:12px">
+          <button class="btn primary" onclick="drawSocial()">Aggiorna anteprima</button>
+          <button class="btn success" onclick="downloadSocial()">Scarica PNG</button>
+          <button class="btn secondary" onclick="shareSocial()">Condividi</button>
+        </div>
+      </div>
+      <div class="canvas-wrap"><canvas id="socialCanvas" width="1080" height="1080"></canvas></div>
+    </div>
+  </section>
+  <section id="articleCard" class="card">
+    <h2>3. Articolo per il giornale locale</h2>
+    <img id="articlePrintPhoto" class="hidden" alt="Foto della partita">
+    <div class="field"><label>Titolo dell’articolo</label><input id="articleTitle"></div>
+    <div class="field"><label>Testo</label><textarea id="articleBody"></textarea></div>
+    <div class="actions no-print">
+      <button class="btn primary" onclick="generateArticle(true)">Rigenera dai dati gara</button>
+      <button class="btn secondary" onclick="copyArticle()">Copia articolo</button>
+      <button class="btn secondary" onclick="window.print()">Stampa / Salva PDF</button>
+    </div>
+  </section>
+  <section class="card no-print">
+    <div class="actions"><button class="btn success" onclick="saveDraft()">Salva tutto</button></div>
+    <div id="saveMsg" class="notice hidden"></div>
+  </section>
+</div>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG;
+const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fixtureId=new URLSearchParams(location.search).get('id');
+const bucket='match-post-media';
+let data=null,selectedMediaId=null,selectedPlayers=new Set();
+
+function team(id){return (data?.teams||[]).find(t=>t.id===id)||{name:'Squadra',logo_url:''}}
+function matchWinner(m){
+ const vals=['h1','a1','h2','a2'].map(k=>Number(m?.[k]));
+ if(vals.some(v=>!Number.isFinite(v)))return null;
+ let h=(vals[0]>vals[1])+(vals[2]>vals[3]),a=(vals[1]>vals[0])+(vals[3]>vals[2]);
+ if(h===a){const ht=Number(m?.htb??m?.h3??m?.home_tb),at=Number(m?.atb??m?.a3??m?.away_tb);if(!Number.isFinite(ht)||!Number.isFinite(at)||ht===at)return null;return ht>at?'home':'away'}
+ return h>a?'home':'away';
+}
+function score(){
+ const matches=data?.result?.matches||[],wins=matches.map(matchWinner),home=wins.filter(x=>x==='home').length,away=wins.filter(x=>x==='away').length;
+ const sp=data?.result?.spareggio||null,spHome=Number(sp?.home_games??sp?.home??sp?.h),spAway=Number(sp?.away_games??sp?.away??sp?.a);
+ let winner=home>away?'home':away>home?'away':Number.isFinite(spHome)&&Number.isFinite(spAway)?(spHome>spAway?'home':'away'):null;
+ return{home,away,winner,spareggio:home===2&&away===2&&Number.isFinite(spHome)&&Number.isFinite(spAway),spHome,spAway};
+}
+function fmtDate(value){return value?new Date(value).toLocaleString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}):''}
+function photoUrl(path){return sb.storage.from(bucket).getPublicUrl(path).data.publicUrl}
+function selectedMedia(){return (data?.media||[]).find(m=>m.id===selectedMediaId)||null}
+function setsText(m){const parts=[`${m.h1}-${m.a1}`,`${m.h2}-${m.a2}`];const ht=m.htb??m.h3??m.home_tb,at=m.atb??m.a3??m.away_tb;if(ht!=null&&at!=null)parts.push(`TB ${ht}-${at}`);return parts.join(', ')}
+
+function renderMatch(){
+ const f=data.fixture,h=team(f.home_team_id),a=team(f.away_team_id),s=score();
+ const matches=(data.result?.matches||[]).map((m,i)=>`<div class="match-row"><b>${esc(m.label||['Maschile 1','Maschile 2','Misto','Femminile'][i])}</b><span>${esc(setsText(m))}</span><b>${matchWinner(m)==='home'?esc(h.name):esc(a.name)}</b></div>`).join('');
+ $('matchCard').innerHTML=`<span class="badge">GARA CHIUSA E OMOLOGATA</span><div class="teams"><div>${h.logo_url?`<img class="team-logo" src="${esc(h.logo_url)}" alt="">`:''}<h3>${esc(h.name)}</h3></div><div><div class="big-score">${s.home} – ${s.away}</div>${s.spareggio?`<div class="badge">Spareggio ${s.spHome}-${s.spAway}</div>`:''}</div><div>${a.logo_url?`<img class="team-logo" src="${esc(a.logo_url)}" alt="">`:''}<h3>${esc(a.name)}</h3></div></div><div class="notice"><b>${esc(fmtDate(f.scheduled_at))}</b><br>${esc(f.venue||'Luogo non indicato')} · ${esc(f.competition_code||'')}</div><h3>Risultati dei singoli incontri</h3>${matches}`;
+}
+function renderGallery(){
+ const media=data.media||[];
+ $('gallery').innerHTML=media.map(m=>`<article class="photo ${m.id===selectedMediaId?'selected':''}" onclick="selectPhoto('${m.id}')"><img src="${esc(photoUrl(m.storage_path))}" alt="${esc(m.caption||m.file_name)}"><div class="photo-bar"><span>${m.id===selectedMediaId?'✓ Foto principale':'Seleziona'}</span><button onclick="event.stopPropagation();deletePhoto('${m.id}')">Elimina</button></div></article>`).join('')||'<div class="notice">Nessuna foto caricata.</div>';
+ const url=selectedMedia()?photoUrl(selectedMedia().storage_path):'';$('articlePrintPhoto').src=url;$('articlePrintPhoto').classList.toggle('hidden',!url);
+}
+function renderPlayers(){
+ const list=data.players||[];
+ $('playerPicks').innerHTML=list.map(p=>`<div class="player-pick">${p.photo_url?`<img src="${esc(p.photo_url)}" alt="">`:''}<span><b>${esc(p.first_name)} ${esc(p.last_name)}</b><br><span class="small muted">${esc(team(p.team_id).name)}</span></span></div>`).join('')||'<div class="notice">Nessun giocatore presente nelle distinte.</div>';
+}
+function selectPhoto(id){selectedMediaId=id;renderGallery();drawSocial()}
+
+async function uploadPhotos(){
+ const files=[...$('photoInput').files];if(!files.length)return alert('Seleziona almeno una foto.');
+ if((data.media||[]).length+files.length>8)return alert('Puoi conservare al massimo 8 foto per partita.');
+ $('uploadBtn').disabled=true;$('uploadBtn').textContent='Caricamento…';
+ try{
+  for(const file of files){
+   if(file.size>10485760)throw new Error(`${file.name}: supera 10 MB.`);
+   if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error(`${file.name}: formato non supportato.`);
+   const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+   const path=`${fixtureId}/${crypto.randomUUID()}.${ext}`;
+   const up=await sb.storage.from(bucket).upload(path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error;
+   const reg=await sb.rpc('register_match_post_media',{p_fixture_id:fixtureId,p_storage_path:path,p_file_name:file.name,p_mime_type:file.type,p_caption:null});
+   if(reg.error){await sb.storage.from(bucket).remove([path]);throw reg.error}
+  }
+  $('photoInput').value='';await loadData();
+ }catch(e){alert(e.message||String(e))}finally{$('uploadBtn').disabled=false;$('uploadBtn').textContent='Carica foto selezionate'}
+}
+async function deletePhoto(id){
+ const m=(data.media||[]).find(x=>x.id===id);if(!m||!confirm('Eliminare questa foto?'))return;
+ const rm=await sb.storage.from(bucket).remove([m.storage_path]);if(rm.error)return alert(rm.error.message);
+ const db=await sb.rpc('delete_match_post_media',{p_media_id:id});if(db.error)return alert(db.error.message);
+ if(selectedMediaId===id)selectedMediaId=null;await loadData();
+}
+
+function defaultSocialTitle(){return 'AICS PADEL CHAMPIONSHIP'}
+function defaultSocialSubtitle(){const f=data.fixture,h=team(f.home_team_id);return `${h.series||String(f.competition_code||'').replaceAll('_',' ')} · ${data.group_name||f.phase||''} · ${f.round_number?`${f.round_number}ª giornata`:''}`.replace(/\s*·\s*·/g,' · ').replace(/^\s*·|·\s*$/g,'').trim()}
+function articleText(){
+ const f=data.fixture,h=team(f.home_team_id),a=team(f.away_team_id),s=score(),winner=s.winner==='home'?h:a,loser=s.winner==='home'?a:h;
+ const detail=(data.result?.matches||[]).map((m,i)=>`${m.label||['Maschile 1','Maschile 2','Misto','Femminile'][i]}: ${setsText(m)}, successo di ${matchWinner(m)==='home'?h.name:a.name}`).join('; ');
+ const names=(data.players||[]).map(p=>`${p.first_name} ${p.last_name}`).join(', ');
+ const intro=s.spareggio?`${h.name} e ${a.name} hanno chiuso i quattro incontri sul ${s.home}-${s.away}. A decidere la giornata è stato lo spareggio misto, terminato ${s.spHome}-${s.spAway} in favore di ${winner.name}.`:`${winner.name} ha superato ${loser.name} con il risultato complessivo di ${s.home}-${s.away}.`;
+ return `${f.venue||'Il campo di gara'}, ${fmtDate(f.scheduled_at)}. ${intro}\n\nLa sfida, valida per ${String(f.competition_code||'la competizione').replaceAll('_',' ')}, ha offerto quattro incontri combattuti. Nel dettaglio: ${detail}.\n\n${names?`Sono scesi in campo: ${names}.\n\n`:''}La giornata si è conclusa in un clima di sportività e partecipazione, consegnando agli appassionati un nuovo appuntamento del campionato AICS Padel.`;
+}
+function generateArticle(force=false){
+ const f=data.fixture,h=team(f.home_team_id),a=team(f.away_team_id),s=score(),winner=s.winner==='home'?h:a;
+ if(force||!$('articleTitle').value)$('articleTitle').value=s.spareggio?`${winner.name} vince allo spareggio contro ${s.winner==='home'?a.name:h.name}`:`${winner.name} conquista la sfida contro ${s.winner==='home'?a.name:h.name}`;
+ if(force||!$('articleBody').value)$('articleBody').value=articleText();
+}
+async function copyArticle(){const text=`${$('articleTitle').value}\n\n${$('articleBody').value}`;await navigator.clipboard.writeText(text);alert('Articolo copiato.')}
+
+function loadImage(url){return new Promise(resolve=>{if(!url)return resolve(null);const i=new Image();i.crossOrigin='anonymous';i.onload=()=>resolve(i);i.onerror=()=>resolve(null);i.src=url})}
+function cover(ctx,img,x,y,w,h){const r=Math.max(w/img.width,h/img.height),iw=img.width*r,ih=img.height*r;ctx.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih)}
+function contain(ctx,img,x,y,w,h){const r=Math.min(w/img.width,h/img.height),iw=img.width*r,ih=img.height*r;ctx.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih)}
+function fitText(ctx,text,maxWidth,start,min=12){let size=start;do{ctx.font=`900 ${size}px system-ui`;if(ctx.measureText(text).width<=maxWidth)return size;size-=2}while(size>min);return min}
+function roundBox(ctx,x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}}
+function logoCircle(ctx,img,cx,cy,size){ctx.save();ctx.beginPath();ctx.arc(cx,cy,size/2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#d9edf9';ctx.lineWidth=3;ctx.stroke();ctx.clip();if(img)contain(ctx,img,cx-size*.38,cy-size*.38,size*.76,size*.76);else{ctx.fillStyle='#082f68';ctx.textAlign='center';ctx.font='800 14px system-ui';ctx.fillText('LOGO',cx,cy+5)}ctx.restore()}
+function upper(value){return String(value||'').toLocaleUpperCase('it-IT')}
+function competitionMeta(){const f=data.fixture,h=team(f.home_team_id),parts=[];parts.push(h.series||String(f.competition_code||'SERIE').replaceAll('_',' '));if(data.group_name)parts.push(data.group_name);else if(f.phase&&upper(f.phase)!=='GIRONE')parts.push(f.phase);if(f.round_number)parts.push(`${f.round_number}ª GIORNATA`);return parts.map(upper).join('  •  ')}
+function lineupFor(teamId){return (data.players||[]).filter(p=>p.team_id===teamId).map(p=>`${p.first_name||''} ${p.last_name||''}`.trim())}
+function drawLineupSection(ctx,x,y,w,name,names,color,maxH){ctx.fillStyle=color;ctx.fillRect(x,y,5,27);ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font=`900 ${fitText(ctx,upper(name),w-18,19)}px system-ui`;ctx.fillText(upper(name),x+15,y+20);const count=Math.max(names.length,1),font=Math.max(12,Math.min(16,Math.floor((maxH-36)/count)));ctx.font=`700 ${font}px system-ui`;ctx.fillStyle='#f4f8fc';const row=Math.min(21,(maxH-34)/count);(names.length?names:['Formazione non disponibile']).forEach((n,i)=>{const label=names.length?`•  ${n}`:n;ctx.fillText(label,x+17,y+42+i*row,w-22)})}
+async function drawSocial(){
+ if(!data)return;const c=$('socialCanvas'),ctx=c.getContext('2d'),f=data.fixture,h=team(f.home_team_id),a=team(f.away_team_id),s=score(),media=selectedMedia();
+ const [photo,homeLogo,awayLogo,aicsLogo]=await Promise.all([loadImage(media?photoUrl(media.storage_path):''),loadImage(h.logo_url),loadImage(a.logo_url),loadImage('assets/aics-logo.png')]);
+ const bg=ctx.createLinearGradient(0,0,1080,1080);bg.addColorStop(0,'#061e3b');bg.addColorStop(1,'#0c5b91');ctx.fillStyle=bg;ctx.fillRect(0,0,1080,1080);
+ if(photo)cover(ctx,photo,0,112,1080,890);else{ctx.textAlign='center';ctx.fillStyle='#d9eaf7';ctx.font='800 32px system-ui';ctx.fillText('SELEZIONA LA FOTO PRINCIPALE',540,550)}
+ const sideShade=ctx.createLinearGradient(0,0,1080,0);sideShade.addColorStop(0,'rgba(2,17,38,.42)');sideShade.addColorStop(.25,'rgba(2,17,38,.05)');sideShade.addColorStop(.75,'rgba(2,17,38,.05)');sideShade.addColorStop(1,'rgba(2,17,38,.42)');ctx.fillStyle=sideShade;ctx.fillRect(0,112,1080,890);
+
+ ctx.fillStyle='#06264b';ctx.fillRect(0,0,1080,112);ctx.fillStyle='#009fe3';ctx.fillRect(250,96,580,3);if(aicsLogo)contain(ctx,aicsLogo,30,18,175,72);
+ ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='1000 43px Arial Black,system-ui';ctx.fillText('AICS PADEL CHAMPIONSHIP',540,52);ctx.fillStyle='#d7edf9';ctx.font=`800 ${fitText(ctx,competitionMeta(),620,22)}px system-ui`;ctx.fillText(competitionMeta(),540,88);
+ ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='700 13px system-ui';['SPORT','PERSONE','COMUNITÀ','VALORI'].forEach((v,i)=>ctx.fillText(v,918,25+i*20));ctx.fillStyle='#009246';ctx.fillRect(1045,15,5,26);ctx.fillStyle='#fff';ctx.fillRect(1045,41,5,26);ctx.fillStyle='#ce2b37';ctx.fillRect(1045,67,5,26);
+
+ ctx.fillStyle='rgba(3,30,62,.94)';ctx.fillRect(0,112,1080,105);ctx.fillStyle='#12aee8';ctx.fillRect(0,214,1080,4);logoCircle(ctx,homeLogo,72,165,86);logoCircle(ctx,awayLogo,1008,165,86);
+ const ht=upper(h.name||'CASA'),at=upper(a.name||'OSPITE');ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font=`1000 ${fitText(ctx,ht,315,31)}px Arial Black,system-ui`;ctx.fillText(ht,268,178);ctx.font=`1000 ${fitText(ctx,at,315,31)}px Arial Black,system-ui`;ctx.fillText(at,812,178);
+ const socialHome=s.spareggio&&s.winner==='home'?s.home+1:s.home,socialAway=s.spareggio&&s.winner==='away'?s.away+1:s.away;roundBox(ctx,438,122,204,86,5,'#075da2','#16b9ef');ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='1000 62px Arial Black,system-ui';ctx.fillText(`${socialHome} - ${socialAway}`,540,187);
+ if(s.spareggio){roundBox(ctx,445,220,190,28,6,'rgba(3,30,62,.92)','#16b9ef');ctx.fillStyle='#fff';ctx.font='800 13px system-ui';ctx.fillText(`SPAREGGIO ${s.spHome}-${s.spAway}`,540,239)}
+
+ roundBox(ctx,20,625,355,350,11,'rgba(3,30,62,.91)','#16b9ef');ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='1000 29px Arial Black,system-ui';ctx.fillText('FORMAZIONI',42,667);ctx.fillStyle='#16b9ef';ctx.fillRect(42,681,260,3);
+ drawLineupSection(ctx,42,700,310,h.name,lineupFor(f.home_team_id),'#16aee8',118);drawLineupSection(ctx,42,835,310,a.name,lineupFor(f.away_team_id),'#ed3346',118);
+
+ roundBox(ctx,738,625,322,350,11,'rgba(3,30,62,.91)','#16b9ef');ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='1000 29px Arial Black,system-ui';ctx.fillText('RISULTATI',760,667);ctx.fillStyle='#16b9ef';ctx.fillRect(760,681,255,3);
+ const resultRows=(data.result?.matches||[]).map((m,i)=>({label:m.label||`${i+1}° INCONTRO`,value:setsText(m),home:matchWinner(m)==='home'}));if(s.spareggio)resultRows.push({label:'SPAREGGIO',value:`${s.spHome}-${s.spAway}`,home:s.winner==='home'});resultRows.slice(0,5).forEach((r,i)=>{const y=710+i*49;ctx.fillStyle=r.home?'#16aee8':'#ed3346';ctx.fillRect(759,y,5,36);ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(764,y,273,36);ctx.strokeStyle='rgba(185,220,241,.45)';ctx.strokeRect(764,y,273,36);ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='700 14px system-ui';ctx.fillText(upper(r.label),776,y+23,150);ctx.textAlign='right';ctx.font='900 15px system-ui';ctx.fillText(r.value,1025,y+23,95)});
+
+ ctx.fillStyle='#06264b';ctx.fillRect(0,990,1080,90);ctx.fillStyle='#16aee8';ctx.fillRect(0,987,1080,3);const date=f.scheduled_at?new Date(f.scheduled_at).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'}):'DATA NON INDICATA';ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='900 22px Arial Black,system-ui';ctx.fillText(`▣  ${upper(date)}`,35,1043,360);ctx.fillStyle='#16aee8';ctx.fillRect(395,1012,2,48);ctx.textAlign='center';ctx.font=`900 ${fitText(ctx,upper(f.venue||h.club_name||'LUOGO NON INDICATO'),540,21)}px Arial Black,system-ui`;ctx.fillStyle='#fff';ctx.fillText(`●  ${upper(f.venue||h.club_name||'LUOGO NON INDICATO')}`,695,1044,560);ctx.textAlign='right';ctx.font='700 12px system-ui';ctx.fillStyle='#b9d9ed';ctx.fillText('PADEL PER TUTTI',1048,1070);
+}
+async function socialBlob(){await drawSocial();return new Promise(resolve=>$('socialCanvas').toBlob(resolve,'image/png',1))}
+async function downloadSocial(){await saveDraft(false);const blob=await socialBlob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`post-partita-${fixtureId}.png`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+async function shareSocial(){const blob=await socialBlob(),file=new File([blob],`post-partita-${fixtureId}.png`,{type:'image/png'});if(navigator.canShare?.({files:[file]}))return navigator.share({files:[file],title:$('socialTitle').value||defaultSocialTitle()});await downloadSocial()}
+
+async function saveDraft(show=true){
+ const r=await sb.rpc('save_match_post_content',{p_fixture_id:fixtureId,p_social_title:$('socialTitle').value.trim(),p_social_subtitle:$('socialSubtitle').value.trim(),p_article_title:$('articleTitle').value.trim(),p_article_body:$('articleBody').value.trim(),p_selected_media_id:selectedMediaId});
+ if(show){$('saveMsg').textContent=r.error?r.error.message:'Post partita salvato correttamente.';$('saveMsg').className=`notice ${r.error?'err':'ok'}`;$('saveMsg').classList.remove('hidden')}
+ if(r.error&&!show)throw r.error;
+}
+
+async function loadData(){
+ const r=await sb.rpc('get_match_post_data',{p_fixture_id:fixtureId});if(r.error)throw r.error;
+ data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.is_closed){$('status').classList.add('hidden');$('locked').classList.remove('hidden');return}
+ if(!data.group_name&&data.fixture?.group_id){const g=await sb.from('competition_groups').select('group_name').eq('id',data.fixture.group_id).maybeSingle();if(!g.error)data.group_name=g.data?.group_name||''}
+ const saved=data.content||{};selectedMediaId=saved.selected_media_id&&data.media.some(m=>m.id===saved.selected_media_id)?saved.selected_media_id:(data.media[0]?.id||null);
+ $('socialTitle').value=saved.social_title||defaultSocialTitle();$('socialSubtitle').value=saved.social_subtitle||defaultSocialSubtitle();$('articleTitle').value=saved.article_title||'';$('articleBody').value=saved.article_body||'';
+ renderMatch();renderGallery();renderPlayers();generateArticle(false);await drawSocial();$('status').classList.add('hidden');$('app').classList.remove('hidden');
+}
+async function init(){try{if(!fixtureId)throw new Error('Partita non indicata.');const s=await sb.auth.getSession();if(!s.data.session)return location.replace('login.html');await loadData()}catch(e){$('status').textContent='Errore: '+(e.message||String(e));$('status').className='card notice err'}}
+init();
+</script>
+</body></html>
