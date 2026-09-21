@@ -14,7 +14,7 @@
 <div class="actions no-print"><button class="btn secondary" onclick="history.back()">← Centro gara</button></div>
 <header class="hero"><span class="badge">MODULO POST PARTITA</span><h1>Post partita / Comunicazione</h1><div>Foto, grafica social e articolo generati dai dati definitivi della gara.</div></header>
 <section id="status" class="card">Caricamento dati della partita…</section>
-<section id="locked" class="card hidden lock"><h2>Post partita non ancora disponibile</h2><p>Questa sezione si attiva automaticamente soltanto dopo la chiusura definitiva e l’omologazione del risultato.</p></section>
+<section id="locked" class="card hidden lock"><h2>Post partita non ancora disponibile</h2><p id="lockText">Questa sezione si attiva automaticamente soltanto dopo la chiusura definitiva e l’omologazione del risultato.</p></section>
 <div id="app" class="hidden">
   <section id="matchCard" class="card"></section>
   <section id="photoCard" class="card">
@@ -63,7 +63,7 @@
 const cfg=window.PAM_V9_CONFIG;
 const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fixtureId=new URLSearchParams(location.search).get('id');
+const params=new URLSearchParams(location.search),fixtureId=params.get('id'),isFriendly=params.get('friendly')==='1';
 const bucket='match-post-media';
 let data=null,selectedMediaId=null,selectedPlayers=new Set();
 
@@ -89,7 +89,7 @@ function setsText(m){const parts=[`${m.h1}-${m.a1}`,`${m.h2}-${m.a2}`];const ht=
 function renderMatch(){
  const f=data.fixture,h=team(f.home_team_id),a=team(f.away_team_id),s=score();
  const matches=(data.result?.matches||[]).map((m,i)=>`<div class="match-row"><b>${esc(m.label||['Maschile 1','Maschile 2','Misto','Femminile'][i])}</b><span>${esc(setsText(m))}</span><b>${matchWinner(m)==='home'?esc(h.name):esc(a.name)}</b></div>`).join('');
- $('matchCard').innerHTML=`<span class="badge">GARA CHIUSA E OMOLOGATA</span><div class="teams"><div>${h.logo_url?`<img class="team-logo" src="${esc(h.logo_url)}" alt="">`:''}<h3>${esc(h.name)}</h3></div><div><div class="big-score">${s.home} – ${s.away}</div>${s.spareggio?`<div class="badge">Spareggio ${s.spHome}-${s.spAway}</div>`:''}</div><div>${a.logo_url?`<img class="team-logo" src="${esc(a.logo_url)}" alt="">`:''}<h3>${esc(a.name)}</h3></div></div><div class="notice"><b>${esc(fmtDate(f.scheduled_at))}</b><br>${esc(f.venue||'Luogo non indicato')} · ${esc(f.competition_code||'')}</div><h3>Risultati dei singoli incontri</h3>${matches}`;
+ $('matchCard').innerHTML=`<span class="badge">${isFriendly?'AMICHEVOLE CHIUSA · FUORI CLASSIFICA':'GARA CHIUSA E OMOLOGATA'}</span><div class="teams"><div>${h.logo_url?`<img class="team-logo" src="${esc(h.logo_url)}" alt="">`:''}<h3>${esc(h.name)}</h3></div><div><div class="big-score">${s.home} – ${s.away}</div>${s.spareggio?`<div class="badge">Spareggio ${s.spHome}-${s.spAway}</div>`:''}</div><div>${a.logo_url?`<img class="team-logo" src="${esc(a.logo_url)}" alt="">`:''}<h3>${esc(a.name)}</h3></div></div><div class="notice"><b>${esc(fmtDate(f.scheduled_at))}</b><br>${esc(f.venue||'Luogo non indicato')} · ${esc(f.competition_code||'')}</div><h3>Risultati dei singoli incontri</h3>${matches}`;
 }
 function renderGallery(){
  const media=data.media||[];
@@ -111,9 +111,11 @@ async function uploadPhotos(){
    if(file.size>10485760)throw new Error(`${file.name}: supera 10 MB.`);
    if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error(`${file.name}: formato non supportato.`);
    const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
-   const path=`${fixtureId}/${crypto.randomUUID()}.${ext}`;
+   const path=`${isFriendly?'friendly/':''}${fixtureId}/${crypto.randomUUID()}.${ext}`;
    const up=await sb.storage.from(bucket).upload(path,file,{contentType:file.type,upsert:false});if(up.error)throw up.error;
-   const reg=await sb.rpc('register_match_post_media',{p_fixture_id:fixtureId,p_storage_path:path,p_file_name:file.name,p_mime_type:file.type,p_caption:null});
+   const reg=isFriendly
+    ?await sb.rpc('register_friendly_match_post_media',{p_friendly_match_id:fixtureId,p_storage_path:path,p_file_name:file.name,p_mime_type:file.type,p_caption:null})
+    :await sb.rpc('register_match_post_media',{p_fixture_id:fixtureId,p_storage_path:path,p_file_name:file.name,p_mime_type:file.type,p_caption:null});
    if(reg.error){await sb.storage.from(bucket).remove([path]);throw reg.error}
   }
   $('photoInput').value='';await loadData();
@@ -122,18 +124,20 @@ async function uploadPhotos(){
 async function deletePhoto(id){
  const m=(data.media||[]).find(x=>x.id===id);if(!m||!confirm('Eliminare questa foto?'))return;
  const rm=await sb.storage.from(bucket).remove([m.storage_path]);if(rm.error)return alert(rm.error.message);
- const db=await sb.rpc('delete_match_post_media',{p_media_id:id});if(db.error)return alert(db.error.message);
+ const db=await sb.rpc(isFriendly?'delete_friendly_match_post_media':'delete_match_post_media',{p_media_id:id});if(db.error)return alert(db.error.message);
  if(selectedMediaId===id)selectedMediaId=null;await loadData();
 }
 
 function defaultSocialTitle(){return 'AICS PADEL CHAMPIONSHIP'}
-function defaultSocialSubtitle(){const f=data.fixture,h=team(f.home_team_id);return `${h.series||String(f.competition_code||'').replaceAll('_',' ')} · ${data.group_name||f.phase||''} · ${f.round_number?`${f.round_number}ª giornata`:''}`.replace(/\s*·\s*·/g,' · ').replace(/^\s*·|·\s*$/g,'').trim()}
+function defaultSocialSubtitle(){if(isFriendly)return 'AMICHEVOLE · FUORI CLASSIFICA';const f=data.fixture,h=team(f.home_team_id);return `${h.series||String(f.competition_code||'').replaceAll('_',' ')} · ${data.group_name||f.phase||''} · ${f.round_number?`${f.round_number}ª giornata`:''}`.replace(/\s*·\s*·/g,' · ').replace(/^\s*·|·\s*$/g,'').trim()}
 function articleText(){
  const f=data.fixture,h=team(f.home_team_id),a=team(f.away_team_id),s=score(),winner=s.winner==='home'?h:a,loser=s.winner==='home'?a:h;
  const detail=(data.result?.matches||[]).map((m,i)=>`${m.label||['Maschile 1','Maschile 2','Misto','Femminile'][i]}: ${setsText(m)}, successo di ${matchWinner(m)==='home'?h.name:a.name}`).join('; ');
  const names=(data.players||[]).map(p=>`${p.first_name} ${p.last_name}`).join(', ');
  const intro=s.spareggio?`${h.name} e ${a.name} hanno chiuso i quattro incontri sul ${s.home}-${s.away}. A decidere la giornata è stato lo spareggio misto, terminato ${s.spHome}-${s.spAway} in favore di ${winner.name}.`:`${winner.name} ha superato ${loser.name} con il risultato complessivo di ${s.home}-${s.away}.`;
- return `${f.venue||'Il campo di gara'}, ${fmtDate(f.scheduled_at)}. ${intro}\n\nLa sfida, valida per ${String(f.competition_code||'la competizione').replaceAll('_',' ')}, ha offerto quattro incontri combattuti. Nel dettaglio: ${detail}.\n\n${names?`Sono scesi in campo: ${names}.\n\n`:''}La giornata si è conclusa in un clima di sportività e partecipazione, consegnando agli appassionati un nuovo appuntamento del campionato AICS Padel.`;
+ const context=isFriendly?'L’amichevole, disputata fuori classifica,':'La sfida, valida per '+String(f.competition_code||'la competizione').replaceAll('_',' ')+',';
+ const ending=isFriendly?'La giornata si è conclusa in un clima di sportività e partecipazione, offrendo alle due squadre un utile confronto in preparazione dei prossimi impegni.':'La giornata si è conclusa in un clima di sportività e partecipazione, consegnando agli appassionati un nuovo appuntamento del campionato AICS Padel.';
+ return `${f.venue||'Il campo di gara'}, ${fmtDate(f.scheduled_at)}. ${intro}\n\n${context} ha offerto quattro incontri combattuti. Nel dettaglio: ${detail}.\n\n${names?`Sono scesi in campo: ${names}.\n\n`:''}${ending}`;
 }
 function generateArticle(force=false){
  const f=data.fixture,h=team(f.home_team_id),a=team(f.away_team_id),s=score(),winner=s.winner==='home'?h:a;
@@ -149,7 +153,7 @@ function fitText(ctx,text,maxWidth,start,min=12){let size=start;do{ctx.font=`900
 function roundBox(ctx,x,y,w,h,r,fill,stroke){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}}
 function logoCircle(ctx,img,cx,cy,size){ctx.save();ctx.beginPath();ctx.arc(cx,cy,size/2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#d9edf9';ctx.lineWidth=3;ctx.stroke();ctx.clip();if(img)contain(ctx,img,cx-size*.38,cy-size*.38,size*.76,size*.76);else{ctx.fillStyle='#082f68';ctx.textAlign='center';ctx.font='800 14px system-ui';ctx.fillText('LOGO',cx,cy+5)}ctx.restore()}
 function upper(value){return String(value||'').toLocaleUpperCase('it-IT')}
-function competitionMeta(){const f=data.fixture,h=team(f.home_team_id),parts=[];parts.push(h.series||String(f.competition_code||'SERIE').replaceAll('_',' '));if(data.group_name)parts.push(data.group_name);else if(f.phase&&upper(f.phase)!=='GIRONE')parts.push(f.phase);if(f.round_number)parts.push(`${f.round_number}ª GIORNATA`);return parts.map(upper).join('  •  ')}
+function competitionMeta(){if(isFriendly)return 'AMICHEVOLE  •  FUORI CLASSIFICA';const f=data.fixture,h=team(f.home_team_id),parts=[];parts.push(h.series||String(f.competition_code||'SERIE').replaceAll('_',' '));if(data.group_name)parts.push(data.group_name);else if(f.phase&&upper(f.phase)!=='GIRONE')parts.push(f.phase);if(f.round_number)parts.push(`${f.round_number}ª GIORNATA`);return parts.map(upper).join('  •  ')}
 function lineupFor(teamId){return (data.players||[]).filter(p=>p.team_id===teamId).map(p=>`${p.first_name||''} ${p.last_name||''}`.trim())}
 function drawLineupSection(ctx,x,y,w,name,names,color,maxH){ctx.fillStyle=color;ctx.fillRect(x,y,5,27);ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font=`900 ${fitText(ctx,upper(name),w-18,19)}px system-ui`;ctx.fillText(upper(name),x+15,y+20);const count=Math.max(names.length,1),font=Math.max(12,Math.min(16,Math.floor((maxH-36)/count)));ctx.font=`700 ${font}px system-ui`;ctx.fillStyle='#f4f8fc';const row=Math.min(21,(maxH-34)/count);(names.length?names:['Formazione non disponibile']).forEach((n,i)=>{const label=names.length?`•  ${n}`:n;ctx.fillText(label,x+17,y+42+i*row,w-22)})}
 async function drawSocial(){
@@ -181,14 +185,20 @@ async function downloadSocial(){await saveDraft(false);const blob=await socialBl
 async function shareSocial(){const blob=await socialBlob(),file=new File([blob],`post-partita-${fixtureId}.png`,{type:'image/png'});if(navigator.canShare?.({files:[file]}))return navigator.share({files:[file],title:$('socialTitle').value||defaultSocialTitle()});await downloadSocial()}
 
 async function saveDraft(show=true){
- const r=await sb.rpc('save_match_post_content',{p_fixture_id:fixtureId,p_social_title:$('socialTitle').value.trim(),p_social_subtitle:$('socialSubtitle').value.trim(),p_article_title:$('articleTitle').value.trim(),p_article_body:$('articleBody').value.trim(),p_selected_media_id:selectedMediaId});
+ const content={p_social_title:$('socialTitle').value.trim(),p_social_subtitle:$('socialSubtitle').value.trim(),p_article_title:$('articleTitle').value.trim(),p_article_body:$('articleBody').value.trim(),p_selected_media_id:selectedMediaId};
+ const r=isFriendly
+  ?await sb.rpc('save_friendly_match_post_content',{p_friendly_match_id:fixtureId,...content})
+  :await sb.rpc('save_match_post_content',{p_fixture_id:fixtureId,...content});
  if(show){$('saveMsg').textContent=r.error?r.error.message:'Post partita salvato correttamente.';$('saveMsg').className=`notice ${r.error?'err':'ok'}`;$('saveMsg').classList.remove('hidden')}
  if(r.error&&!show)throw r.error;
 }
 
 async function loadData(){
- const r=await sb.rpc('get_match_post_data',{p_fixture_id:fixtureId});if(r.error)throw r.error;
- data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.is_closed){$('status').classList.add('hidden');$('locked').classList.remove('hidden');return}
+ const r=isFriendly
+  ?await sb.rpc('get_friendly_match_post_data',{p_friendly_match_id:fixtureId})
+  :await sb.rpc('get_match_post_data',{p_fixture_id:fixtureId});
+ if(r.error)throw r.error;
+ data=Array.isArray(r.data)?r.data[0]:r.data;if(!data?.is_closed){$('lockText').textContent=isFriendly?'Questa sezione si attiva automaticamente dopo il salvataggio e la chiusura definitiva dell’amichevole.':'Questa sezione si attiva automaticamente soltanto dopo la chiusura definitiva e l’omologazione del risultato.';$('status').classList.add('hidden');$('locked').classList.remove('hidden');return}
  if(!data.group_name&&data.fixture?.group_id){const g=await sb.from('competition_groups').select('group_name').eq('id',data.fixture.group_id).maybeSingle();if(!g.error)data.group_name=g.data?.group_name||''}
  const saved=data.content||{};selectedMediaId=saved.selected_media_id&&data.media.some(m=>m.id===saved.selected_media_id)?saved.selected_media_id:(data.media[0]?.id||null);
  $('socialTitle').value=saved.social_title||defaultSocialTitle();$('socialSubtitle').value=saved.social_subtitle||defaultSocialSubtitle();$('articleTitle').value=saved.article_title||'';$('articleBody').value=saved.article_body||'';

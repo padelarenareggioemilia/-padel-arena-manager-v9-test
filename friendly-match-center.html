@@ -22,7 +22,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
   <button class="btn secondary" onclick="location.href='account-home.html?v=9947'">🏠 Home Capitano</button>
 </div>
 <header class="hero"><span class="badge">AMICHEVOLE · FUORI CLASSIFICA</span><h1 style="margin:8px 0 0">Centro gara</h1><div>Distinta, appello QR e risultato con lo stesso flusso operativo del campionato.</div></header>
-<section id="summary" class="card">Caricamento…</section><section id="chooser" class="card hidden"></section><section id="lineup" class="card hidden"></section><section id="appeal" class="card hidden"></section><section id="result" class="card hidden"></section>
+<section id="summary" class="card">Caricamento…</section><section id="chooser" class="card hidden"></section><section id="lineup" class="card hidden"></section><section id="appeal" class="card hidden"></section><section id="result" class="card hidden"></section><section id="postMatch" class="card hidden"></section>
 </main><script>
 const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),id=new URLSearchParams(location.search).get('id');let d={},m={},myTeamId=null,mySide=null,scanner=null;
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
@@ -36,7 +36,13 @@ summary.innerHTML=`<h2>${esc(m.home_team_name)} – ${esc(m.away_team_name)}</h2
 if(!allowed.length){chooser.innerHTML='<div class="notice">Non sei autorizzato a gestire questa amichevole.</div>';chooser.classList.remove('hidden');return}
 if(allowed.length===1)return choose(allowed[0]);chooser.innerHTML='<h2>Scegli la squadra da gestire</h2><div class="actions">'+allowed.map(t=>`<button class="btn primary" onclick="choose('${t}')">${String(t)===String(m.source_home_team_id)?esc(m.home_team_name):esc(m.away_team_name)}</button>`).join('')+'</div>';chooser.classList.remove('hidden')}
 
-function choose(t){myTeamId=t;mySide=String(t)===String(m.source_home_team_id)?'home':'away';chooser.classList.add('hidden');renderLineup();renderAppeal();renderResult()}
+function choose(t){myTeamId=t;mySide=String(t)===String(m.source_home_team_id)?'home':'away';chooser.classList.add('hidden');renderLineup();renderAppeal();renderResult();renderPostMatch()}
+
+function renderPostMatch(){
+ const ready=m.result_status==='completed'&&d.result;
+ postMatch.classList.toggle('hidden',!ready);
+ if(ready)postMatch.innerHTML=`<span class="badge">AMICHEVOLE CHIUSA</span><h2>Post partita / Comunicazione</h2><div class="notice" style="border-color:#009246"><b>Risultato definitivo e fuori classifica.</b><br>Puoi caricare le foto, creare la grafica social ufficiale e preparare l’articolo.</div><button class="btn primary" onclick="location.href='post-match.html?friendly=1&id=${encodeURIComponent(id)}&v=9982'">Apri Post partita</button>`;
+}
 
 function renderLineup(){const players=(d.players||[]).filter(p=>p.side===mySide),lu=(d.lineups||[]).find(x=>x.side===mySide),saved=(d.lineup_players||[]).filter(x=>x.lineup_id===lu?.id);
 lineup.innerHTML=`<h2>Formazione e distinta</h2><div class="muted">Stesso schema del campionato: M1, M2, Misto, Femminile. Massimo 2 incontri per giocatore.</div>`+
@@ -144,7 +150,7 @@ async function saveResult(){
  const labs=['Maschile 1','Maschile 2','Misto','Femminile'],matches=labs.map((label,i)=>{const o={label};['h1','a1','h2','a2','htb','atb'].forEach(k=>{const e=result.querySelector(`[data-r="${i}"][data-k="${k}"]`);if(e&&e.value!=='')o[k]=Number(e.value)});return o});
  let h=0,a=0;[0,1,2,3].forEach(i=>{const s=_fs(i);if(s.winner==='home')h++;if(s.winner==='away')a++});const payload={matches};
  if(h===2&&a===2){if(spHome.value===''||spAway.value===''||Number(spHome.value)===Number(spAway.value))return resMsg.innerHTML='<div class="notice" style="border-color:#ce2b37">Inserisci il risultato dello spareggio finale Misto.</div>';payload.spareggio={type:'Misto',format:'1 set ai 6',home_games:Number(spHome.value),away_games:Number(spAway.value),winner:Number(spHome.value)>Number(spAway.value)?'home':'away'}}
- const r=await sb.rpc('friendly_save_result',{p_friendly_match_id:id,p_result:payload});if(r.error)return resMsg.innerHTML=`<div class="notice" style="border-color:#ce2b37"><b>Partita non chiusa.</b><br>${esc(r.error.message)}</div>`;resMsg.innerHTML='<div class="notice" style="border-color:#009246"><b>Partita completata e chiusa correttamente.</b><br>Amichevole fuori classifica.</div>';
+ const r=await sb.rpc('friendly_save_result',{p_friendly_match_id:id,p_result:payload});if(r.error)return resMsg.innerHTML=`<div class="notice" style="border-color:#ce2b37"><b>Partita non chiusa.</b><br>${esc(r.error.message)}</div>`;m.result_status='completed';d.result={result_data:payload};resMsg.innerHTML='<div class="notice" style="border-color:#009246"><b>Partita completata e chiusa correttamente.</b><br>Amichevole fuori classifica.</div>';renderPostMatch();postMatch.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 window.choose=choose;window.saveLineup=saveLineup;window.startScan=startScan;window.stopScan=stopScan;window.verifyQr=verifyQr;window.saveResult=saveResult;init();
 </script><script src="captain-print-share.js?v=9954"></script></body></html>
