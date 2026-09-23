@@ -41,7 +41,7 @@ function choose(t){myTeamId=t;mySide=String(t)===String(m.source_home_team_id)?'
 function renderPostMatch(){
  const ready=m.result_status==='completed'&&d.result;
  postMatch.classList.toggle('hidden',!ready);
- if(ready)postMatch.innerHTML=`<span class="badge">AMICHEVOLE CHIUSA</span><h2>Post partita / Comunicazione</h2><div class="notice" style="border-color:#009246"><b>Risultato definitivo e fuori classifica.</b><br>Puoi caricare le foto, creare la grafica social ufficiale e preparare l’articolo.</div><button class="btn primary" onclick="location.href='post-match.html?friendly=1&id=${encodeURIComponent(id)}&v=9982'">Apri Post partita</button>`;
+ if(ready)postMatch.innerHTML=`<span class="badge">AMICHEVOLE CHIUSA</span><h2>Post partita / Comunicazione</h2><div class="notice" style="border-color:#009246"><b>Risultato definitivo e fuori classifica.</b><br>Puoi caricare le foto, creare la grafica social ufficiale e preparare l’articolo.</div><button class="btn primary" onclick="location.href='post-match.html?friendly=1&id=${encodeURIComponent(id)}&v=9983'">Apri Post partita</button>`;
 }
 
 function renderLineup(){const players=(d.players||[]).filter(p=>p.side===mySide),lu=(d.lineups||[]).find(x=>x.side===mySide),saved=(d.lineup_players||[]).filter(x=>x.lineup_id===lu?.id);
