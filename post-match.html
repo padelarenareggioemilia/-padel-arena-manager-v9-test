@@ -155,9 +155,9 @@ function logoCircle(ctx,img,cx,cy,size){ctx.save();ctx.beginPath();ctx.arc(cx,cy
 function upper(value){return String(value||'').toLocaleUpperCase('it-IT')}
 function competitionMeta(){if(isFriendly)return 'AMICHEVOLE  •  FUORI CLASSIFICA';const f=data.fixture,h=team(f.home_team_id),parts=[];parts.push(h.series||String(f.competition_code||'SERIE').replaceAll('_',' '));if(data.group_name)parts.push(data.group_name);else if(f.phase&&upper(f.phase)!=='GIRONE')parts.push(f.phase);if(f.round_number)parts.push(`${f.round_number}ª GIORNATA`);return parts.map(upper).join('  •  ')}
 function lineupFor(teamId){
- if(isFriendly&&Array.isArray(data.lineup_entries)){
+ if(Array.isArray(data.lineup_entries)&&data.lineup_entries.length){
   const f=data.fixture,side=String(teamId)===String(f.home_team_id)?'home':'away',labels=[['M1','M1'],['M2','M2'],['Misto','MISTO'],['Femminile','FEMM.']];
-  const rows=labels.map(([position,label])=>{const names=data.lineup_entries.filter(e=>e.side===side&&e.position===position).map(e=>`${e.first_name||''} ${e.last_name||''}`.trim());return names.length?`${label}: ${names.join(' / ')}`:''}).filter(Boolean);
+  const rows=labels.map(([position,label])=>{const names=data.lineup_entries.filter(e=>(String(e.team_id)===String(teamId)||e.side===side)&&e.position===position).map(e=>`${e.first_name||''} ${e.last_name||''}`.trim());return names.length?`${label}: ${names.join(' / ')}`:''}).filter(Boolean);
   if(rows.length)return rows;
  }
  return (data.players||[]).filter(p=>String(p.team_id)===String(teamId)).map(p=>`${p.first_name||''} ${p.last_name||''}`.trim());

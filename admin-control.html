@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body><main class="shell">
-<div class="nav"><button class="btn secondary" onclick="location.href='index.html'">← Home</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button><button class="btn secondary" onclick="location.href='diagnostics.html'">Centro diagnostico</button><button class="btn secondary" onclick="location.href='matches-view.html'">Vista partite</button></div>
+<div class="nav"><button class="btn secondary" onclick="location.href='index.html'">← Home</button><button class="btn secondary" onclick="location.href='calendar.html'">Calendario</button><button class="btn secondary" onclick="location.href='diagnostics.html'">Centro diagnostico</button><button class="btn secondary" onclick="location.href='matches-view.html'">Vista partite</button><button class="btn secondary" onclick="location.href='friendly.html?v=9985'">Amichevoli</button><button class="btn success" onclick="location.href='admin-weekly-article.html?v=9985'">Articolo settimanale</button></div>
 <header class="hero"><div class="brand"><img class="logo" src="assets/aics-logo.png"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div class="muted">Controllo campionato e pubblicazione</div></div></div><span class="badge">ADMIN</span></header>
 
 <section class="card">
@@ -56,6 +56,7 @@
 </section>
 
 <section class="card"><h2>Partite e stato formazione</h2><div id="matches"></div></section>
+<section class="card"><div class="match-head"><div><h2 style="margin:0">Amichevoli</h2><div class="muted small">Controllo completo, distinte, risultati e post partita.</div></div><button class="btn secondary" onclick="location.href='friendly.html?v=9985'">Apri area amichevoli</button></div><div id="adminFriendlies"></div></section>
 </main>
 
 <script>
@@ -173,13 +174,19 @@ async function loadMatches(){
   const renderAdminMatch=x=>{
     const wf=workflows[x.id];
     const home=teams[x.home_team_id],away=teams[x.away_team_id];
-    return `<div class="match"><div class="match-head"><div><b>${home?.name||x.home_placeholder||'Da definire'} – ${away?.name||x.away_placeholder||'Da definire'}</b><div class="muted small">${x.scheduled_at?new Date(x.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${x.venue||''}</div></div><span class="badge">${!wf?'NON PUBBLICATA':wf.formation_open_at?'FORMAZIONE APERTA':'IN ATTESA'}</span></div><div class="actions" style="margin-top:8px"><button class="btn secondary" onclick="location.href='match-center.html?id=${x.id}'">Apri gara</button></div></div>`;
+    return `<div class="match"><div class="match-head"><div><b>${home?.name||x.home_placeholder||'Da definire'} – ${away?.name||x.away_placeholder||'Da definire'}</b><div class="muted small">${x.scheduled_at?new Date(x.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${x.venue||''}</div></div><span class="badge">${!wf?'NON PUBBLICATA':wf.formation_open_at?'FORMAZIONE APERTA':'IN ATTESA'}</span></div><div class="actions" style="margin-top:8px"><button class="btn secondary" onclick="location.href='admin-match-lineup.html?id=${x.id}&v=9985'">Compila distinte</button><button class="btn primary" onclick="location.href='match-center.html?id=${x.id}&v=9985'">Inserisci risultato</button></div></div>`;
   };
   const adminList=f.data||[];
   $('matches').innerHTML=adminList.length?groupedFixturesHtml(adminList,renderAdminMatch):'<div class="notice">Nessuna partita.</div>';
 }
+async function loadAdminFriendlies(){
+ const r=await sb.rpc('friendly_get_hub');
+ if(r.error){$('adminFriendlies').innerHTML=`<div class="notice err">${r.error.message}</div>`;return}
+ const hub=Array.isArray(r.data)?r.data[0]:(r.data||{}),list=hub.matches||[];
+ $('adminFriendlies').innerHTML=list.length?list.map(m=>`<div class="match"><div class="match-head"><div><b>${m.home_team_name} – ${m.away_team_name}</b><div class="muted small">${m.scheduled_at?new Date(m.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${m.venue||''}</div></div><span class="badge">${m.result_status==='completed'?'CHIUSA':String(m.result_status||m.status||'IN PROGRAMMA').toUpperCase()}</span></div><div class="actions" style="margin-top:8px"><button class="btn primary" onclick="location.href='friendly-match-center.html?id=${m.id}&v=9985'">Gestisci distinta e risultato</button>${m.result_status==='completed'?`<button class="btn secondary" onclick="location.href='post-match.html?friendly=1&id=${m.id}&v=9985'">Post partita</button>`:''}</div></div>`).join(''):'<div class="notice">Nessuna amichevole presente.</div>';
+}
 window.publishCalendar=publishCalendar;window.setPublication=setPublication;
-guard().then(ok=>{if(ok)Promise.all([loadControls(),loadPublication(),loadMatches()])});
+guard().then(ok=>{if(ok)Promise.all([loadControls(),loadPublication(),loadMatches(),loadAdminFriendlies()])});
 </script>
 <script src="app-ui.js?v=980stable"></script>
 </body></html>

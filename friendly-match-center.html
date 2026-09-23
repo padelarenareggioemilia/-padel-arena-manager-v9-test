@@ -29,9 +29,9 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&
 const opts=s=>['','M1','M2','Misto','Femminile','Riserva'].map(v=>`<option value="${v}" ${v===s?'selected':''}>${v||'—'}</option>`).join('');
 
 async function init(){const s=await sb.auth.getSession();if(!s.data.session){location.href='login.html';return}
-const [h,r]=await Promise.all([sb.rpc('friendly_get_hub'),sb.rpc('friendly_get_match_detail',{p_friendly_match_id:id})]);
+const [h,r,p]=await Promise.all([sb.rpc('friendly_get_hub'),sb.rpc('friendly_get_match_detail',{p_friendly_match_id:id}),sb.from('profiles').select('role').eq('id',s.data.session.user.id).maybeSingle()]);
 if(r.error)return summary.textContent='Errore: '+r.error.message;d=Array.isArray(r.data)?r.data[0]:r.data;m=d.match;
-const hub=Array.isArray(h.data)?h.data[0]:(h.data||{}),mine=new Set((hub.my_teams||[]).map(x=>String(x.id))),allowed=[m.source_home_team_id,m.source_away_team_id].filter(x=>mine.has(String(x)));
+const hub=Array.isArray(h.data)?h.data[0]:(h.data||{}),mine=new Set((hub.my_teams||[]).map(x=>String(x.id))),isAdmin=String(p.data?.role||'').toLowerCase()==='admin',allowed=isAdmin?[m.source_home_team_id,m.source_away_team_id].filter(Boolean):[m.source_home_team_id,m.source_away_team_id].filter(x=>mine.has(String(x)));
 summary.innerHTML=`<h2>${esc(m.home_team_name)} – ${esc(m.away_team_name)}</h2><div><b>${m.scheduled_at?new Date(m.scheduled_at).toLocaleString('it-IT'):'Data da definire'}</b></div><div class="muted">${esc(m.venue||'')}</div><div class="notice"><b>Questa gara non produce alcun effetto sulla classifica ufficiale.</b></div>`;
 if(!allowed.length){chooser.innerHTML='<div class="notice">Non sei autorizzato a gestire questa amichevole.</div>';chooser.classList.remove('hidden');return}
 if(allowed.length===1)return choose(allowed[0]);chooser.innerHTML='<h2>Scegli la squadra da gestire</h2><div class="actions">'+allowed.map(t=>`<button class="btn primary" onclick="choose('${t}')">${String(t)===String(m.source_home_team_id)?esc(m.home_team_name):esc(m.away_team_name)}</button>`).join('')+'</div>';chooser.classList.remove('hidden')}
@@ -41,7 +41,7 @@ function choose(t){myTeamId=t;mySide=String(t)===String(m.source_home_team_id)?'
 function renderPostMatch(){
  const ready=m.result_status==='completed'&&d.result;
  postMatch.classList.toggle('hidden',!ready);
- if(ready)postMatch.innerHTML=`<span class="badge">AMICHEVOLE CHIUSA</span><h2>Post partita / Comunicazione</h2><div class="notice" style="border-color:#009246"><b>Risultato definitivo e fuori classifica.</b><br>Puoi caricare le foto, creare la grafica social ufficiale e preparare l’articolo.</div><button class="btn primary" onclick="location.href='post-match.html?friendly=1&id=${encodeURIComponent(id)}&v=9983'">Apri Post partita</button>`;
+ if(ready)postMatch.innerHTML=`<span class="badge">AMICHEVOLE CHIUSA</span><h2>Post partita / Comunicazione</h2><div class="notice" style="border-color:#009246"><b>Risultato definitivo e fuori classifica.</b><br>Puoi caricare le foto, creare la grafica social ufficiale e preparare l’articolo.</div><button class="btn primary" onclick="location.href='post-match.html?friendly=1&id=${encodeURIComponent(id)}&v=9985'">Apri Post partita</button>`;
 }
 
 function renderLineup(){const players=(d.players||[]).filter(p=>p.side===mySide),lu=(d.lineups||[]).find(x=>x.side===mySide),saved=(d.lineup_players||[]).filter(x=>x.lineup_id===lu?.id);
