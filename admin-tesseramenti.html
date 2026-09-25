@@ -21,8 +21,8 @@ select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radi
 @media(max-width:650px){.actions{display:grid}.btn{width:100%}}
 </style></head>
 <body><main>
-<section class="card hero"><h1>Admin · Tesseramenti V9.9.68</h1><b>Flusso definitivo Admin → Capitano → Admin → AICS · SOLO REALE</b></section>
-<section class="card"><button class="btn secondary" onclick="location.href='index.html?v=9968'">← Dashboard Admin</button></section>
+<section class="card hero"><h1>Admin · Tesseramenti V9.9.69</h1><b>Flusso definitivo Admin → Capitano → Admin → AICS · SOLO REALE</b></section>
+<section class="card"><button class="btn secondary" onclick="location.href='index.html?v=9969'">← Dashboard Admin</button></section>
 <section class="card"><b>Squadra</b><select id="team"></select><div id="status" class="notice">Caricamento…</div></section>
 
 <section id="work" class="hidden">
@@ -58,7 +58,7 @@ async function start(){
  if(r.error)throw r.error;
  const requestedTeam=new URLSearchParams(location.search).get('team')||'';
  $('team').innerHTML='<option value="">Seleziona squadra</option>'+r.data.map(t=>`<option value="${t.id}" ${(requestedTeam?t.id===requestedTeam:t.name==='EDEN NEXT GEN PADEL CLUB')?'selected':''}>${esc(t.name)}</option>`).join('');
- $('team').onchange=()=>{const id=$('team').value;history.replaceState(null,'',id?'admin-tesseramenti.html?team='+encodeURIComponent(id)+'&v=9968':'admin-tesseramenti.html?v=9968');load()};
+ $('team').onchange=()=>{const id=$('team').value;history.replaceState(null,'',id?'admin-tesseramenti.html?team='+encodeURIComponent(id)+'&v=9969':'admin-tesseramenti.html?v=9969');load()};
  if($('team').value)await load();
  $('status').textContent='Admin riconosciuto.';
 }
@@ -74,8 +74,9 @@ async function load(){
 function render(){
  $('players').innerHTML=(d.players||[]).map(p=>`<div class="player"><input class="pick" type="checkbox" value="${p.id}" ${p.registration_status==='da_tesserare'?'checked':'disabled'} onchange="calc()"><div><b>${p.first_name} ${p.last_name}</b><br><small>${p.email||''}</small></div><span class="pill">${p.registration_status}</span></div>`).join('');
  $('history').innerHTML=(d.requests||[]).map(q=>{
-   const notice=`<div class="actions" style="margin-top:10px"><button class="btn secondary" onclick="openPaymentNotice('${q.id}')">Apri / stampa richiesta pagamento</button><button class="btn secondary" onclick="copyCaptainPaymentMessage('${q.id}')">Copia messaggio per il Capitano</button></div>`;
-   const receipt=q.receipt_url?`<div class="notice ok"><b>Ricevuta caricata dalla squadra:</b><br><a href="${q.receipt_url}" target="_blank">Apri ricevuta ${esc(q.receipt_file_name||'')}</a></div>`:`<div class="notice warn"><b>Ricevuta non ancora caricata.</b><br>La richiesta è in attesa dell’operazione del Capitano.</div>`;
+   const notice=q.status!=='cancelled'?`<div class="actions" style="margin-top:10px"><button class="btn secondary" onclick="openPaymentNotice('${q.id}')">Apri / stampa richiesta pagamento</button><button class="btn secondary" onclick="copyCaptainPaymentMessage('${q.id}')">Copia messaggio per il Capitano</button></div>`:'';
+   const receipt=q.status==='cancelled'?`<div class="notice"><b>Richiesta annullata.</b><br>Non è più conteggiata tra gli importi da pagare.</div>`:q.receipt_url?`<div class="notice ok"><b>Ricevuta caricata dalla squadra:</b><br><a href="${q.receipt_url}" target="_blank">Apri ricevuta ${esc(q.receipt_file_name||'')}</a></div>`:`<div class="notice warn"><b>Ricevuta non ancora caricata.</b><br>La richiesta è in attesa dell’operazione del Capitano.</div>`;
+   const adminActions=q.status==='payment_requested'&&!q.receipt_url?`<div class="actions"><button class="btn danger" onclick="cancelRequest('${q.id}','${esc(q.request_number)}')">Annulla richiesta</button></div>`:q.status==='receipt_uploaded'&&q.receipt_url?`<div class="actions"><button class="btn danger" onclick="resetReceipt('${q.id}','${esc(q.request_number)}')">Elimina / sostituisci ricevuta</button></div>`:'';
    const prep=q.status==='receipt_uploaded' && !q.test_mode?`<button class="btn success" onclick="prepare('${q.id}')">Approva e prepara CSV + Excel + PDF</button>`:'';
    const files=(q.csv_file_url||q.xlsx_file_url||q.pdf_file_url)?`<div class="notice ok files"><b>Documenti:</b><br>${q.csv_file_url?`<a href="${q.csv_file_url}" target="_blank">CSV</a>`:''}${q.xlsx_file_url?`<a href="${q.xlsx_file_url}" target="_blank">Excel</a>`:''}${q.pdf_file_url?`<a href="${q.pdf_file_url}" target="_blank">PDF</a>`:''}</div>`:'';
    let send='';
@@ -86,7 +87,7 @@ function render(){
    } else if(q.status==='submitted'){
       send=`<div class="notice ok"><b>INVIATA AD AICS</b>${q.sent_at?` · ${new Date(q.sent_at).toLocaleString('it-IT')}`:''}<br>I giocatori inclusi risultano ora Tesserati.</div>`;
    }
-   return `<div class="request"><b>${q.request_number}</b> <span class="pill">${q.status}</span><div>${q.player_count} giocatori · € ${Number(q.amount).toFixed(2)}</div>${notice}${receipt}${prep}${files}${send}</div>`;
+   return `<div class="request"><b>${q.request_number}</b> <span class="pill">${q.status}</span><div>${q.player_count} giocatori · € ${Number(q.amount).toFixed(2)}</div>${notice}${receipt}${adminActions}${prep}${files}${send}</div>`;
  }).join('')||'<div class="notice">Nessuna richiesta.</div>';
  calc();
 }
@@ -101,6 +102,30 @@ async function createRequest(){
  const r=await sb.rpc('admin_create_tesseramento_request',{p_team_id:$('team').value,p_player_ids:ids,p_notes:$('notes').value.trim()||null,p_test_mode:false});
  if(r.error)return alert(r.error.message);
  alert(`Richiesta ${r.data.request_number} creata. Totale € ${Number(r.data.amount).toFixed(2)}.`);
+ await load();
+}
+
+async function cancelRequest(id,num){
+ const reason=prompt(`ANNULLA RICHIESTA\n\n${num}\n\nQuesta operazione rimuove la pratica dagli importi da pagare, ma la conserva nello storico.\nScrivi il motivo dell’annullamento:`);
+ if(reason===null)return;
+ if(!reason.trim())return alert('Inserisci il motivo dell’annullamento.');
+ if(!confirm(`Confermi l’annullamento della richiesta ${num}?\n\nNon verranno modificati giocatori, altre richieste o pratiche già inviate.`))return;
+ const r=await sb.rpc('admin_cancel_tesseramento_request',{p_request_id:id,p_reason:reason.trim()});
+ if(r.error)return alert('Annullamento non eseguito: '+r.error.message);
+ alert(`Richiesta ${num} annullata. Non risulta più da pagare.`);
+ await load();
+}
+
+async function resetReceipt(id,num){
+ if(!confirm(`Eliminare la ricevuta della richiesta ${num}?\n\nLa pratica tornerà in attesa di pagamento e il Capitano potrà caricare il documento corretto.`))return;
+ const r=await sb.rpc('admin_reset_tesseramento_receipt',{p_request_id:id});
+ if(r.error)return alert('Ricevuta non modificata: '+r.error.message);
+ let storageWarning='';
+ if(r.data?.storage_path){
+   const removed=await sb.storage.from('team-documents').remove([r.data.storage_path]);
+   if(removed.error)storageWarning='\n\nAttenzione: la pratica è stata corretta, ma il vecchio file non è stato rimosso dall’archivio.';
+ }
+ alert(`Ricevuta rimossa dalla richiesta ${num}. Ora può essere caricata quella corretta.${storageWarning}`);
  await load();
 }
 
@@ -125,7 +150,7 @@ async function openPaymentNotice(id){
 async function copyCaptainPaymentMessage(id){
  try{
   const detail=await getRequestDetail(id),req=detail.request,team=detail.team,settings=detail.settings,causale=paymentCausale(detail);
-  const url=new URL('captain-tesseramenti.html',location.href);url.searchParams.set('team',team.id);url.searchParams.set('v','9968');
+  const url=new URL('captain-tesseramenti.html',location.href);url.searchParams.set('team',team.id);url.searchParams.set('v','9969');
   const text=`Ciao ${team.captain_name||'Capitano'},\n\nè disponibile la richiesta di pagamento tessere ${req.request_number} per la squadra ${team.name}.\n\nGiocatori: ${(detail.players||[]).length}\nImporto totale: € ${Number(req.amount).toFixed(2)}\nIntestatario: ${settings.account_holder}\nIBAN: ${settings.iban}\nCausale: ${causale}\n\nAccedi all’Area Capitano e apri la sezione Tesseramenti per vedere la richiesta e caricare una sola ricevuta del bonifico:\n${url.href}`;
   try{await navigator.clipboard.writeText(text);alert('Messaggio per il Capitano copiato.')}catch(_e){prompt('Copia il messaggio per il Capitano:',text)}
  }catch(e){alert('Impossibile preparare il messaggio: '+(e.message||e))}
@@ -179,7 +204,7 @@ async function sendAics(id,num){
    alert('Invio NON eseguito: '+(e.message||e));
  }
 }
-window.toggleAll=toggleAll;window.createRequest=createRequest;window.openPaymentNotice=openPaymentNotice;window.copyCaptainPaymentMessage=copyCaptainPaymentMessage;window.prepare=prepare;window.sendAics=sendAics;
+window.toggleAll=toggleAll;window.createRequest=createRequest;window.cancelRequest=cancelRequest;window.resetReceipt=resetReceipt;window.openPaymentNotice=openPaymentNotice;window.copyCaptainPaymentMessage=copyCaptainPaymentMessage;window.prepare=prepare;window.sendAics=sendAics;
 start().catch(e=>$('status').textContent='Errore: '+e.message);
 </script>
 </body></html>
