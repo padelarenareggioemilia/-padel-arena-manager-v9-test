@@ -688,13 +688,25 @@ async function saveAdminPlayer(){
 async function deleteAdminPlayer(playerId){
   const player=adminRosterCache.find(x=>x.id===playerId);
   const playerName=((player?.first_name||'')+' '+(player?.last_name||'')).trim()||'questo giocatore';
-  if(!confirm(`Eliminare definitivamente ${playerName} dalla squadra?\n\nL’operazione non può essere annullata.`))return;
+  if(!confirm(`Rimuovere ${playerName} esclusivamente dalla squadra ${currentTeam?.name||'selezionata'}?\n\nL’anagrafica eventualmente presente in altre squadre non verrà modificata.`))return;
+  const button=document.querySelector(`button[onclick="deleteAdminPlayer('${playerId}')"]`);
+  if(button){button.disabled=true;button.textContent='Rimozione…'}
   try{
     const r=await sb.rpc('delete_player_safely',{p_player_id:playerId});
     if(r.error)throw r.error;
-    adminPlayerMessage(r.data?.message||`${playerName} è stato eliminato dalla squadra.`);
     await reloadAdminRoster();
-  }catch(e){adminPlayerMessage(e.message||String(e),true)}
+    const message=r.data?.message||`${playerName} è stato rimosso dalla squadra.`;
+    adminPlayerMessage(message);
+    document.getElementById('adminPlayerMsg')?.scrollIntoView({behavior:'smooth',block:'center'});
+    alert(message);
+  }catch(e){
+    const message=e.message||String(e);
+    adminPlayerMessage(message,true);
+    document.getElementById('adminPlayerMsg')?.scrollIntoView({behavior:'smooth',block:'center'});
+    alert(`Rimozione non riuscita: ${message}`);
+  }finally{
+    if(button&&document.body.contains(button)){button.disabled=false;button.textContent='Elimina'}
+  }
 }
 window.openAdminPlayerEditor=openAdminPlayerEditor;window.closeAdminPlayerEditor=closeAdminPlayerEditor;window.saveAdminPlayer=saveAdminPlayer;window.deleteAdminPlayer=deleteAdminPlayer;
 
@@ -998,7 +1010,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.73 FIX INSERIMENTO GIOCATORE</div>
+<div style="position:fixed;right:8px;bottom:8px;z-index:9999;padding:4px 7px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui;opacity:.75">V9.9.86 FIX ELIMINAZIONE GIOCATORE</div>
 <script src="app-ui.js?v=980stable"></script>
 </body>
 </html>
