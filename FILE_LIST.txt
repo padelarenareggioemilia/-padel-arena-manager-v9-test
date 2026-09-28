@@ -1,10 +1,13 @@
 CHANGELOG.md
 README.txt
 SUPABASE_V9_4_UPDATE.sql
+SUPABASE_V9_9_87_FLUSSO_GARA_REGOLAMENTO_2027.sql
 VERSION.txt
 admin-control.html
+admin-result-appeals.html
 calendar.html
 captain.html
+captain-home.html
 competitions.html
 data-exchange.html
 groups.html
