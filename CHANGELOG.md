@@ -1,30 +1,30 @@
-# CHANGELOG â Padel Arena Manager
+# CHANGELOG — Padel Arena Manager
 
-## V9.9.87 â Flusso gara regolamento 2027
+## V9.9.87 — Flusso gara regolamento 2027
 - Distinte definitive e bloccate automaticamente a T-120.
 - Ordine ufficiale degli incontri: M1 e Femminile, poi M2 e Misto.
 - Controlli su composizione, numero massimo di incontri e tessere/certificati.
 - Appello digitale condiviso, verifica QR e sostituzioni soltanto dalle riserve.
-- Spareggio misto sul 2-2 con soli giocatori giÃ  impiegati nella giornata.
-- Risultati bloccati e trasmessi automaticamente il lunedÃ¬ alle 00:01.
+- Spareggio misto sul 2-2 con soli giocatori già impiegati nella giornata.
+- Risultati bloccati e trasmessi automaticamente il lunedì alle 00:01.
 - Ricorso formale entro 48 ore e nuova area amministrativa di gestione ricorsi.
 
-## V9.5.0 â Calendario corretto
+## V9.5.0 — Calendario corretto
 - Correzione fuso orario locale/UTC.
 - Solo andata oppure andata e ritorno.
 - Giorno, ora e campo obbligatori dalla squadra di casa.
-- FestivitÃ , prefestivi e sospensioni.
-- Solo semifinali e finali playoff/playout/Coppa allâEden.
+- Festività, prefestivi e sospensioni.
+- Solo semifinali e finali playoff/playout/Coppa all’Eden.
 
 
-## V9.4.4 â Import modulo Google AICS
+## V9.4.4 — Import modulo Google AICS
 - Supporto diretto all'esportazione Google Forms del campionato 2027.
 - Mappatura automatica delle intestazioni originali.
 - Normalizzazione avanzata dei duplicati.
 - Riconoscimento automatico della serie e dell'orario.
 
 
-## V9.4.3 â IdentitÃ  AICS completa
+## V9.4.3 — Identità AICS completa
 - Favicon AICS.
 - Icone iPhone, Android e Web App.
 - Manifest installabile.
@@ -33,7 +33,7 @@
 - Service worker.
 
 
-## V9.4.2 â Repository completo
+## V9.4.2 — Repository completo
 - Pacchetto completo e coerente dell'intero progetto V9.
 - Inclusa la funzione amministratore Importa/Esporta Excel e CSV.
 - Inclusi i filtri per Serie e singola Squadra.
