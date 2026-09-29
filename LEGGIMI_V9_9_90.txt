@@ -1,0 +1,38 @@
+AICS PADEL CHAMPIONSHIP — AGGIORNAMENTO V9.9.90
+DIAGNOSTICA LIMITAZIONI FITP E COMUNICAZIONI AI CAPITANI
+
+INSTALLAZIONE
+
+1. Aprire Supabase > SQL Editor.
+2. Eseguire integralmente:
+   database/SUPABASE_V9_9_90_DIAGNOSTICA_FITP.sql
+3. Caricare su GitHub, mantenendo le stesse cartelle:
+   - diagnostics.html
+   - start.html
+   - captain-home.html
+   - service-worker.js
+   - VERSION.txt
+   - CHANGELOG.md
+4. Aprire la V9 come amministratore.
+5. Entrare nel Centro diagnostico e premere “Esegui diagnostica completa”.
+
+NUOVE FUNZIONI
+
+- 34 irregolarità FITP accertate.
+- 21 posizioni FITP da verificare.
+- Raggruppamento automatico per squadra.
+- Pulsante “Prepara email” con destinatario, oggetto e testo già compilati.
+- Pulsante “Copia testo”.
+- Pulsante “Segna inviata” per registrare la comunicazione effettuata.
+- Accesso ai dati FITP riservato esclusivamente all’amministratore tramite RLS.
+
+REGOLA APPLICATA ALLA SERIE C
+
+Sono ammessi esclusivamente giocatori di 4ª o 5ª fascia con 0 punti,
+considerati equivalenti a non classificati.
+
+IMPORTANTE
+
+Il pulsante “Prepara email” apre Gmail e consente di controllare o modificare
+il testo prima dell’invio. La V9 non registra automaticamente l’email come
+inviata: dopo averla realmente spedita, premere “Segna inviata”.

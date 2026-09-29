@@ -1,5 +1,13 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.9.90 — Diagnostica limitazioni FITP
+- Inseriti 34 casi di non conformità accertata e 21 posizioni da verificare.
+- Nuova sezione protetta nella Diagnostica, raggruppata per squadra.
+- E-mail al capitano già compilata con tutte le anomalie della propria rosa.
+- Testi distinti per irregolarità accertate e posizioni ancora da verificare.
+- Registrazione manuale della data di comunicazione inviata.
+- Regola Serie C: ammessi soltanto giocatori di 4ª o 5ª fascia con 0 punti.
+
 ## V9.9.89 — Adeguamento completo al regolamento 2027
 - Classifiche corrette: 2 punti alla vittoria e 0 alla sconfitta.
 - Risultati validati su set ai 6, tie-break decisivo ai 7 e spareggio Misto.
