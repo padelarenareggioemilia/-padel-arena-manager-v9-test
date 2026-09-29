@@ -1,5 +1,21 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.9.89 — Adeguamento completo al regolamento 2027
+- Classifiche corrette: 2 punti alla vittoria e 0 alla sconfitta.
+- Risultati validati su set ai 6, tie-break decisivo ai 7 e spareggio Misto.
+- Risultato complessivo salvato e pubblicato automaticamente.
+- Controlli su categoria FITP, unicità del giocatore, rosa massima e validità del tesseramento dopo 24 ore.
+- Procedura digitale per la distinta tardiva con decisione dell'avversario.
+- Registro amministrativo di irregolarità, risultati a tavolino e penalizzazioni progressive.
+- Penalizzazioni integrate nelle classifiche pubbliche e riservate.
+- Riserve non più utilizzabili dopo il blocco T-120.
+- Protezione RLS delle tabelle amichevoli e rimozione dell'accesso anonimo dalle RPC operative.
+
+## V9.9.88 — Hotfix tessere digitali
+- Generazione automatica della tessera per ogni giocatore con stato ufficiale `approved`.
+- Recuperate le tessere mancanti delle rose già approvate.
+- Tessere attive soltanto con certificato medico presente e non scaduto.
+
 ## V9.9.87 — Flusso gara regolamento 2027
 - Distinte definitive e bloccate automaticamente a T-120.
 - Ordine ufficiale degli incontri: M1 e Femminile, poi M2 e Misto.

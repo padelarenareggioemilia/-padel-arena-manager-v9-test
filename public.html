@@ -173,7 +173,7 @@ const logos={
 };
 
 const code=new URLSearchParams(location.search).get('code');
-let teams=[],groups=[],members=[],fixtures=[],statuses=[],view='current';
+let teams=[],groups=[],members=[],fixtures=[],statuses=[],adjustments=[],view='current';
 
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
 function teamName(id,p){return teams.find(t=>t.id===id)?.name||p||'Da definire'}
@@ -208,8 +208,9 @@ function standingsFor(group){
     if(Number.isNaN(h)||Number.isNaN(a))return;
     const H=rows[f.home_team_id],A=rows[f.away_team_id];if(!H||!A)return;
     H.g++;A.g++;H.mf+=h;H.ms+=a;A.mf+=a;A.ms+=h;
-    if(h>a){H.v++;A.p++;H.pt+=3}else if(a>h){A.v++;H.p++;A.pt+=3}else{H.n++;A.n++;H.pt++;A.pt++}
+    if(h>a){H.v++;A.p++;H.pt+=2}else if(a>h){A.v++;H.p++;A.pt+=2}
   });
+  adjustments.filter(x=>x.competition_code===code&&rows[x.team_id]).forEach(x=>rows[x.team_id].pt+=Number(x.points_delta||0));
   return Object.values(rows).sort((a,b)=>b.pt-a.pt||(b.mf-b.ms)-(a.mf-a.ms)||teamName(a.id).localeCompare(teamName(b.id)));
 }
 function render(){
@@ -253,16 +254,17 @@ async function loadCompetition(){
   $('headerButton').textContent='← Competizioni';
   $('headerButton').onclick=()=>location.href='public.html';
 
-  const [t,g,m,f,w]=await Promise.all([
+  const [t,g,m,f,w,a]=await Promise.all([
     sb.from('public_championship_teams').select('*'),
     sb.from('public_championship_groups').select('*').eq('competition_code',code),
     sb.from('public_championship_group_teams').select('*'),
     sb.from('public_championship_fixtures').select('*').eq('competition_code',code).order('scheduled_at'),
-    sb.from('public_championship_status').select('*')
+    sb.from('public_championship_status').select('*'),
+    sb.from('public_standing_adjustments').select('*').eq('competition_code',code)
   ]);
   const e=t.error||g.error||m.error||f.error;
   if(e){$('content').innerHTML=`<div class="notice">${esc(e.message)}</div>`;return}
-  teams=t.data||[];groups=g.data||[];members=m.data||[];fixtures=f.data||[];statuses=w.error?[]:(w.data||[]);
+  teams=t.data||[];groups=g.data||[];members=m.data||[];fixtures=f.data||[];statuses=w.error?[]:(w.data||[]);adjustments=a.error?[]:(a.data||[]);
   render();
 }
 window.setView=setView;

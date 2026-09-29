@@ -2,8 +2,11 @@ CHANGELOG.md
 README.txt
 SUPABASE_V9_4_UPDATE.sql
 SUPABASE_V9_9_87_FLUSSO_GARA_REGOLAMENTO_2027.sql
+SUPABASE_V9_9_88_FIX_TESSERE_APPROVATE.sql
+SUPABASE_V9_9_89_ADEGUAMENTO_REGOLAMENTO_COMPLETO.sql
 VERSION.txt
 admin-control.html
+admin-discipline.html
 admin-result-appeals.html
 calendar.html
 captain.html
