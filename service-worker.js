@@ -1,4 +1,4 @@
-const CACHE='aics-padel-v9-9-91-fitp-email';
+const CACHE='aics-padel-v9-9-92-fitp-ranking-cutoff';
 self.addEventListener('install',()=>self.skipWaiting());
 self.addEventListener('activate',event=>{
   event.waitUntil(caches.keys().then(keys=>Promise.all(keys.map(k=>caches.delete(k)))).then(()=>self.clients.claim()));

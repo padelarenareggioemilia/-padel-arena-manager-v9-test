@@ -1,5 +1,13 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.9.92 — Correzione ranking FITP di riferimento
+- Diagnostica ricalcolata su tutte le 778 posizioni usando il ranking FITP di luglio 2026, valido per il campionato fino al 27 settembre 2026.
+- Le segnalazioni accertate passano da 34 a 18.
+- Le 21 posizioni precedentemente indicate come “da verificare” vengono considerate regolari: si tratta di giocatori privi di tessera FITP e quindi equivalenti a NC.
+- Rimossi automaticamente i controlli non più validi del precedente ricalcolo.
+- Schermata Diagnostica ed email ai capitani indicano chiaramente il ranking di riferimento.
+- Il caso Felicetti resta non conforme: anche nel ranking precedente risulta in 4ª fascia con 12,2 punti.
+
 ## V9.9.91 — Verifica FITP per giocatori senza tessera
 - Nelle email relative alle posizioni da verificare il capitano può ora dichiarare che il giocatore non possiede una tessera FITP.
 - Se il giocatore possiede una tessera FITP, vengono richiesti numero di tessera, fascia e punteggio aggiornati.

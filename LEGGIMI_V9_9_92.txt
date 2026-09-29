@@ -1,0 +1,43 @@
+AICS PADEL CHAMPIONSHIP — AGGIORNAMENTO V9.9.92
+
+OBIETTIVO
+Correggere la diagnostica FITP usando il ranking di luglio 2026,
+assunto dal campionato come valido fino al 27 settembre 2026.
+
+RISULTATO DEL RICALCOLO COMPLETO
+- giocatori controllati: 778
+- squadre controllate: 47
+- irregolarità accertate: 18
+- posizioni da verificare: 0
+- squadre con almeno un'irregolarità accertata: 9
+- squadre con sole posizioni da verificare: 0
+
+INSTALLAZIONE
+1. Aprire Supabase > SQL Editor.
+2. Eseguire integralmente:
+   database/SUPABASE_V9_9_92_CORREZIONE_RANKING_FITP.sql
+3. Caricare nella root del sito GitHub i file:
+   - diagnostics.html
+   - start.html
+   - service-worker.js
+   - VERSION.txt
+   - CHANGELOG.md
+4. Attendere la pubblicazione di GitHub Pages e ricaricare il sito.
+
+EFFETTO DEL FILE SQL
+- elimina soltanto le segnalazioni del controllo del 29/09/2026
+  che non risultano più aperte con il ranking corretto;
+- aggiorna o inserisce le 18 irregolarità effettive ancora aperte;
+- conserva la data di eventuale comunicazione già registrata per i
+  giocatori che restano presenti nella diagnostica.
+
+GIOCATORI SENZA TESSERA FITP
+I giocatori che non risultano negli elenchi perché privi di tessera FITP
+sono considerati non classificati e quindi regolari. Non vengono più
+mostrati nella sezione “da verificare”.
+
+NOTA SUL CASO FELICETTI
+Davide Tommaso Felicetti resta non conforme per la Serie C: anche nel
+ranking precedente risulta in 4ª fascia con 12,2 punti.
+
+Non eseguire nuovamente il precedente file SQL V9.9.90 dopo questa correzione.
