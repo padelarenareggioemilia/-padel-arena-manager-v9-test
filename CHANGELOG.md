@@ -1,5 +1,11 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.9.91 — Verifica FITP per giocatori senza tessera
+- Nelle email relative alle posizioni da verificare il capitano può ora dichiarare che il giocatore non possiede una tessera FITP.
+- Se il giocatore possiede una tessera FITP, vengono richiesti numero di tessera, fascia e punteggio aggiornati.
+- Il testo riepiloga i limiti applicati alle Serie A, B e C.
+- Nessuna modifica alle 34 irregolarità accertate e ai 21 casi già presenti nella diagnostica.
+
 ## V9.9.90 — Diagnostica limitazioni FITP
 - Inseriti 34 casi di non conformità accertata e 21 posizioni da verificare.
 - Nuova sezione protetta nella Diagnostica, raggruppata per squadra.

@@ -1,0 +1,26 @@
+AICS PADEL CHAMPIONSHIP — AGGIORNAMENTO V9.9.91
+VERIFICA FITP PER GIOCATORI SENZA TESSERA
+
+INSTALLAZIONE
+
+Caricare su GitHub, sovrascrivendo i file esistenti:
+- diagnostics.html
+- start.html
+- service-worker.js
+- VERSION.txt
+- CHANGELOG.md
+
+Non è necessario eseguire alcun file SQL.
+
+MODIFICA INTRODOTTA
+
+Per le posizioni FITP “Da verificare”, l'email consente ora al capitano di:
+- dichiarare espressamente che il giocatore non possiede una tessera FITP;
+- oppure comunicare numero di tessera, fascia e punteggio aggiornati.
+
+Il testo riepiloga anche i criteri applicati:
+- Serie A: massimo 3ª fascia;
+- Serie B: massimo 4ª fascia, indipendentemente dal punteggio;
+- Serie C: NC oppure 4ª/5ª fascia con 0 punti.
+
+Le 34 irregolarità accertate e i 21 casi da verificare non vengono modificati.
