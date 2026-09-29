@@ -1,0 +1,29 @@
+AICS PADEL CHAMPIONSHIP — AGGIORNAMENTO V9.9.93
+
+OBIETTIVO
+Applicare il ranking FITP corretto in base alla data di tesseramento.
+
+REGOLA APPLICATA
+- tesseramento entro il 27/09/2026: il giocatore è regolare se rispetta
+  i limiti con almeno uno tra ranking di luglio e ranking di agosto;
+- tesseramento dal 28/09/2026: viene applicato il ranking di agosto;
+- chi era regolare all'iscrizione conserva l'idoneità anche se è salito;
+- chi è sceso di fascia beneficia della nuova posizione;
+- chi non possiede tessera FITP è considerato NC e regolare.
+
+INSTALLAZIONE
+1. Aprire Supabase > SQL Editor.
+2. Eseguire integralmente:
+   database/SUPABASE_V9_9_93_RANKING_PER_DATA_TESSERAMENTO.sql
+3. Annotare il numero mostrato nella colonna
+   “irregolarita_fitp_definitive”.
+4. Caricare nella root del sito GitHub i file:
+   - diagnostics.html
+   - start.html
+   - service-worker.js
+   - VERSION.txt
+   - CHANGELOG.md
+5. Attendere la pubblicazione di GitHub Pages e ricaricare il sito.
+
+Il nuovo SQL sostituisce automaticamente i precedenti controlli FITP del
+29/09/2026. Non occorre cancellare manualmente alcun dato.

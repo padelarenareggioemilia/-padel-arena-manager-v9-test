@@ -1,5 +1,13 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.9.93 — Ranking FITP per data di tesseramento
+- Controllo automatico basato sulla data `created_at` del tesseramento registrata nel sistema.
+- Tesserati entro il 27 settembre 2026: criterio più favorevole tra ranking di luglio e aggiornamento di agosto.
+- Tesserati dal 28 settembre 2026: applicazione del ranking FITP di agosto.
+- Un giocatore regolare all'iscrizione conserva l'idoneità anche in caso di successivo incremento della fascia.
+- Un giocatore sceso di fascia con l'aggiornamento beneficia immediatamente della nuova posizione.
+- I giocatori privi di tessera FITP restano considerati NC e regolari.
+
 ## V9.9.92 — Correzione ranking FITP di riferimento
 - Diagnostica ricalcolata su tutte le 778 posizioni usando il ranking FITP di luglio 2026, valido per il campionato fino al 27 settembre 2026.
 - Le segnalazioni accertate passano da 34 a 18.
