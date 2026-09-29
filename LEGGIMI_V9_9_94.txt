@@ -1,0 +1,12 @@
+AGGIORNAMENTO V9.9.94
+
+Caricare nella cartella principale del repository GitHub soltanto questi file:
+- diagnostics.html
+- start.html
+- service-worker.js
+- VERSION.txt
+- CHANGELOG.md
+
+Non è necessario eseguire alcun file SQL.
+
+L'aggiornamento modifica esclusivamente la spiegazione del criterio FITP nella diagnostica e nelle e-mail preparate per i capitani. Il calcolo delle 17 irregolarità resta invariato.

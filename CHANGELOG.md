@@ -1,5 +1,10 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.9.94 — Chiarezza criterio ranking FITP
+- La diagnostica e le e-mail automatiche spiegano che il doppio confronto è un criterio eccezionale e particolarmente favorevole ai giocatori.
+- Precisato che la scelta si è resa necessaria perché l'aggiornamento FITP atteso in prossimità del 1° settembre è stato pubblicato soltanto il 28 settembre.
+- Confermata la posizione più favorevole tra luglio e agosto per i tesserati entro il 27 settembre; dal 28 settembre resta valido il ranking di agosto.
+
 ## V9.9.93 — Ranking FITP per data di tesseramento
 - Controllo automatico basato sulla data `created_at` del tesseramento registrata nel sistema.
 - Tesserati entro il 27 settembre 2026: criterio più favorevole tra ranking di luglio e aggiornamento di agosto.
