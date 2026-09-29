@@ -1,3 +1,2 @@
-AICS PADEL CHAMPIONSHIP V9.9.94
-Build: 9994
-Repository previsto: -padel-arena-manager-v9-test
+V9.9.95
+Classificazioni FITP ufficiali verificate e bloccate

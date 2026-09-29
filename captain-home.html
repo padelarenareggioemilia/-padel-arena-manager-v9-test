@@ -121,7 +121,7 @@ function dashboardView(){
  </div>`;
 }
 function competitionCards(){const codes=[...new Set(arr(data.fixtures).map(comp))];return codes.map(code=>{const fs=arr(data.fixtures).filter(f=>comp(f)===code),group=arr(data.groups).find(g=>g.competition_code===code),next=fs.filter(f=>!done(f))[0];let state='Fase da definire';if(group){const rows=standings(group),pos=rows.findIndex(r=>r.id===data.team_id);if(pos>=0)state=`${pos+1}ª posizione · ${rows[pos].pt} punti · ${esc(group.group_name||'Girone')}`}else{const last=fs.filter(done).slice(-1)[0];state=stage(last||next||{})}return `<div class="stage" style="margin:8px 0">${esc(labels[code]||code)} — ${state}</div>`}).join('')||'<div class="notice">Nessuna competizione.</div>'}
-function playerCard(p){const med=medicalState(p);return `<div class="player">${p.photo_url?`<img class="photo" src="${esc(p.photo_url)}">`:'<div class="photo"></div>'}<div><b>${esc(p.first_name||'')} ${esc(p.last_name||'')}</b><div class="muted">${esc(p.email||'')} · ${esc(p.fitp_ranking||'FITP non indicata')}</div><span class="badge ${p.status==='approved'?'good':p.status==='rejected'?'bad':'yellow'}">${esc(p.status||'pending')}</span><span class="badge ${med[1]}">${esc(med[0])}</span>${p.user_id?'<span class="badge good">Account collegato</span>':'<span class="badge">Account non collegato</span>'}</div><div class="actions"><button class="btn secondary tiny" onclick="editPlayer('${p.id}')">Modifica</button><button class="btn primary tiny" onclick="generateCard('${p.id}')">Genera tessera</button>${p.status==='pending'?`<button class="btn success tiny" onclick="setPlayerStatus('${p.id}','approved')">Approva</button><button class="btn danger tiny" onclick="setPlayerStatus('${p.id}','rejected')">Rifiuta</button>`:''}</div></div>`}
+function playerCard(p){const med=medicalState(p);return `<div class="player">${p.photo_url?`<img class="photo" src="${esc(p.photo_url)}">`:'<div class="photo"></div>'}<div><b>${esc(p.first_name||'')} ${esc(p.last_name||'')}</b><div class="muted">${esc(p.email||'')} · ${esc(p.fitp_ranking||'FITP non indicata')}</div><span class="badge ${p.status==='approved'?'good':p.status==='rejected'?'bad':'yellow'}">${esc(p.status||'pending')}</span><span class="badge ${med[1]}">${esc(med[0])}</span>${p.fitp_verified?'<span class="badge good">FITP verificata 🔒</span>':''}${p.user_id?'<span class="badge good">Account collegato</span>':'<span class="badge">Account non collegato</span>'}</div><div class="actions"><button class="btn secondary tiny" onclick="editPlayer('${p.id}')">Modifica</button><button class="btn primary tiny" onclick="generateCard('${p.id}')">Genera tessera</button>${p.status==='pending'?`<button class="btn success tiny" onclick="setPlayerStatus('${p.id}','approved')">Approva</button><button class="btn danger tiny" onclick="setPlayerStatus('${p.id}','rejected')">Rifiuta</button>`:''}</div></div>`}
 function playersView(){content.innerHTML=`<div class="actions"><button class="btn primary" onclick="addPlayerModal()">Inserisci giocatore</button><button class="btn secondary" onclick="copyPlayerLink()">Copia link iscrizione</button></div><h3>Rosa completa</h3>${arr(data.players).map(playerCard).join('')||'<div class="notice">Nessun giocatore presente.</div>'}`}
 function calendarView(){const fs=arr(data.fixtures).slice().sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));content.innerHTML=fs.length?fs.map(fixtureHtml).join(''):'<div class="notice">Nessuna partita disponibile.</div>'}
 function standingsView(){content.innerHTML=arr(data.groups).map(g=>{const rows=standings(g);return `<h3>${esc(labels[g.competition_code]||g.competition_code||'Competizione')} · ${esc(g.group_name||'Girone')}</h3><div class="table-wrap"><table><thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>Diff.</th><th>Pt</th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.id===data.team_id?'me':''}"><td>${i+1}</td><td>${esc(tn(r.id))}${String(r.id)!==String(data.team_id)?`<br><button class="btn secondary tiny" onclick="location.href='${rosterHref(r.id)}'">Capitano e rosa</button>`:''}</td><td>${r.g}</td><td>${r.v}</td><td>${r.n}</td><td>${r.p}</td><td>${r.f-r.s}</td><td>${r.pt}</td></tr>`).join('')}</tbody></table></div>`}).join('')||'<div class="notice">Nessuna classifica disponibile.</div>'}
@@ -227,7 +227,7 @@ function editPlayer(id){
  const p=arr(data.players).find(x=>x.id===id);
  if(!p)return alert('Giocatore non trovato.');
  openModal('Scheda giocatore',`
-  <div class="notice"><b>Dati anagrafici visibili ma protetti.</b><br>Il capitano può modificare soltanto classifica FITP e scadenza del certificato medico.</div>
+  <div class="notice"><b>Dati anagrafici visibili ma protetti.</b><br>${p.fitp_verified?'La classificazione FITP è stata verificata dall’organizzazione e non può essere modificata. Puoi aggiornare soltanto la scadenza del certificato medico.':'Il capitano può modificare soltanto classifica FITP e scadenza del certificato medico.'}</div>
   <div class="grid2">
    <div class="field"><label>Nome</label><input value="${esc(p.first_name||'')}" readonly></div>
    <div class="field"><label>Cognome</label><input value="${esc(p.last_name||'')}" readonly></div>
@@ -238,10 +238,10 @@ function editPlayer(id){
    <div class="field"><label>Luogo di nascita</label><input value="${esc(p.birth_place||'')}" readonly></div>
    <div class="field"><label>Comune di residenza</label><input value="${esc(p.residence_town||'')}" readonly></div>
    <div class="field"><label>Provincia</label><input value="${esc(p.residence_province||'')}" readonly></div>
-   <div class="field"><label>Classifica FITP</label><input id="efitp" value="${esc(p.fitp_ranking||'')}"></div>
+   <div class="field"><label>Classifica FITP ${p.fitp_verified?'ufficiale verificata 🔒':''}</label><input id="efitp" value="${esc(p.fitp_ranking||'')}" ${p.fitp_verified?'readonly':''}>${p.fitp_verified?`<div class="muted">Fonte: ${esc(p.fitp_ranking_source||'ranking FITP ufficiale')}</div>`:''}</div>
    <div class="field"><label>Scadenza certificato medico</label><input id="emed" type="date" value="${esc(p.medical_certificate_expiry||'')}"></div>
   </div>
-  <button class="btn primary" onclick="savePlayer('${id}')">Salva FITP e certificato</button>`);
+  <button class="btn primary" onclick="savePlayer('${id}')">${p.fitp_verified?'Salva certificato':'Salva FITP e certificato'}</button>`);
 }
 async function savePlayer(id){
  const r=await sb.rpc('captain_update_player_sport_data',{
@@ -356,7 +356,7 @@ if (!new URLSearchParams(location.search).get('team')) {
   startCaptainApp();
 }
 </script>
-<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.90 DIAGNOSTICA FITP</div>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.95 CLASSIFICHE FITP VERIFICATE</div>
 <script src="captain-multiteam.js?v=9969"></script>
 <script src="captain-print-share.js?v=9954"></script>
 </body>

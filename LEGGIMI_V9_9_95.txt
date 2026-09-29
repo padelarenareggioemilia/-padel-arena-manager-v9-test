@@ -1,0 +1,24 @@
+AICS PADEL CHAMPIONSHIP V9.9.95
+CLASSIFICAZIONI FITP VERIFICATE E BLOCCATE
+
+Il database è già stato aggiornato con le classificazioni ufficiali dei 17
+giocatori per i quali è stata accertata l'incongruenza.
+
+Per completare l'aggiornamento grafico su GitHub, caricare nella cartella
+principale del sito soltanto questi due file:
+
+- captain-home.html
+- service-worker.js
+
+Sostituire i file esistenti con lo stesso nome.
+
+Il file SQL incluso è la copia dell'intervento già eseguito e non deve essere
+eseguito nuovamente.
+
+Effetti:
+- fascia e punteggio ufficiali visibili nell'anagrafica;
+- badge "FITP verificata";
+- campo FITP non modificabile da capitani, segretari e giocatori;
+- possibilità di aggiornare comunque il certificato medico;
+- amministrazione autorizzata alle eventuali correzioni;
+- conservazione del valore precedentemente dichiarato.
