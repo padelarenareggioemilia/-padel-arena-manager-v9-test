@@ -1,2 +1,2 @@
-V9.9.95
-Classificazioni FITP ufficiali verificate e bloccate
+V9.9.96
+Messaggio automatico FITP dalla diagnostica

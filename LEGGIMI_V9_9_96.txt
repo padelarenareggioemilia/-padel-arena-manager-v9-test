@@ -1,0 +1,15 @@
+AGGIORNAMENTO V9.9.96
+
+Caricare nella cartella principale del repository GitHub soltanto questi file:
+- diagnostics.html
+- service-worker.js
+- VERSION.txt
+- CHANGELOG.md
+
+Non è necessario eseguire alcun file SQL.
+
+Dopo l'esecuzione della diagnostica, nella sezione “Limitazioni categorie FITP”,
+il pulsante “Prepara email” genera automaticamente per ogni squadra una
+comunicazione già compilata con anomalie, verifica omonimie e possibile richiesta
+di passaggio alla categoria superiore. Il pulsante “Copia testo” genera lo stesso
+contenuto negli appunti.

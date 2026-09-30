@@ -1,5 +1,12 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.9.96 — Comunicazione automatica anomalie FITP
+- Il pulsante “Prepara email” nella diagnostica genera automaticamente una comunicazione completa per ogni squadra non conforme.
+- Il testo include squadra, serie e nominativi segnalati con fascia e punteggio ufficiali.
+- Richiesta una verifica collaborativa per escludere eventuali omonimie prima della decisione definitiva.
+- Per Serie C e Serie B viene proposta, se necessaria, la possibilità di richiedere il passaggio alla categoria superiore.
+- Precisato che il passaggio è soggetto a verifica di fattibilità per tutelare calendari, campi e impegni già assunti.
+
 ## V9.9.94 — Chiarezza criterio ranking FITP
 - La diagnostica e le e-mail automatiche spiegano che il doppio confronto è un criterio eccezionale e particolarmente favorevole ai giocatori.
 - Precisato che la scelta si è resa necessaria perché l'aggiornamento FITP atteso in prossimità del 1° settembre è stato pubblicato soltanto il 28 settembre.

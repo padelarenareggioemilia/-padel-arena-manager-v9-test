@@ -47,7 +47,54 @@ function duplicateTable(rows){if(!rows?.length)return empty('Nessun possibile du
 function conflictTable(rows){if(!rows?.length)return empty('Conflitti calendario: 0. Nessuna doppia occupazione dello stesso campo è stata rilevata.');return `<div class="notice err"><b>Questi sono gli unici conflitti ancora da risolvere.</b><br>Una riga viene mostrata solo se sono identificabili almeno due partite distinte e due squadre di casa diverse sullo stesso campo nello stesso orario.</div><div class="table-wrap"><table><thead><tr><th>Data e ora</th><th>Campo</th><th>Squadre di casa contemporanee</th><th>Partite coinvolte</th><th>Azioni</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${new Date(r.scheduled_at).toLocaleString('it-IT')}</td><td>${esc(r.venue)}</td><td><b>${esc(r.home_teams)}</b></td><td>${esc(r.matches)}</td><td><button class="btn secondary tiny" onclick="location.href='calendar.html'">Apri calendario</button></td></tr>`).join('')}</tbody></table></div>`}
 function fitpTeamTable(groups){if(report?.fitp_error)return `<div class="notice err"><b>Modulo FITP non disponibile.</b><br>${esc(report.fitp_error)}<br>Eseguire prima il file SQL V9.9.93.</div>`;if(!groups?.length)return empty('Nessuna irregolarità FITP aperta.');return `<div class="notice warnbox"><b>Criterio eccezionale e particolarmente favorevole:</b> poiché la FITP ha pubblicato l'aggiornamento soltanto il 28 settembre, anziché in prossimità del 1° settembre, per i tesseramenti effettuati entro il 27 settembre 2026 viene considerata la posizione più favorevole tra il ranking di luglio e quello di agosto. Dal 28 settembre si applica il ranking di agosto.<br><b>Tutela dell'idoneità:</b> chi era regolare al momento dell'iscrizione resta regolare anche dopo un incremento; chi è sceso di fascia beneficia del nuovo ranking. I giocatori privi di tessera FITP sono considerati NC.</div><div class="table-wrap"><table><thead><tr><th>Squadra</th><th>Serie</th><th>Irregolarità accertate</th><th>Ultima comunicazione</th><th>Azioni</th></tr></thead><tbody>${groups.map(g=>`<tr><td><b>${esc(g.team.name)}</b><div class="small muted">Capitano: ${esc(g.team.captain_name||'—')} · ${esc(g.team.captain_email||'email non impostata')}</div></td><td>${esc(g.team.series||'—')}</td><td>${g.bad.length?`<span class="badge red">${g.bad.length}</span><div class="small" style="margin-top:6px">${g.bad.map(x=>esc(x.player_name)).join('<br>')}</div>`:'—'}</td><td>${g.notified_at?new Date(g.notified_at).toLocaleString('it-IT'):'Non comunicata'}</td><td><div class="actions"><button class="btn primary tiny" ${g.team.captain_email?'':'disabled'} onclick="openFitpEmail('${g.team.id}')">Prepara email</button><button class="btn secondary tiny" ${g.team.captain_email?'':'disabled'} onclick="copyFitpEmail('${g.team.id}')">Copia testo</button><button class="btn secondary tiny" onclick="markFitpNotified('${g.team.id}')">Segna inviata</button><button class="btn secondary tiny" onclick="openTeam('${g.team.id}')">Apri rosa</button></div></td></tr>`).join('')}</tbody></table></div>`}
 function groupFitpChecks(checks,teams,players){const teamMap=new Map((teams||[]).map(x=>[x.id,x])),playerMap=new Map((players||[]).map(x=>[x.id,x])),groups=new Map();for(const check of checks||[]){const team=teamMap.get(check.team_id)||{id:check.team_id,name:'Squadra non trovata',series:'',captain_name:'',captain_email:''},player=playerMap.get(check.player_id)||{};if(!groups.has(check.team_id))groups.set(check.team_id,{team,bad:[],review:[],notified_at:null});const group=groups.get(check.team_id),item={...check,player_name:`${player.first_name||''} ${player.last_name||''}`.trim()||'Giocatore non trovato',fitp_ranking:player.fitp_ranking||''};(check.status==='non_compliant'?group.bad:group.review).push(item);if(check.notified_at&&(!group.notified_at||new Date(check.notified_at)>new Date(group.notified_at)))group.notified_at=check.notified_at}return [...groups.values()].sort((a,b)=>String(a.team.series||'').localeCompare(String(b.team.series||''))||String(a.team.name||'').localeCompare(String(b.team.name||''),'it'))}
-function fitpEmailData(teamId){const g=(report?.fitp_groups||[]).find(x=>x.team.id===teamId);if(!g)return null;const lines=[];lines.push(`Buongiorno ${g.team.captain_name||'Capitano'},`,'',`a seguito del controllo della rosa della squadra ${g.team.name}, effettuato applicando il ranking FITP previsto in base alla data di tesseramento di ciascun giocatore, sono emerse le seguenti posizioni:`,'');if(g.bad.length){lines.push('IRREGOLARITÀ ACCERTATE');for(const x of g.bad)lines.push(`- ${x.player_name}: classifica inserita in V9 ${x.fitp_ranking||'non indicata'}; riscontro ufficiale ${x.official_candidates||('fascia '+(x.official_band||'—')+', '+(x.official_points||'—')+' punti')}. ${x.reason||''}`.trim());lines.push('','I giocatori sopra indicati non possono essere schierati nella categoria assegnata fino alla regolarizzazione della posizione.','')}lines.push('Criterio eccezionale e particolarmente favorevole applicato: poiché la FITP ha pubblicato l\'aggiornamento soltanto il 28 settembre, anziché in prossimità del 1° settembre, per i tesseramenti effettuati entro il 27 settembre 2026 abbiamo incrociato il ranking di luglio e quello di agosto, considerando per ciascun atleta la posizione più favorevole. Per i tesseramenti effettuati dal 28 settembre viene invece applicato il ranking di agosto. In questo modo chi era regolare al momento dell\'iscrizione conserva l\'idoneità anche in caso di successivo incremento, mentre chi è sceso di fascia beneficia del nuovo aggiornamento. I giocatori privi di tessera FITP sono considerati NC.','','Limiti applicati: Serie A fino alla 3ª fascia; Serie B fino alla 4ª fascia, indipendentemente dal punteggio; Serie C giocatori NC oppure di 4ª o 5ª fascia con 0 punti. Un giocatore di 3ª fascia non è ammesso in Serie C anche se ha 0 punti.','','Un saluto,','Francesco Lignola','Comitato Tecnico Organizzativo AICS Padel Championship');return{group:g,subject:`AICS Padel Championship 2027 – Verifica rosa ${g.team.name}`,body:lines.join('\n')}}
+function fitpEmailData(teamId){
+ const g=(report?.fitp_groups||[]).find(x=>x.team.id===teamId);
+ if(!g)return null;
+ const lines=[];
+ const series=String(g.team.series||'').trim();
+ const higherSeries=/serie\s*c/i.test(series)?'Serie B':(/serie\s*b/i.test(series)?'Serie A':'');
+ lines.push(
+  `Buongiorno ${g.team.captain_name||'Capitano'},`,
+  '',
+  `a seguito dei controlli effettuati sulla rosa della squadra ${g.team.name}, iscritta in ${series||'categoria non indicata'}, abbiamo rilevato alcune posizioni che, sulla base delle classifiche FITP consultate, potrebbero non essere conformi ai limiti previsti dal regolamento dell'AICS Padel Championship.`,
+  '',
+  'POSIZIONI SEGNALATE'
+ );
+ for(const x of g.bad){
+  const official=x.official_candidates||(`fascia ${x.official_band||'—'}, ${x.official_points||'—'} punti`);
+  lines.push(`- ${x.player_name}: ${official}.`);
+ }
+ lines.push(
+  '',
+  'Prima di assumere qualsiasi decisione definitiva, vi chiediamo cortesemente di effettuare anche una vostra verifica sui nominativi indicati. La corrispondenza di nome e cognome potrebbe infatti, in alcuni casi, dipendere da un’omonimia e non essere riferita al giocatore effettivamente inserito nella vostra rosa.',
+  '',
+  'Qualora riteniate che la classificazione individuata non appartenga al vostro atleta, vi chiediamo di comunicarcelo e, se possibile, di inviarci un elemento utile all’identificazione, come il numero della tessera FITP o un’attestazione riferita alla posizione corretta.',
+  '',
+  'Per tutelare al massimo ogni atleta abbiamo adottato un criterio eccezionale e particolarmente favorevole: per i tesseramenti effettuati entro il 27 settembre 2026 viene considerata la posizione più favorevole tra il ranking di luglio e quello di agosto; per i tesseramenti effettuati dal 28 settembre viene applicato il ranking di agosto. I giocatori privi di tessera FITP sono considerati NC.',
+  '',
+  'Limiti applicati: Serie A fino alla 3ª fascia; Serie B fino alla 4ª fascia, indipendentemente dal punteggio; Serie C giocatori NC, di 5ª fascia oppure di 4ª fascia con 0 punti.'
+ );
+ if(higherSeries){
+  lines.push(
+   '',
+   `Se le classifiche indicate fossero confermate e rendessero la rosa incompatibile con la ${series}, potrete eventualmente presentare una richiesta di passaggio alla ${higherSeries}, così da uniformare la composizione della squadra ai limiti previsti dal regolamento.`,
+   '',
+   'L’eventuale passaggio non potrà essere considerato automatico: valuteremo concretamente la fattibilità della richiesta, cercando, per quanto possibile, di non modificare eccessivamente i calendari e di tutelare gli impegni già assunti dalle società con i club per la disponibilità dei campi e con i propri giocatori.'
+  );
+ }
+ lines.push(
+  '',
+  'Il nostro obiettivo è risolvere ogni posizione con equilibrio e collaborazione, evitando esclusioni basate su dati non certi e garantendo nello stesso tempo a tutte le squadre il rispetto uniforme del regolamento.',
+  '',
+  'In attesa di un vostro cortese riscontro, vi ringraziamo per la collaborazione.',
+  '',
+  'Un saluto,',
+  'Francesco Lignola',
+  'Comitato Tecnico Organizzativo',
+  'AICS Padel Championship'
+ );
+ return{group:g,subject:`Verifica categorie FITP – ${g.team.name}`,body:lines.join('\n')};
+}
 function openFitpEmail(teamId){const d=fitpEmailData(teamId);if(!d)return alert('Controllo FITP non trovato.');if(!d.group.team.captain_email)return alert('Email del capitano non impostata.');window.open(`https://mail.google.com/mail/?view=cm&fs=1&authuser=${encodeURIComponent('aicspadeltour@gmail.com')}&to=${encodeURIComponent(d.group.team.captain_email)}&su=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.body)}`,'_blank')}
 async function copyFitpEmail(teamId){const d=fitpEmailData(teamId);if(!d)return alert('Controllo FITP non trovato.');await navigator.clipboard.writeText(`Oggetto: ${d.subject}\n\n${d.body}`);alert('Testo della comunicazione copiato.')}
 async function markFitpNotified(teamId){const g=(report?.fitp_groups||[]).find(x=>x.team.id===teamId);if(!g)return;if(!confirm(`Confermi che la comunicazione a ${g.team.name} è stata inviata?`))return;const ids=[...g.bad,...g.review].map(x=>x.id),session=(await sb.auth.getSession()).data.session,now=new Date().toISOString();const r=await sb.from('fitp_compliance_checks').update({notified_at:now,notified_by:session?.user?.id||null,updated_at:now}).in('id',ids);if(r.error)return alert(r.error.message);g.notified_at=now;renderReport();alert('Comunicazione registrata come inviata.')}
