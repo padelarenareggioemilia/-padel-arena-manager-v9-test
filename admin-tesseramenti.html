@@ -21,7 +21,7 @@ select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radi
 @media(max-width:650px){.actions{display:grid}.btn{width:100%}}
 </style></head>
 <body><main>
-<section class="card hero"><h1>Admin · Tesseramenti V9.9.69</h1><b>Flusso definitivo Admin → Capitano → Admin → AICS · SOLO REALE</b></section>
+<section class="card hero"><h1>Admin · Tesseramenti V9.9.98</h1><b>Richieste, ricevute e portafoglio virtuale squadre</b></section>
 <section class="card"><button class="btn secondary" onclick="location.href='index.html?v=9969'">← Dashboard Admin</button></section>
 <section class="card"><b>Squadra</b><select id="team"></select><div id="status" class="notice">Caricamento…</div></section>
 
@@ -33,7 +33,8 @@ select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radi
 <div class="notice ok"><b>Modalità operativa reale.</b> Tutte le nuove richieste vengono create come richieste effettive.</div>
 <div class="actions"><button class="btn secondary" onclick="toggleAll(true)">Seleziona tutti</button><button class="btn secondary" onclick="toggleAll(false)">Deseleziona tutti</button></div>
 <div id="players"></div>
-<div class="notice"><b>Selezionati:</b> <span id="count">0</span> · <b>Totale:</b> € <span id="amount">0.00</span></div>
+<div id="wallet" class="notice ok"></div>
+<div class="notice"><b>Selezionati:</b> <span id="count">0</span> · <b>Lordo:</b> € <span id="gross">0.00</span> · <b>Credito applicato:</b> € <span id="used">0.00</span> · <b>Da pagare:</b> € <span id="amount">0.00</span></div>
 <textarea id="notes" placeholder="Note facoltative"></textarea><br><br>
 <button class="btn primary" onclick="createRequest()">Genera richiesta pagamento</button>
 </section>
@@ -72,12 +73,13 @@ async function load(){
  render();$('work').classList.remove('hidden');
 }
 function render(){
+ $('wallet').innerHTML=`<b>Portafoglio virtuale squadra:</b> € ${Number(d.wallet_balance||0).toFixed(2)}<br><small>Il credito disponibile viene scalato automaticamente dalla prossima richiesta.</small>`;
  $('players').innerHTML=(d.players||[]).map(p=>`<div class="player"><input class="pick" type="checkbox" value="${p.id}" ${p.registration_status==='da_tesserare'?'checked':'disabled'} onchange="calc()"><div><b>${p.first_name} ${p.last_name}</b><br><small>${p.email||''}</small></div><span class="pill">${p.registration_status}</span></div>`).join('');
  $('history').innerHTML=(d.requests||[]).map(q=>{
    const notice=q.status!=='cancelled'?`<div class="actions" style="margin-top:10px"><button class="btn secondary" onclick="openPaymentNotice('${q.id}')">Apri / stampa richiesta pagamento</button><button class="btn secondary" onclick="copyCaptainPaymentMessage('${q.id}')">Copia messaggio per il Capitano</button></div>`:'';
-   const receipt=q.status==='cancelled'?`<div class="notice"><b>Richiesta annullata.</b><br>Non è più conteggiata tra gli importi da pagare.</div>`:q.receipt_url?`<div class="notice ok"><b>Ricevuta caricata dalla squadra:</b><br><a href="${q.receipt_url}" target="_blank">Apri ricevuta ${esc(q.receipt_file_name||'')}</a></div>`:`<div class="notice warn"><b>Ricevuta non ancora caricata.</b><br>La richiesta è in attesa dell’operazione del Capitano.</div>`;
+   const receipt=q.status==='cancelled'?`<div class="notice"><b>Richiesta annullata.</b><br>L’eventuale credito utilizzato è stato restituito al portafoglio.</div>`:Number(q.amount)===0?`<div class="notice ok"><b>Interamente coperta dal portafoglio.</b><br>Non è richiesta alcuna ricevuta.</div>`:q.receipt_url?`<div class="notice ok"><b>Ricevuta caricata dalla squadra:</b><br><a href="${q.receipt_url}" target="_blank">Apri ricevuta ${esc(q.receipt_file_name||'')}</a></div>`:`<div class="notice warn"><b>Ricevuta non ancora caricata.</b><br>La richiesta è in attesa dell’operazione del Capitano.</div>`;
    const adminActions=q.status==='payment_requested'&&!q.receipt_url?`<div class="actions"><button class="btn danger" onclick="cancelRequest('${q.id}','${esc(q.request_number)}')">Annulla richiesta</button></div>`:q.status==='receipt_uploaded'&&q.receipt_url?`<div class="actions"><button class="btn danger" onclick="resetReceipt('${q.id}','${esc(q.request_number)}')">Elimina / sostituisci ricevuta</button></div>`:'';
-   const prep=q.status==='receipt_uploaded' && !q.test_mode?`<button class="btn success" onclick="prepare('${q.id}')">Approva e prepara CSV + Excel + PDF</button>`:'';
+   const prep=((q.status==='receipt_uploaded'&&q.receipt_url)||(q.status==='payment_requested'&&Number(q.amount)===0))&&!q.test_mode?`<button class="btn success" onclick="prepare('${q.id}')">Approva e prepara CSV + Excel + PDF</button>`:'';
    const files=(q.csv_file_url||q.xlsx_file_url||q.pdf_file_url)?`<div class="notice ok files"><b>Documenti:</b><br>${q.csv_file_url?`<a href="${q.csv_file_url}" target="_blank">CSV</a>`:''}${q.xlsx_file_url?`<a href="${q.xlsx_file_url}" target="_blank">Excel</a>`:''}${q.pdf_file_url?`<a href="${q.pdf_file_url}" target="_blank">PDF</a>`:''}</div>`:'';
    let send='';
    if(q.test_mode){
@@ -87,21 +89,22 @@ function render(){
    } else if(q.status==='submitted'){
       send=`<div class="notice ok"><b>INVIATA AD AICS</b>${q.sent_at?` · ${new Date(q.sent_at).toLocaleString('it-IT')}`:''}<br>I giocatori inclusi risultano ora Tesserati.</div>`;
    }
-   return `<div class="request"><b>${q.request_number}</b> <span class="pill">${q.status}</span><div>${q.player_count} giocatori · € ${Number(q.amount).toFixed(2)}</div>${notice}${receipt}${adminActions}${prep}${files}${send}</div>`;
+   const amounts=Number(q.wallet_credit_used||0)>0?`${q.player_count} giocatori · Lordo € ${Number(q.gross_amount).toFixed(2)} · Credito € ${Number(q.wallet_credit_used).toFixed(2)} · <b>Da pagare € ${Number(q.amount).toFixed(2)}</b>`:`${q.player_count} giocatori · € ${Number(q.amount).toFixed(2)}`;
+   return `<div class="request"><b>${q.request_number}</b> <span class="pill">${q.status}</span><div>${amounts}</div>${notice}${receipt}${adminActions}${prep}${files}${send}</div>`;
  }).join('')||'<div class="notice">Nessuna richiesta.</div>';
  calc();
 }
-function calc(){const n=document.querySelectorAll('.pick:checked').length;$('count').textContent=n;$('amount').textContent=(n*Number(d.settings.fee_per_player||15)).toFixed(2)}
+function calc(){const n=document.querySelectorAll('.pick:checked').length,gross=n*Number(d.settings.fee_per_player||15),used=Math.min(gross,Number(d.wallet_balance||0));$('count').textContent=n;$('gross').textContent=gross.toFixed(2);$('used').textContent=used.toFixed(2);$('amount').textContent=(gross-used).toFixed(2)}
 function toggleAll(v){document.querySelectorAll('.pick:not(:disabled)').forEach(x=>x.checked=v);calc()}
 async function createRequest(){
  const ids=[...document.querySelectorAll('.pick:checked')].map(x=>x.value);
  if(!ids.length)return alert('Seleziona almeno un giocatore.');
- const amount=(ids.length*Number(d.settings.fee_per_player||15)).toFixed(2);
- const msg=`ATTENZIONE: stai creando una richiesta REALE per ${ids.length} giocatori (€ ${amount}). Dopo ricevuta e tua approvazione potrà essere inviata ad AICS. Continuare?`;
+ const gross=ids.length*Number(d.settings.fee_per_player||15),used=Math.min(gross,Number(d.wallet_balance||0)),amount=(gross-used).toFixed(2);
+ const msg=`ATTENZIONE: stai creando una richiesta REALE per ${ids.length} giocatori.\nLordo: € ${gross.toFixed(2)}\nCredito applicato: € ${used.toFixed(2)}\nDa pagare: € ${amount}\n\nContinuare?`;
  if(!confirm(msg))return;
  const r=await sb.rpc('admin_create_tesseramento_request',{p_team_id:$('team').value,p_player_ids:ids,p_notes:$('notes').value.trim()||null,p_test_mode:false});
  if(r.error)return alert(r.error.message);
- alert(`Richiesta ${r.data.request_number} creata. Totale € ${Number(r.data.amount).toFixed(2)}.`);
+ alert(`Richiesta ${r.data.request_number} creata.\nCredito applicato: € ${Number(r.data.wallet_credit_used||0).toFixed(2)}\nDa pagare: € ${Number(r.data.amount).toFixed(2)}.`);
  await load();
 }
 
@@ -143,7 +146,9 @@ async function openPaymentNotice(id){
   const detail=await getRequestDetail(id),req=detail.request,team=detail.team,settings=detail.settings,causale=paymentCausale(detail);
   const players=(detail.players||[]).map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.first_name)} ${esc(p.last_name)}</td><td>${esc(p.email||'')}</td></tr>`).join('');
   win.document.open();
-  win.document.write(`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(req.request_number)}</title><style>body{font-family:system-ui;color:#0a2e5e;margin:0;padding:28px}.head{border-bottom:5px solid #164a95;padding-bottom:14px}h1{margin:0}.box{border:1px solid #b9cde3;border-radius:14px;padding:14px;margin:14px 0;background:#f4f8fc}.amount{font-size:28px;font-weight:900;color:#164a95}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #d9e3ee;text-align:left}.actions{display:flex;gap:8px;margin-bottom:18px}button{border:0;border-radius:10px;padding:10px 13px;background:#164a95;color:#fff;font-weight:800}@media print{.actions{display:none}body{padding:8px}}</style></head><body><div class="actions"><button onclick="window.print()">Stampa / salva PDF</button><button onclick="window.close()">Chiudi</button></div><div class="head"><h1>Richiesta pagamento tesseramenti</h1><div>AICS Padel Championship 2027</div></div><div class="box"><b>Squadra:</b> ${esc(team.name)}<br><b>Club:</b> ${esc(team.club_name||'')}<br><b>Riferimento:</b> ${esc(req.request_number)}<br><b>Giocatori:</b> ${(detail.players||[]).length}</div><div class="box"><div>Importo totale</div><div class="amount">€ ${Number(req.amount).toFixed(2)}</div><br><b>Intestatario:</b> ${esc(settings.account_holder)}<br><b>IBAN:</b> ${esc(settings.iban)}<br><b>Causale:</b> ${esc(causale)}</div><h2>Giocatori inclusi</h2><table><thead><tr><th>#</th><th>Giocatore</th><th>Email</th></tr></thead><tbody>${players}</tbody></table><div class="box"><b>Istruzioni per il Capitano</b><br>Eseguire un unico bonifico per l’importo totale. Dopo il pagamento entrare nell’Area Capitano, aprire <b>Tesseramenti</b> e caricare una sola ricevuta PDF, JPG o PNG.</div></body></html>`);
+  const breakdown=Number(req.wallet_credit_used||0)>0?`Importo lordo: € ${Number(req.gross_amount).toFixed(2)}<br>Credito portafoglio applicato: − € ${Number(req.wallet_credit_used).toFixed(2)}<br>`:'';
+  const instructions=Number(req.amount)===0?'La richiesta è interamente coperta dal portafoglio virtuale: non occorre effettuare alcun bonifico né caricare una ricevuta.':'Eseguire un unico bonifico per l’importo da pagare. Dopo il pagamento entrare nell’Area Capitano, aprire <b>Tesseramenti</b> e caricare una sola ricevuta PDF, JPG o PNG.';
+  win.document.write(`<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(req.request_number)}</title><style>body{font-family:system-ui;color:#0a2e5e;margin:0;padding:28px}.head{border-bottom:5px solid #164a95;padding-bottom:14px}h1{margin:0}.box{border:1px solid #b9cde3;border-radius:14px;padding:14px;margin:14px 0;background:#f4f8fc}.amount{font-size:28px;font-weight:900;color:#164a95}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #d9e3ee;text-align:left}.actions{display:flex;gap:8px;margin-bottom:18px}button{border:0;border-radius:10px;padding:10px 13px;background:#164a95;color:#fff;font-weight:800}@media print{.actions{display:none}body{padding:8px}}</style></head><body><div class="actions"><button onclick="window.print()">Stampa / salva PDF</button><button onclick="window.close()">Chiudi</button></div><div class="head"><h1>Richiesta pagamento tesseramenti</h1><div>AICS Padel Championship 2027</div></div><div class="box"><b>Squadra:</b> ${esc(team.name)}<br><b>Club:</b> ${esc(team.club_name||'')}<br><b>Riferimento:</b> ${esc(req.request_number)}<br><b>Giocatori:</b> ${(detail.players||[]).length}</div><div class="box">${breakdown}<div>Importo da pagare</div><div class="amount">€ ${Number(req.amount).toFixed(2)}</div><br><b>Intestatario:</b> ${esc(settings.account_holder)}<br><b>IBAN:</b> ${esc(settings.iban)}<br><b>Causale:</b> ${esc(causale)}</div><h2>Giocatori inclusi</h2><table><thead><tr><th>#</th><th>Giocatore</th><th>Email</th></tr></thead><tbody>${players}</tbody></table><div class="box"><b>Istruzioni per il Capitano</b><br>${instructions}</div></body></html>`);
   win.document.close();
  }catch(e){win.close();alert('Impossibile aprire la richiesta: '+(e.message||e))}
 }
@@ -151,7 +156,9 @@ async function copyCaptainPaymentMessage(id){
  try{
   const detail=await getRequestDetail(id),req=detail.request,team=detail.team,settings=detail.settings,causale=paymentCausale(detail);
   const url=new URL('captain-tesseramenti.html',location.href);url.searchParams.set('team',team.id);url.searchParams.set('v','9969');
-  const text=`Ciao ${team.captain_name||'Capitano'},\n\nè disponibile la richiesta di pagamento tessere ${req.request_number} per la squadra ${team.name}.\n\nGiocatori: ${(detail.players||[]).length}\nImporto totale: € ${Number(req.amount).toFixed(2)}\nIntestatario: ${settings.account_holder}\nIBAN: ${settings.iban}\nCausale: ${causale}\n\nAccedi all’Area Capitano e apri la sezione Tesseramenti per vedere la richiesta e caricare una sola ricevuta del bonifico:\n${url.href}`;
+  const walletLine=Number(req.wallet_credit_used||0)>0?`Importo lordo: € ${Number(req.gross_amount).toFixed(2)}\nCredito portafoglio applicato: € ${Number(req.wallet_credit_used).toFixed(2)}\n`:'';
+  const action=Number(req.amount)===0?'La richiesta è interamente coperta dal credito: non devi effettuare alcun bonifico né caricare ricevute.':'Accedi all’Area Capitano e apri la sezione Tesseramenti per vedere la richiesta e caricare una sola ricevuta del bonifico:';
+  const text=`Ciao ${team.captain_name||'Capitano'},\n\nè disponibile la richiesta tessere ${req.request_number} per la squadra ${team.name}.\n\nGiocatori: ${(detail.players||[]).length}\n${walletLine}Importo da pagare: € ${Number(req.amount).toFixed(2)}\nIntestatario: ${settings.account_holder}\nIBAN: ${settings.iban}\nCausale: ${causale}\n\n${action}\n${url.href}`;
   try{await navigator.clipboard.writeText(text);alert('Messaggio per il Capitano copiato.')}catch(_e){prompt('Copia il messaggio per il Capitano:',text)}
  }catch(e){alert('Impossibile preparare il messaggio: '+(e.message||e))}
 }
@@ -165,7 +172,7 @@ async function prepare(id){
    const rr=await sb.rpc('admin_get_tesseramento_request_detail',{p_request_id:id}); if(rr.error)throw rr.error;
    const detail=rr.data,rows=rowsFor(detail),req=detail.request;
    if(req.test_mode)throw Error('Questa richiesta appartiene allo storico di collaudo e non può essere inviata.');
-   if(req.status!=='receipt_uploaded')throw Error('La richiesta non è nello stato corretto.');
+   if(!(req.status==='receipt_uploaded'||(req.status==='payment_requested'&&Number(req.amount)===0)))throw Error('La richiesta non è nello stato corretto.');
    const headers=Object.keys(rows[0]||{});
    const csv='\uFEFF'+headers.map(csvEscape).join(';')+'\n'+rows.map(r=>headers.map(h=>csvEscape(r[h])).join(';')).join('\n');
    const csvBlob=new Blob([csv],{type:'text/csv;charset=utf-8'});

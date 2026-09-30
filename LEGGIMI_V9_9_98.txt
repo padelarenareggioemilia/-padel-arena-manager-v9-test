@@ -1,0 +1,18 @@
+AICS PADEL CHAMPIONSHIP 2027 - AGGIORNAMENTO V9.9.98
+
+INSTALLAZIONE
+1. Eseguire in Supabase il file:
+   database/SUPABASE_V9_9_98_PORTAFOGLIO_TESSERE.sql
+2. Caricare nella radice GitHub tutti gli altri file contenuti nel pacchetto,
+   mantenendo le cartelle.
+3. Ricaricare il portale ignorando la cache.
+
+UTILIZZO
+- In Diagnostica, accanto a ogni giocatore FITP non conforme, usare prima
+  “Richiedi annullamento”.
+- Quando il Comitato comunica l’esito, scegliere uno solo dei due pulsanti:
+  “+ €15 · bloccata” se la tessera non è stata generata;
+  “+ €10 · già emessa” se la tessera era già stata generata.
+- Il sistema verifica che la tessera sia stata pagata e impedisce doppi accrediti.
+- Alla successiva richiesta di pagamento il credito viene scalato automaticamente.
+- Se il credito copre tutto, il capitano non deve caricare alcuna ricevuta.

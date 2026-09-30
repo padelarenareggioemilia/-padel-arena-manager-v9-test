@@ -1,5 +1,19 @@
 # CHANGELOG — Padel Arena Manager
 
+## V9.9.98 — Portafoglio virtuale tessere
+- Aggiunto il portafoglio virtuale per ogni squadra, con saldo e storico movimenti.
+- Dalla diagnostica FITP è possibile assegnare €15 se la tessera viene bloccata prima della generazione oppure €10 se era già stata emessa.
+- Il credito è consentito solo per tessere già pagate e non può essere assegnato due volte allo stesso giocatore.
+- Le nuove richieste tesseramenti scalano automaticamente il credito disponibile; l’eventuale residuo resta nel portafoglio.
+- Se una richiesta viene annullata, il credito impiegato viene restituito automaticamente.
+- Le richieste interamente coperte dal credito proseguono senza bonifico e senza ricevuta.
+
+## V9.9.97 — Richiesta annullamento tessera AICS
+- Aggiunto, accanto a ogni giocatore FITP non conforme, il pulsante “Richiedi annullamento tessera”.
+- Il pulsante apre una bozza indirizzata a reggioemilia@aics.it con i dati anagrafici disponibili dell’atleta e della squadra.
+- La richiesta specifica di annullare il tesseramento soltanto se la tessera non è stata ancora generata.
+- Se la tessera risulta già emessa, viene richiesto al Comitato di indicare la procedura applicabile.
+
 ## V9.9.96 — Comunicazione automatica anomalie FITP
 - Il pulsante “Prepara email” nella diagnostica genera automaticamente una comunicazione completa per ogni squadra non conforme.
 - Il testo include squadra, serie e nominativi segnalati con fascia e punteggio ufficiali.
