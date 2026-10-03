@@ -36,7 +36,6 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
     </div>
   </div>
 </header>
-
 <section class="card controls">
   <h2 style="margin-top:0">Quali partite vuoi vedere?</h2>
   <div class="scope-grid">
@@ -50,13 +49,11 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
   </div>
   <div id="saveMsg" class="notice hidden"></div>
 </section>
-
 <section class="card">
   <div class="actions" style="justify-content:space-between"><div><h2 id="viewTitle" style="margin:0">Partite</h2><div id="viewSubtitle" class="muted"></div></div><button class="btn secondary" onclick="loadData()">Aggiorna</button></div>
   <div id="matches"><div class="notice">Caricamento…</div></div>
 </section>
 </main>
-
 <script>
 const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=id=>document.getElementById(id);
 let session=null,role='player',isAdmin=false,teams=[],fixtures=[],statuses=[],myTeamIds=[],mySeries=[],preference=null;
@@ -65,7 +62,9 @@ function team(id){return teams.find(t=>t.id===id)}
 function tname(id,p){return team(id)?.name||p||'Da definire'}
 function tlogo(id){return team(id)?.logo_url||'assets/aics-logo.png'}
 function workflow(id){return statuses.find(x=>x.fixture_id===id)?.workflow_data||{}}
-function score(id){const w=workflow(id),r=w.result_data||w.result||w.match_result;return r?.home_score!=null?`${r.home_score} – ${r.away_score}`:''}
+function result(id){const w=workflow(id);return w.result_data||w.result||w.match_result||null}
+function score(id){const r=result(id);return r?.home_score!=null&&r?.away_score!=null?`${r.home_score} – ${r.away_score}`:''}
+function resultLabel(id){const s=score(id);return s?`<span><b>GIOCATA</b><br>${esc(s)}</span>`:'<span>DA GIOCARE</span>'}
 function roundKey(f){return f.round_number!=null?Number(f.round_number):(f.scheduled_at?new Date(f.scheduled_at).toISOString().slice(0,10):'Senza giornata')}
 function roundLabel(k){return typeof k==='number'?`Giornata ${k}`:(k==='Senza giornata'?k:new Date(`${k}T12:00:00`).toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))}
 function toggleExport(){$('exportMenu').classList.toggle('hidden')}
@@ -77,7 +76,7 @@ function filteredFixtures(){
   if(scope==='category')return fixtures.filter(f=>[team(f.home_team_id)?.series,team(f.away_team_id)?.series].includes($('categoryFilter').value));
   const id=$('teamFilter').value;return fixtures.filter(f=>f.home_team_id===id||f.away_team_id===id);
 }
-function fixtureHtml(f){return `<div class="fixture"><div class="small muted">${f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Data da definire'}</div><div><div class="teamline"><img class="team-logo" src="${esc(tlogo(f.home_team_id))}"><b>${esc(tname(f.home_team_id,f.home_placeholder))}</b></div><div class="muted small">contro</div><div class="teamline"><img class="team-logo" src="${esc(tlogo(f.away_team_id))}"><b>${esc(tname(f.away_team_id,f.away_placeholder))}</b></div><div class="small muted">${esc(f.competition_code||'')} · ${esc(f.venue||'')}</div></div><div class="score">${score(f.id)||'Da giocare'}</div></div>`}
+function fixtureHtml(f){return `<div class="fixture"><div class="small muted">${f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Data da definire'}</div><div><div class="teamline"><img class="team-logo" src="${esc(tlogo(f.home_team_id))}"><b>${esc(tname(f.home_team_id,f.home_placeholder))}</b></div><div class="muted small">contro</div><div class="teamline"><img class="team-logo" src="${esc(tlogo(f.away_team_id))}"><b>${esc(tname(f.away_team_id,f.away_placeholder))}</b></div><div class="small muted">${esc(f.competition_code||'')} · ${esc(f.venue||'')}</div></div><div class="score">${resultLabel(f.id)}</div></div>`}
 function render(){
   const list=filteredFixtures().sort((a,b)=>new Date(a.scheduled_at||0)-new Date(b.scheduled_at||0));
   const scope=selectedScope();
@@ -118,13 +117,13 @@ async function loadData(){
     sb.from('profiles').select('role').eq('id',session.user.id).maybeSingle(),
     sb.from('teams').select('id,name,series,logo_url').order('name'),
     sb.from('fixtures').select('*').order('scheduled_at'),
-    sb.from('match_workflows').select('*'),
+    sb.from('public_championship_status').select('*'),
     sb.from('team_user_roles').select('team_id,role,active').eq('user_id',session.user.id).eq('active',true),
     sb.from('roster_requests').select('team_id,status').eq('user_id',session.user.id),
     sb.from('user_match_view_preferences').select('*').eq('user_id',session.user.id).maybeSingle()
   ]);
-  const error=t.error||f.error;if(error){$('matches').innerHTML=`<div class="notice err">${esc(error.message)}</div>`;return}
-  role=p.data?.role||'player';isAdmin=role==='admin';teams=t.data||[];fixtures=f.data||[];statuses=w.error?[]:(w.data||[]);
+  const error=t.error||f.error||w.error;if(error){$('matches').innerHTML=`<div class="notice err">${esc(error.message)}</div>`;return}
+  role=p.data?.role||'player';isAdmin=role==='admin';teams=t.data||[];fixtures=f.data||[];statuses=w.data||[];
   myTeamIds=[...new Set([...(r.data||[]).filter(x=>['captain','secretary'].includes(x.role)).map(x=>x.team_id),...(rr.data||[]).filter(x=>x.status==='approved').map(x=>x.team_id)])];
   mySeries=[...new Set(myTeamIds.map(id=>team(id)?.series).filter(Boolean))];
   $('roleText').textContent=isAdmin?'Amministratore · tutte le squadre':role==='captain'?'Capitano · vista personalizzata':'Giocatore · vista personalizzata';

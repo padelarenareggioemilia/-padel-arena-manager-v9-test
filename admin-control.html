@@ -13,6 +13,8 @@
 .btn{border:0;border-radius:11px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue)}.success{background:var(--green);color:#fff}.danger{background:var(--red);color:#fff}.btn:disabled{opacity:.48;cursor:not-allowed}.actions,.nav{display:flex;gap:8px;flex-wrap:wrap}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.field{margin:8px 0}label{display:block;font-size:13px;font-weight:900;margin-bottom:5px}select,input{width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;font:inherit}
 .notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:9px 0;white-space:pre-line}.ok{background:#ebf8f0;border-color:#79bf90}.err{background:#fdecef;border-color:#dd7a85}.warn{background:#fff7dd;border-color:#d9b757}.hidden{display:none!important}.switch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:13px;margin:8px 0}.switch{width:auto;transform:scale(1.3)}
 .match{border:1px solid var(--line);border-radius:14px;padding:12px;margin:9px 0}.match-head{display:flex;justify-content:space-between;gap:10px}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#e6eff9;border:1px solid var(--line);font-size:11px;font-weight:900}.small{font-size:12px}
+.result-admin{margin-top:8px;padding:9px 11px;border-radius:10px;background:#ebf8f0;border:1px solid #79bf90;font-weight:900}
+.standings-admin{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 @media(max-width:800px){.grid2,.grid3{grid-template-columns:1fr}.hero{align-items:flex-start}.logo{width:84px;height:58px}}
 
 .matchday-block{border:1px solid var(--line);border-radius:16px;margin:12px 0;overflow:hidden;background:#fff}
@@ -53,6 +55,15 @@
 <h2>Pubblicazione portale pubblico</h2>
 <div id="publicationControls" class="grid3"></div>
 <div id="publicationMsg" class="notice hidden"></div>
+</section>
+
+<section class="card">
+<h2>Classifiche</h2>
+<div class="standings-admin">
+<button class="btn secondary" onclick="location.href='competition-public.html?code=SERIE_A&view=standings'">Classifica Serie A</button>
+<button class="btn secondary" onclick="location.href='competition-public.html?code=SERIE_B&view=standings'">Classifica Serie B</button>
+<button class="btn secondary" onclick="location.href='competition-public.html?code=SERIE_C&view=standings'">Classifica Serie C</button>
+</div>
 </section>
 
 <section class="card"><h2>Partite e stato formazione</h2><div id="matches"></div></section>
@@ -100,9 +111,7 @@ function groupedFixturesHtml(list,renderFixture){
     </section>
   `).join('');
 }
-
 const labels={SERIE_A:'Serie A',SERIE_B:'Serie B',SERIE_C:'Serie C',COPPA_ITALIA:'Coppa Italia',SUPERCOPPA:'Supercoppa'};
-
 function box(id,text,error=false){
   const el=$(id);el.textContent=text;el.className='notice '+(error?'err':'ok');el.classList.remove('hidden');
 }
@@ -163,18 +172,22 @@ async function setPublication(code,value){
   loadPublication();
 }
 async function loadMatches(){
-  const [f,w,t]=await Promise.all([
+  const [f,w,r,t]=await Promise.all([
     sb.from('fixtures').select('*').order('scheduled_at',{ascending:true}).limit(150),
     sb.from('match_workflows').select('*'),
+    sb.from('match_results').select('fixture_id,result_data'),
     sb.from('teams').select('id,name,logo_url')
   ]);
-  const error=f.error||w.error||t.error;if(error)return box('publishMsg',error.message,true);
+  const error=f.error||w.error||r.error||t.error;if(error)return box('publishMsg',error.message,true);
   const teams=Object.fromEntries((t.data||[]).map(x=>[x.id,x]));
   const workflows=Object.fromEntries((w.data||[]).map(x=>[x.fixture_id,x]));
+  const results=Object.fromEntries((r.data||[]).map(x=>[x.fixture_id,x.result_data||{}]));
   const renderAdminMatch=x=>{
-    const wf=workflows[x.id];
+    const wf=workflows[x.id],res=results[x.id];
     const home=teams[x.home_team_id],away=teams[x.away_team_id];
-    return `<div class="match"><div class="match-head"><div><b>${home?.name||x.home_placeholder||'Da definire'} – ${away?.name||x.away_placeholder||'Da definire'}</b><div class="muted small">${x.scheduled_at?new Date(x.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${x.venue||''}</div></div><span class="badge">${!wf?'NON PUBBLICATA':wf.formation_open_at?'FORMAZIONE APERTA':'IN ATTESA'}</span></div><div class="actions" style="margin-top:8px"><button class="btn secondary" onclick="location.href='admin-match-lineup.html?id=${x.id}&v=9985'">Compila distinte</button><button class="btn primary" onclick="location.href='match-center.html?id=${x.id}&v=9985'">Inserisci risultato</button></div></div>`;
+    const hasResult=res?.home_score!=null&&res?.away_score!=null;
+    const resultHtml=hasResult?`<div class="result-admin">GIOCATA · ${res.home_score} – ${res.away_score}</div>`:'';
+    return `<div class="match"><div class="match-head"><div><b>${home?.name||x.home_placeholder||'Da definire'} – ${away?.name||x.away_placeholder||'Da definire'}</b><div class="muted small">${x.scheduled_at?new Date(x.scheduled_at).toLocaleString('it-IT'):'Data da definire'} · ${x.venue||''}</div>${resultHtml}</div><span class="badge">${hasResult?'GIOCATA':!wf?'NON PUBBLICATA':wf.formation_open_at?'FORMAZIONE APERTA':'IN ATTESA'}</span></div><div class="actions" style="margin-top:8px"><button class="btn secondary" onclick="location.href='admin-match-lineup.html?id=${x.id}&v=9985'">Compila distinte</button><button class="btn primary" onclick="location.href='match-center.html?id=${x.id}&v=9985'">${hasResult?'Modifica risultato':'Inserisci risultato'}</button></div></div>`;
   };
   const adminList=f.data||[];
   $('matches').innerHTML=adminList.length?groupedFixturesHtml(adminList,renderAdminMatch):'<div class="notice">Nessuna partita.</div>';
