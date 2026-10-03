@@ -24,7 +24,7 @@ body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linea
 <link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body><main class="shell">
-<div class="actions"><button class="btn secondary" onclick="history.length>1?history.back():location.href='public.html'">← Indietro</button></div>
+<div class="actions"><button class="btn secondary" onclick="history.length>1?history.back():location.href='public.html'">← Indietro</button><button class="btn secondary" onclick="openStandings()">Classifica</button></div>
 <header class="hero">
   <div class="brand"><img class="logo" src="assets/aics-logo.png"><div><h1 style="margin:0">AICS PADEL CHAMPIONSHIP</h1><div id="roleText">Vista partite personalizzata</div></div></div>
   <div class="export">
@@ -139,7 +139,13 @@ async function loadData(){
   if(preference?.selected_series)$('categoryFilter').value=preference.selected_series;
   render();
 }
-window.scopeChanged=scopeChanged;window.filtersChanged=filtersChanged;window.toggleExport=toggleExport;window.printPdf=printPdf;window.exportExcel=exportExcel;window.shareCurrentView=shareCurrentView;window.loadData=loadData;
+function openStandings(){
+  const scope=document.querySelector('input[name=scope]:checked')?.value||'team';
+  const series=$('categoryFilter').value;
+  const code=series==='Serie B'?'SERIE_B':series==='Serie C'?'SERIE_C':'SERIE_A';
+  location.href='competition-public.html?code='+encodeURIComponent(code)+'&view=standings';
+}
+window.openStandings=openStandings;window.scopeChanged=scopeChanged;window.filtersChanged=filtersChanged;window.toggleExport=toggleExport;window.printPdf=printPdf;window.exportExcel=exportExcel;window.shareCurrentView=shareCurrentView;window.loadData=loadData;
 loadData();
 </script><script src="app-ui.js?v=980stable"></script>
 </body></html>
