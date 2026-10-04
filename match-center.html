@@ -5,13 +5,28 @@
 <title>AICS Padel Championship · Centro gara</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
 <style>
-:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--y:#d79b00;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#637b96}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,#009246 33%,#fff 33% 66%,#ce2b37 66%);z-index:20}.shell{max-width:1100px;margin:auto;padding:20px 12px 80px}.card,.top{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff;border-radius:20px;padding:18px}.btn{border:0;border-radius:11px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}.warning{background:var(--y);color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:10px 0}.ok{background:#eaf8f0;border-color:#77bd90}.warn{background:#fff7dc;border-color:#dfbf68}.err{background:#fdecef;border-color:#dd7a85}.hidden{display:none!important}.muted{color:var(--muted)}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#e7f0fb;border:1px solid var(--line);font-size:12px;font-weight:900}.score{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.score-grid{display:grid;grid-template-columns:150px repeat(4,1fr);gap:8px;align-items:center}.score-grid input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit}.decider{margin-top:9px;padding:10px;border-radius:11px;background:#f7faff;border:1px dashed var(--line)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:9px 0}.field label{display:block;font-weight:900;font-size:13px;margin-bottom:5px}.turn{font-weight:900;color:var(--b);margin-top:15px}.btn:disabled,input:disabled,select:disabled{opacity:.55;cursor:not-allowed}@media(max-width:800px){.score-grid,.grid2{grid-template-columns:1fr 1fr}.score-grid b{grid-column:1/-1}.actions{display:grid}.btn{width:100%}}
+:root{--b:#164a95;--bd:#082f68;--g:#009246;--r:#ce2b37;--y:#d79b00;--bg:#f4f8fc;--line:#b9cde3;--text:#0a2e5e;--muted:#637b96}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,sans-serif;color:var(--text)}body:before{content:"";position:fixed;inset:0 0 auto;height:6px;background:linear-gradient(90deg,#009246 33%,#fff 33% 66%,#ce2b37 66%);z-index:20}.shell{max-width:1100px;margin:auto;padding:20px 12px 80px}.card,.top{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin:12px 0}.hero{background:linear-gradient(135deg,var(--b),var(--bd));color:#fff;border-radius:20px;padding:18px}.btn{border:0;border-radius:11px;padding:11px 13px;font:inherit;font-weight:900;cursor:pointer}.primary{background:var(--b);color:#fff}.secondary{background:#fff;color:var(--b);border:1px solid var(--b)}.success{background:var(--g);color:#fff}.warning{background:var(--y);color:#fff}.danger{background:var(--r);color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border:1px solid var(--line);border-radius:12px;background:#edf4fb;margin:10px 0}.ok{background:#eaf8f0;border-color:#77bd90}.warn{background:#fff7dc;border-color:#dfbf68}.err{background:#fdecef;border-color:#dd7a85}.hidden{display:none!important}.muted{color:var(--muted)}.badge{display:inline-flex;padding:5px 8px;border-radius:999px;background:#e7f0fb;border:1px solid var(--line);font-size:12px;font-weight:900}.score{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.score-grid{display:grid;grid-template-columns:150px repeat(4,1fr);gap:8px;align-items:center}.score-grid input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:9px;font:inherit}.decider{margin-top:9px;padding:10px;border-radius:11px;background:#f7faff;border:1px dashed var(--line)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:9px 0}.field label{display:block;font-weight:900;font-size:13px;margin-bottom:5px}.turn{font-weight:900;color:var(--b);margin-top:15px}.btn:disabled,input:disabled,select:disabled{opacity:.55;cursor:not-allowed}@media(max-width:800px){.score-grid,.grid2{grid-template-columns:1fr 1fr}.score-grid b{grid-column:1/-1}.actions{display:grid}.btn{width:100%}}
 </style><link rel="stylesheet" href="app-theme.css?v=980stable">
 </head>
 <body><main class="shell">
 <div class="top"><div class="actions"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='captain-home.html?v=9987'">Area Capitano</button></div></div>
 <header class="hero"><h1 style="margin:0">Centro gara</h1><div>Referto digitale · risultati · spareggio · ricorsi</div></header>
 <section id="status" class="card">Caricamento della partita…</section><section id="summary" class="card hidden"></section>
+
+<section id="noShowCard" class="card hidden">
+  <span class="badge">RINUNCIA AVVERSARIA</span>
+  <h2>La squadra avversaria non ha confermato la distinta</h2>
+  <div class="notice warn">
+    Se l'avversario ha rinunciato a disputare la gara, non devi inserire manualmente i 6–0.
+    Puoi registrare la <b>mancata presentazione / rinuncia avversaria</b>: il sistema assegnerà automaticamente il risultato <b>4–0</b> con quattro incontri <b>6–0 / 6–0</b>.
+  </div>
+  <div class="notice">
+    Questa procedura è disponibile quando la distinta della tua squadra è confermata e quella avversaria non è confermata.
+  </div>
+  <button id="noShowBtn" class="btn danger" onclick="reportOpponentNoShow()">Registra rinuncia avversaria</button>
+  <div id="noShowMsg" class="notice hidden"></div>
+</section>
+
 <section id="resultCard" class="card hidden"><h2>Risultato dell’incontro</h2><div class="notice">Inserisci i primi due set. In caso di 1–1 è obbligatorio il tie-break decisivo. Sul 2–2 si disputa lo spareggio Misto, un set ai 6.</div><div class="turn">Primo turno · Maschile 1 e Femminile</div><div id="scoresFirst"></div><div class="turn">Secondo turno · Maschile 2 e Misto</div><div id="scoresSecond"></div>
 <div id="teamDecider" class="decider hidden"><h3>Spareggio finale · Misto · un set ai 6</h3><div class="score-grid"><b>Risultato</b><input id="spHome" type="number" min="0" placeholder="Casa"><input id="spAway" type="number" min="0" placeholder="Ospite"></div><div class="grid2"><div><h4 id="homeSpTitle">Squadra di casa</h4><div class="field"><label>Uomo</label><select id="spHomeM"></select></div><div class="field"><label>Donna</label><select id="spHomeF"></select></div></div><div><h4 id="awaySpTitle">Squadra ospite</h4><div class="field"><label>Uomo</label><select id="spAwayM"></select></div><div class="field"><label>Donna</label><select id="spAwayF"></select></div></div></div><div class="notice warn">Sono selezionabili soltanto atleti presenti nella distinta definitiva che abbiano già disputato almeno un incontro della giornata.</div></div>
 <div class="actions" style="margin-top:12px"><button id="saveBtn" class="btn primary" onclick="saveResult()">Salva e conferma risultato</button></div><div id="resultMsg" class="notice hidden"></div></section>
@@ -19,6 +34,7 @@
 <section id="postMatchCard" class="card hidden"><span class="badge">GARA CHIUSA</span><h2>Post partita</h2><div class="notice ok">Il risultato è stato salvato. Puoi ora preparare il Post partita. L'omologazione definitiva resta separata.</div><button class="btn primary" onclick="location.href='post-match.html?id='+encodeURIComponent(fixtureId)+'&v=9987'">Apri Post partita</button></section>
 </main><script>
 const cfg=window.PAM_V9_CONFIG,sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey),$=x=>document.getElementById(x),params=new URLSearchParams(location.search),fixtureId=params.get('id')||params.get('fixture');let data=null,locked=false;const labels=['Maschile 1','Femminile','Maschile 2','Misto'];const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const arr=x=>Array.isArray(x)?x:[];
+
 function msg(t,e=false){const x=$('resultMsg');x.textContent=t;x.className='notice '+(e?'err':'ok');x.classList.remove('hidden')}
 function genderIsFemale(v){return ['f','femminile','female','donna'].includes(String(v||'').trim().toLowerCase())}
 function validSet(a,b){a=Number(a);b=Number(b);if(!Number.isInteger(a)||!Number.isInteger(b)||a<0||b<0||a===b)return false;const hi=Math.max(a,b),lo=Math.min(a,b);return(hi===6&&lo<=4)||(hi===7&&(lo===5||lo===6))}
@@ -28,9 +44,75 @@ function scoreHtml(label,index,m={}){return `<div class="score"><div class="scor
 function collect(){return labels.map((label,i)=>{const o={label};document.querySelectorAll(`[data-r="${i}"]`).forEach(x=>{o[x.dataset.k]=x.value===''?null:+x.value});return o})}
 function refresh(){const ms=collect();ms.forEach((m,i)=>{const box=$('decider-'+i),need=[m.h1,m.a1,m.h2,m.a2].every(v=>v!=null)&&m.h1!==m.a1&&m.h2!==m.a2&&((m.h1>m.a1)+(m.h2>m.a2)===1)&&((m.a1>m.h1)+(m.a2>m.h2)===1);box.classList.toggle('hidden',!need)});const wins=ms.map(winnerOf),h=wins.filter(x=>x==='home').length,a=wins.filter(x=>x==='away').length;$('teamDecider').classList.toggle('hidden',!(h===2&&a===2&&wins.every(Boolean)))}
 function options(teamId,female,selected){const xs=arr(data.eligible_spareggio).filter(x=>x.team_id===teamId&&genderIsFemale(x.gender)===female);return '<option value="">— Seleziona —</option>'+xs.map(x=>`<option value="${x.player_id}" ${x.player_id===selected?'selected':''}>${esc(x.first_name)} ${esc(x.last_name)}</option>`).join('')}
-function render(){const f=data.fixture,teams=arr(data.teams),home=teams.find(x=>x.id===f.home_team_id)||{},away=teams.find(x=>x.id===f.away_team_id)||{},saved=data.result||{},deadline=new Date(data.result_deadline),central=!!data.workflow?.central_sent_at;locked=central||Date.now()>=deadline.getTime();$('summary').innerHTML=`<span class="badge">${esc(f.competition_code||'COMPETIZIONE')}</span><h2>${esc(home.name||'Casa')} – ${esc(away.name||'Ospite')}</h2><div class="muted">${new Date(f.scheduled_at).toLocaleString('it-IT')} · ${esc(f.venue||'')}</div><div class="notice ${locked?'err':'warn'}"><b>${locked?'RISULTATO BLOCCATO':'Termine risultati'}</b><br>Domenica ore 24:00 · ${deadline.toLocaleString('it-IT')}</div>`;$('scoresFirst').innerHTML=scoreHtml(labels[0],0,saved.matches?.[0])+scoreHtml(labels[1],1,saved.matches?.[1]);$('scoresSecond').innerHTML=scoreHtml(labels[2],2,saved.matches?.[2])+scoreHtml(labels[3],3,saved.matches?.[3]);$('homeSpTitle').textContent=home.name||'Casa';$('awaySpTitle').textContent=away.name||'Ospite';$('spHomeM').innerHTML=options(f.home_team_id,false,saved.spareggio?.home_players?.[0]);$('spHomeF').innerHTML=options(f.home_team_id,true,saved.spareggio?.home_players?.[1]);$('spAwayM').innerHTML=options(f.away_team_id,false,saved.spareggio?.away_players?.[0]);$('spAwayF').innerHTML=options(f.away_team_id,true,saved.spareggio?.away_players?.[1]);if(saved.spareggio){$('spHome').value=saved.spareggio.home_games??'';$('spAway').value=saved.spareggio.away_games??''}document.querySelectorAll('#resultCard input,#resultCard select').forEach(x=>{x.addEventListener('input',refresh);x.disabled=locked});$('saveBtn').disabled=locked;refresh();$('status').classList.add('hidden');$('summary').classList.remove('hidden');$('resultCard').classList.remove('hidden');if(saved.matches)$('appealCard').classList.remove('hidden');if(saved.matches)$('postMatchCard').classList.remove('hidden');$('appealList').innerHTML=arr(data.appeals).map(a=>`<div class="notice"><b>Ricorso ${esc(a.status)}</b><br>${esc(a.reason)}<div class="muted">${new Date(a.submitted_at).toLocaleString('it-IT')}</div></div>`).join('')}
-async function saveResult(){const matches=collect();for(let i=0;i<matches.length;i++){const m=matches[i];if(!validSet(m.h1,m.a1)||!validSet(m.h2,m.a2))return msg(`Punteggio non valido nell’incontro ${i+1}: ogni set è ai 6 game.`,true);const split=(m.h1>m.a1)!==(m.h2>m.a2);if(split&&!validTb(m.htb,m.atb))return msg(`Tie-break decisivo non valido nell’incontro ${i+1}: si gioca ai 7 punti.`,true);if(!split&&(m.htb!=null||m.atb!=null))return msg(`Il tie-break decisivo dell’incontro ${i+1} è ammesso soltanto sull’1–1.`,true)}const w=matches.map(winnerOf),h=w.filter(x=>x==='home').length,a=w.filter(x=>x==='away').length,payload={matches};if(h===2&&a===2){const sh=$('spHome').value,sa=$('spAway').value,homePlayers=[$('spHomeM').value,$('spHomeF').value],awayPlayers=[$('spAwayM').value,$('spAwayF').value];if(!validSet(sh,sa))return msg('Inserisci un risultato valido ai 6 game per lo spareggio.',true);if(homePlayers.some(x=>!x)||awayPlayers.some(x=>!x))return msg('Seleziona uomo e donna di entrambe le squadre per lo spareggio.',true);payload.spareggio={type:'Misto',format:'1 set ai 6',home_games:Number(sh),away_games:Number(sa),winner:Number(sh)>Number(sa)?'home':'away',home_players:homePlayers,away_players:awayPlayers}}const r=await sb.rpc('save_match_result',{p_fixture_id:fixtureId,p_result:payload});if(r.error)return msg(r.error.message,true);msg('Risultato salvato e confermato correttamente.');await init()}
+
+function render(){
+  const f=data.fixture,teams=arr(data.teams),home=teams.find(x=>x.id===f.home_team_id)||{},away=teams.find(x=>x.id===f.away_team_id)||{},saved=data.result||{},deadline=new Date(data.result_deadline),central=!!data.workflow?.central_sent_at;
+  locked=central||Date.now()>=deadline.getTime();
+  const myTeamId=data.my_team_id||null;
+  const homeLineup=data.lineup_status?.home||'missing';
+  const awayLineup=data.lineup_status?.away||'missing';
+  const mySide=myTeamId===f.home_team_id?'home':myTeamId===f.away_team_id?'away':null;
+  const opponentStatus=mySide==='home'?awayLineup:mySide==='away'?homeLineup:null;
+  const myLineup=mySide==='home'?homeLineup:mySide==='away'?awayLineup:null;
+  const noShowEligible=!!myTeamId&&myLineup==='confirmed'&&opponentStatus!=='confirmed'&&!saved.matches&&!saved.administrative&&!data.workflow?.homologated_at;
+
+  $('summary').innerHTML=`<span class="badge">${esc(f.competition_code||'COMPETIZIONE')}</span><h2>${esc(home.name||'Casa')} – ${esc(away.name||'Ospite')}</h2><div class="muted">${new Date(f.scheduled_at).toLocaleString('it-IT')} · ${esc(f.venue||'')}</div><div class="notice ${locked?'err':'warn'}"><b>${locked?'RISULTATO BLOCCATO':'Termine risultati'}</b><br>Domenica ore 24:00 · ${deadline.toLocaleString('it-IT')}</div>`;
+  $('scoresFirst').innerHTML=scoreHtml(labels[0],0,saved.matches?.[0])+scoreHtml(labels[1],1,saved.matches?.[1]);
+  $('scoresSecond').innerHTML=scoreHtml(labels[2],2,saved.matches?.[2])+scoreHtml(labels[3],3,saved.matches?.[3]);
+  $('homeSpTitle').textContent=home.name||'Casa';$('awaySpTitle').textContent=away.name||'Ospite';
+  $('spHomeM').innerHTML=options(f.home_team_id,false,saved.spareggio?.home_players?.[0]);$('spHomeF').innerHTML=options(f.home_team_id,true,saved.spareggio?.home_players?.[1]);$('spAwayM').innerHTML=options(f.away_team_id,false,saved.spareggio?.away_players?.[0]);$('spAwayF').innerHTML=options(f.away_team_id,true,saved.spareggio?.away_players?.[1]);
+  if(saved.spareggio){$('spHome').value=saved.spareggio.home_games??'';$('spAway').value=saved.spareggio.away_games??''}
+  document.querySelectorAll('#resultCard input,#resultCard select').forEach(x=>{x.addEventListener('input',refresh);x.disabled=locked});
+  $('saveBtn').disabled=locked;
+  refresh();
+  $('status').classList.add('hidden');$('summary').classList.remove('hidden');$('resultCard').classList.remove('hidden');
+  $('noShowCard').classList.toggle('hidden',!noShowEligible);
+  $('appealCard').classList.toggle('hidden',!saved.matches);
+  $('postMatchCard').classList.toggle('hidden',!(saved.matches||saved.administrative));
+  $('appealList').innerHTML=arr(data.appeals).map(a=>`<div class="notice"><b>Ricorso ${esc(a.status)}</b><br>${esc(a.reason)}<div class="muted">${new Date(a.submitted_at).toLocaleString('it-IT')}</div></div>`).join('');
+}
+
+async function reportOpponentNoShow(){
+  if(!data?.my_team_id)return;
+  if(!confirm('Confermi che la squadra avversaria ha rinunciato / non si è presentata? Il sistema registrerà una vittoria 4–0 a tavolino con quattro incontri 6–0 / 6–0.'))return;
+  const note=prompt('Nota per il referto (facoltativa):','La squadra avversaria ha rinunciato alla gara.');
+  if(note===null)return;
+  $('noShowBtn').disabled=true;
+  const r=await sb.rpc('captain_report_opponent_no_show',{p_fixture_id:fixtureId,p_team_id:data.my_team_id,p_notes:note});
+  if(r.error){
+    $('noShowBtn').disabled=false;
+    $('noShowMsg').textContent=r.error.message;
+    $('noShowMsg').className='notice err';
+    $('noShowMsg').classList.remove('hidden');
+    return;
+  }
+  $('noShowMsg').textContent='Rinuncia registrata. Il risultato è stato assegnato 4–0 a tavolino e la gara è stata chiusa.';
+  $('noShowMsg').className='notice ok';
+  $('noShowMsg').classList.remove('hidden');
+  await init();
+}
+
+async function saveResult(){
+  const matches=collect();
+  for(let i=0;i<matches.length;i++){
+    const m=matches[i];
+    if(!validSet(m.h1,m.a1)||!validSet(m.h2,m.a2))return msg(`Punteggio non valido nell’incontro ${i+1}: ogni set è ai 6 game.`,true);
+    const split=(m.h1>m.a1)!==(m.h2>m.a2);
+    if(split&&!validTb(m.htb,m.atb))return msg(`Tie-break decisivo non valido nell’incontro ${i+1}: si gioca ai 7 punti.`,true);
+    if(!split&&(m.htb!=null||m.atb!=null))return msg(`Il tie-break decisivo dell’incontro ${i+1} è ammesso soltanto sull’1–1.`,true)
+  }
+  const w=matches.map(winnerOf),h=w.filter(x=>x==='home').length,a=w.filter(x=>x==='away').length,payload={matches};
+  if(h===2&&a===2){
+    const sh=$('spHome').value,sa=$('spAway').value,homePlayers=[$('spHomeM').value,$('spHomeF').value],awayPlayers=[$('spAwayM').value,$('spAwayF').value];
+    if(!validSet(sh,sa))return msg('Inserisci un risultato valido ai 6 game per lo spareggio.',true);
+    if(homePlayers.some(x=>!x)||awayPlayers.some(x=>!x))return msg('Seleziona uomo e donna di entrambe le squadre per lo spareggio.',true);
+    payload.spareggio={type:'Misto',format:'1 set ai 6',home_games:Number(sh),away_games:Number(sa),winner:Number(sh)>Number(sa)?'home':'away',home_players:homePlayers,away_players:awayPlayers}
+  }
+  const r=await sb.rpc('save_match_result',{p_fixture_id:fixtureId,p_result:payload});
+  if(r.error)return msg(r.error.message,true);
+  msg('Risultato salvato e confermato correttamente.');await init()
+}
 async function submitAppeal(){const reason=$('appealReason').value.trim();if(reason.length<10)return alert('Inserisci una motivazione dettagliata.');if(!confirm('Confermi la presentazione del ricorso formale?'))return;const r=await sb.rpc('captain_submit_result_appeal',{p_fixture_id:fixtureId,p_reason:reason});if(r.error)return alert(r.error.message);alert('Ricorso registrato e trasmesso all’organizzazione.');$('appealReason').value='';await init()}
 async function init(){if(!fixtureId){$('status').textContent='Partita non indicata.';return}const session=await sb.auth.getSession();if(!session.data.session)return location.href='login.html';const r=await sb.rpc('captain_get_match_center',{p_fixture_id:fixtureId});if(r.error){$('status').textContent='Errore: '+r.error.message;$('status').className='card notice err';return}data=Array.isArray(r.data)?r.data[0]:r.data;render()}
-window.saveResult=saveResult;window.submitAppeal=submitAppeal;init();
+window.saveResult=saveResult;window.submitAppeal=submitAppeal;window.reportOpponentNoShow=reportOpponentNoShow;init();
 </script></body></html>
