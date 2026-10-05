@@ -7,171 +7,57 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="config.js"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f4f8fc;color:#0a2e5e;font-family:system-ui,-apple-system,sans-serif}
-.shell{max-width:1120px;margin:auto;padding:18px 14px 70px}.top,.card{background:#fff;border:1px solid #b9cde3;border-radius:18px;padding:16px;margin:12px 0}
-.hero{background:linear-gradient(135deg,#164a95,#082f68);color:#fff;border-radius:20px;padding:18px}
-.btn{border:0;border-radius:10px;padding:10px 13px;font-weight:900;cursor:pointer}.primary{background:#164a95;color:#fff}.secondary{background:#fff;color:#164a95;border:1px solid #164a95}.success{background:#009246;color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}
-.notice{padding:12px;border:1px solid #b9cde3;border-radius:12px;background:#edf4fb;margin:8px 0}.ok{background:#eaf8f0}.warn{background:#fff7dc}.err{background:#fdecef;border-color:#dd7a85}.muted{color:#627b97}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:9px 0}.field label{display:block;font-weight:900;margin-bottom:5px}.field input,.field textarea{width:100%;padding:10px;border:1px solid #b9cde3;border-radius:9px;font:inherit}
-.media-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.media{border:1px solid #b9cde3;border-radius:12px;overflow:hidden}.media img{width:100%;height:140px;object-fit:cover;display:block}.media .meta{padding:8px;font-size:12px}.hidden{display:none!important}
-#socialCanvas{width:min(100%,760px);aspect-ratio:1/1;border:1px solid #b9cde3;border-radius:14px;background:#fff;display:block;margin:auto}
-@media(max-width:800px){.grid2{grid-template-columns:1fr}.media-grid{grid-template-columns:repeat(2,1fr)}}@media print{.no-print{display:none!important}}
+*{box-sizing:border-box}body{margin:0;background:#f4f8fc;color:#0a2e5e;font-family:system-ui,-apple-system,sans-serif}.shell{max-width:1120px;margin:auto;padding:18px 14px 70px}.top,.card{background:#fff;border:1px solid #b9cde3;border-radius:18px;padding:16px;margin:12px 0}.hero{background:linear-gradient(135deg,#164a95,#082f68);color:#fff;border-radius:20px;padding:18px}.btn{border:0;border-radius:10px;padding:10px 13px;font-weight:900;cursor:pointer}.primary{background:#164a95;color:#fff}.secondary{background:#fff;color:#164a95;border:1px solid #164a95}.success{background:#009246;color:#fff}.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border:1px solid #b9cde3;border-radius:12px;background:#edf4fb;margin:8px 0}.ok{background:#eaf8f0}.warn{background:#fff7dc}.err{background:#fdecef;border-color:#dd7a85}.muted{color:#627b97}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:9px 0}.field label{display:block;font-weight:900;margin-bottom:5px}.field input,.field textarea{width:100%;padding:10px;border:1px solid #b9cde3;border-radius:9px;font:inherit}.media-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.media{border:1px solid #b9cde3;border-radius:12px;overflow:hidden}.media img{width:100%;height:140px;object-fit:cover;display:block}.media .meta{padding:8px;font-size:12px}.hidden{display:none!important}#socialCanvas{width:min(100%,760px);aspect-ratio:1/1;border:1px solid #b9cde3;border-radius:14px;background:#fff;display:block;margin:auto}@media(max-width:800px){.grid2{grid-template-columns:1fr}.media-grid{grid-template-columns:repeat(2,1fr)}}@media print{.no-print{display:none!important}}
 </style>
 </head>
 <body>
 <main class="shell">
-<div class="top no-print"><div class="actions">
-<button class="btn secondary" onclick="history.back()">← Indietro</button>
-<button class="btn secondary" onclick="location.href='captain-home.html?v=10003'">Area Capitano</button>
-</div></div>
-
+<div class="top no-print"><div class="actions"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='captain-home.html?v=10003'">Area Capitano</button></div></div>
 <header class="hero"><b>POST PARTITA</b><h1 style="margin:8px 0">Contenuti della gara</h1><div>Foto · formazioni · risultato · grafica social · articolo</div></header>
 <section id="status" class="card">Caricamento della gara…</section>
-
 <section id="main" class="hidden">
 <section class="card"><div id="matchInfo"></div><div id="matchReport"></div></section>
-
-<section class="card no-print">
-<h2>1. Foto della giornata</h2>
-<div class="notice">La <b>foto principale</b> sarà la grande immagine protagonista della grafica quadrata. Puoi caricare fino a 8 immagini.</div>
-<input id="mediaFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple>
-<div id="mediaGrid" class="media-grid" style="margin-top:12px"></div>
-</section>
-
-<section class="card">
-<h2>2. Grafica social quadrata 1:1</h2>
-<div class="grid2 no-print">
-<div>
-<div class="field"><label>Titolo</label><input id="socialTitle"></div>
-<div class="field"><label>Sottotitolo</label><input id="socialSubtitle"></div>
-<div class="notice"><b>Layout ufficiale:</b> grande foto della gara in alto, risultato centrale, formazione della squadra del capitano, logo e nome dell'avversaria e risultati dei singoli incontri. Gli spazi vengono ridistribuiti automaticamente.</div>
-</div>
-<div>
-<canvas id="socialCanvas" width="1080" height="1080"></canvas>
-<div class="actions" style="margin-top:10px">
-<button class="btn primary" onclick="drawGraphic()">Aggiorna</button>
-<button class="btn secondary" onclick="downloadGraphic()">Scarica PNG</button>
-</div>
-</div>
-</div>
-</section>
-
-<section class="card no-print">
-<h2>3. Articolo per il giornale / sito</h2>
-<div class="field"><label>Titolo</label><input id="articleTitle"></div>
-<div class="field"><label>Testo</label><textarea id="articleBody" rows="16"></textarea></div>
-<div class="actions">
-<button class="btn secondary" onclick="generateArticle()">Rigenera dai dati gara</button>
-<button class="btn secondary" onclick="copyArticle()">Copia articolo</button>
-<button class="btn secondary" onclick="window.print()">Stampa / PDF</button>
-</div>
-</section>
-
+<section class="card no-print"><h2>1. Foto della giornata</h2><div class="notice">La <b>foto principale</b> sarà la grande immagine protagonista della grafica quadrata. Puoi caricare fino a 8 immagini.</div><input id="mediaFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple><div id="mediaGrid" class="media-grid" style="margin-top:12px"></div></section>
+<section class="card"><h2>2. Grafica social quadrata 1:1</h2><div class="grid2 no-print"><div><div class="field"><label>Titolo</label><input id="socialTitle"></div><div class="field"><label>Sottotitolo</label><input id="socialSubtitle"></div><div class="notice"><b>Layout ufficiale:</b> impostazione completa stile locandina AICS: competizione, serie, giornata, foto, loghi, risultato, formazioni di entrambe le squadre, giocatori e risultati di tutti gli incontri, data e struttura.</div></div><div><canvas id="socialCanvas" width="1080" height="1080"></canvas><div class="actions" style="margin-top:10px"><button class="btn primary" onclick="drawGraphic()">Aggiorna</button><button class="btn secondary" onclick="downloadGraphic()">Scarica PNG</button></div></div></div></section>
+<section class="card no-print"><h2>3. Articolo per il giornale / sito</h2><div class="field"><label>Titolo</label><input id="articleTitle"></div><div class="field"><label>Testo</label><textarea id="articleBody" rows="16"></textarea></div><div class="actions"><button class="btn secondary" onclick="generateArticle()">Rigenera dai dati gara</button><button class="btn secondary" onclick="copyArticle()">Copia articolo</button><button class="btn secondary" onclick="window.print()">Stampa / PDF</button></div></section>
 <section class="card no-print"><button class="btn success" onclick="saveAll()">Salva tutto</button><div id="saveMsg" class="notice hidden"></div></section>
-</section>
-</main>
-
+</section></main>
 <script>
-const cfg=window.PAM_V9_CONFIG||{},$=x=>document.getElementById(x),params=new URLSearchParams(location.search),fixtureId=params.get('id')||params.get('fixture');
-let sb=null,data=null,selectedMedia=null,backgroundImage=null,viewerTeamId=null;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const timeout=(p,ms,label)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(label)),ms))]);
-
-function teams(){const t=data?.teams||[];return{home:t[0]||{},away:t[1]||{}}}
-function result(){return data?.result||{}}
-function matches(){return Array.isArray(result().matches)?result().matches:[]}
-function scoreText(){const s=data?.result_summary||{};if(s.home_score!=null&&s.away_score!=null)return s.home_score+' – '+s.away_score;let h=0,a=0;matches().forEach(x=>{const w=winnerOf(x);if(w==='home')h++;if(w==='away')a++});return h+' – '+a}
-function labelPosition(label){const x=String(label||'').toLowerCase();if(x.includes('femmin'))return'Femminile';if(x.includes('misto'))return'Misto';if(x.includes('2'))return'M2';return'M1'}
-function entriesFor(pos,teamId){return(data.lineup_entries||[]).filter(x=>String(x.team_id)===String(teamId)&&String(x.position)===String(pos))}
-function lineupPlayers(pos,teamId){const seen=new Set();return entriesFor(pos,teamId).filter(e=>{const id=e.player_id||e.id;if(!id||seen.has(id))return false;seen.add(id);return true}).slice(0,2).map(e=>(data.players||[]).find(p=>String(p.id)===String(e.player_id||e.id))||e)}
-function playersText(pos,teamId){const a=lineupPlayers(pos,teamId);return a.length?a.map(x=>((x.first_name||'')+' '+(x.last_name||'')).trim()).filter(Boolean).join(' / '):'Formazione non disponibile'}
-function viewerTeam(){const t=teams();return[t.home,t.away].find(x=>String(x.id)===String(viewerTeamId))||t.home}
-function opponentTeam(){const t=teams(),v=viewerTeam();return String(t.home.id)===String(v.id)?t.away:t.home}
-function winnerOf(m){const h=[m.h1,m.h2].filter(v=>v!=null).map(Number),a=[m.a1,m.a2].filter(v=>v!=null).map(Number);if(h.length<2||a.length<2)return null;const hw=(h[0]>a[0]?1:0)+(h[1]>a[1]?1:0),aw=(a[0]>h[0]?1:0)+(a[1]>h[1]?1:0);if(hw===2)return'home';if(aw===2)return'away';if(m.htb!=null&&m.atb!=null)return Number(m.htb)>Number(m.atb)?'home':'away';return null}
-function gameScore(m){const h=[m.h1,m.h2].filter(v=>v!=null),a=[m.a1,m.a2].filter(v=>v!=null);if(!h.length||!a.length)return'';let x=h.map(Number).join(' – '),y=a.map(Number).join(' – ');if(m.htb!=null||m.atb!=null)x+=' ['+(m.htb??'')+' – '+(m.atb??'')+']';return x+' | '+y}
-function publicUrl(path){return sb.storage.from('match-post-media').getPublicUrl(path).data.publicUrl}
-function showError(t){$('status').className='card';$('status').innerHTML='<div class="notice err"><b>Errore caricamento Post partita</b><br>'+esc(t)+'</div>'}
-
-function renderReport(){
-const {home,away}=teams();let h='<h3>Referto ufficiale</h3><div class="notice"><b>'+esc(home.name)+' '+scoreText()+' '+esc(away.name)+'</b></div>';
-matches().forEach(m=>{const p=labelPosition(m.label);h+='<div style="padding:12px;border-bottom:1px solid #dbe5ef"><b>'+esc(m.label||p)+'</b> · <b>'+esc(gameScore(m)||'Risultato registrato')+'</b><div class="muted">'+esc(home.name)+': '+esc(playersText(p,home.id))+'<br>'+esc(away.name)+': '+esc(playersText(p,away.id))+'</div></div>'});
-const sp=result().spareggio;if(sp)h+='<div class="notice warn"><b>SPAREGGIO MISTO</b><br>Risultato: '+esc((sp.home_games??'')+' – '+(sp.away_games??''))+'</div>';$('matchReport').innerHTML=h}
-
-function renderMedia(){
-$('mediaGrid').innerHTML=(data.media||[]).map(m=>'<div class="media"><img src="'+esc(publicUrl(m.storage_path))+'" alt=""><div class="meta"><b>'+esc(m.file_name)+'</b><br><button class="btn secondary" style="padding:6px 8px;margin-top:6px" onclick="selectMedia(\''+m.id+'\')">'+(m.id===selectedMedia?'✓ Foto principale':'Usa come principale')+'</button></div></div>').join('')||'<div class="notice">Nessuna foto caricata.</div>'}
-
-function loadBackground(){
-backgroundImage=null;if(!selectedMedia){drawGraphic();return}
-const m=(data.media||[]).find(x=>x.id===selectedMedia);if(!m){drawGraphic();return}
-const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{backgroundImage=img;drawGraphic()};img.onerror=()=>{backgroundImage=null;drawGraphic()};img.src=publicUrl(m.storage_path)
-}
-function selectMedia(id){selectedMedia=id;renderMedia();loadBackground()}
-
-function render(){
-const {home,away}=teams(),f=data.fixture||{},c=data.content||{};
-$('matchInfo').innerHTML='<h2>'+esc(home.name)+' – '+esc(away.name)+'</h2><div class="muted">'+(f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT'):'')+' · '+esc(f.competition_code||f.competition_type||'')+' · '+esc(f.venue||'')+'</div><div class="notice '+(data.is_homologated?'ok':'warn')+'"><b>'+(data.is_homologated?'Gara chiusa e omologata':'Gara chiusa · risultato salvato')+'</b></div>';
-renderReport();$('socialTitle').value=c.social_title||home.name+' – '+away.name;$('socialSubtitle').value=c.social_subtitle||'Risultato finale '+scoreText();$('articleTitle').value=c.article_title||home.name+' – '+away.name+': il racconto della gara';$('articleBody').value=c.article_body||'';
-if(!c.article_body)generateArticle();if((data.media||[]).length&&!selectedMedia)selectedMedia=c.selected_media_id||(data.media||[])[0].id;renderMedia();loadBackground()
-}
-
-async function uploadFiles(files){
-if(!files.length)return;const existing=data.media||[];if(existing.length+files.length>8)return saveMessage('Puoi avere massimo 8 foto.',true);
-for(const file of files){if(file.size>10*1024*1024)return saveMessage('Ogni foto deve essere massimo 10 MB.',true);
-const ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path=fixtureId+'/'+crypto.randomUUID()+'.'+ext;
-const up=await sb.storage.from('match-post-media').upload(path,file,{contentType:file.type,upsert:false});if(up.error)return saveMessage(up.error.message,true);
-const r=await sb.rpc('register_match_post_media',{p_fixture_id:fixtureId,p_storage_path:path,p_file_name:file.name,p_mime_type:file.type,p_caption:null});if(r.error)return saveMessage(r.error.message,true)}
-await loadData()
-}
-
-async function loadData(){
-const q=await timeout(sb.rpc('get_match_post_data',{p_fixture_id:fixtureId}),15000,'Timeout caricamento gara (15 secondi).');if(q.error)throw q.error;
-data=Array.isArray(q.data)?q.data[0]:q.data;if(!data||!data.is_closed){$('status').innerHTML='<div class="notice warn"><b>Post partita non ancora disponibile</b><br>'+esc(data?.message||'La gara deve avere un risultato salvato.')+'</div>';return false}
-const vt=await sb.rpc('get_match_post_viewer_team',{p_fixture_id:fixtureId});if(!vt.error)viewerTeamId=vt.data||null;if(!viewerTeamId)viewerTeamId=data.fixture?.home_team_id||data.teams?.[0]?.id||null;
-$('status').classList.add('hidden');$('main').classList.remove('hidden');render();return true
-}
-
-function generateArticle(){
-const {home,away}=teams(),f=data.fixture||{},lines=matches().map(m=>m.label+': '+gameScore(m)+'.');
-let b='Si è disputata '+(f.scheduled_at?'il '+new Date(f.scheduled_at).toLocaleDateString('it-IT'):'')+' la sfida '+home.name+' contro '+away.name+', valida per '+(f.competition_code||f.competition_type||'il campionato')+'.\n\nIl confronto si è chiuso sul '+scoreText()+'.\n\n'+lines.join('\n');
-const sp=result().spareggio;if(sp)b+='\n\nSul pari è stato necessario lo spareggio misto, con il punteggio '+sp.home_games+'-'+sp.away_games+'.';
-$('articleTitle').value=home.name+' – '+away.name+': il racconto della gara';$('articleBody').value=b
-}
-
-function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
-function fit(ctx,text,max,size,min=16){let s=size;while(s>min){ctx.font='900 '+s+'px system-ui';if(ctx.measureText(text).width<=max)return s;s--}return min}
-function drawCover(ctx,img,x,y,w,h){if(!img)return;const s=Math.max(w/img.width,h/img.height),iw=img.width*s,ih=img.height*s;ctx.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih)}
+const cfg=window.PAM_V9_CONFIG||{},$=x=>document.getElementById(x),params=new URLSearchParams(location.search),fixtureId=params.get('id')||params.get('fixture');let sb=null,data=null,selectedMedia=null,backgroundImage=null,viewerTeamId=null;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const timeout=(p,ms,label)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(label)),ms))]);
+function teams(){const t=data?.teams||[];return{home:t[0]||{},away:t[1]||{}}}function result(){return data?.result||{}}function matches(){return Array.isArray(result().matches)?result().matches:[]}function scoreText(){const s=data?.result_summary||{};if(s.home_score!=null&&s.away_score!=null)return s.home_score+' – '+s.away_score;let h=0,a=0;matches().forEach(x=>{const w=winnerOf(x);if(w==='home')h++;if(w==='away')a++});return h+' – '+a}
+function labelPosition(label){const x=String(label||'').toLowerCase();if(x.includes('femmin'))return'Femminile';if(x.includes('misto'))return'Misto';if(x.includes('2'))return'M2';return'M1'}function entriesFor(pos,teamId){return(data.lineup_entries||[]).filter(x=>String(x.team_id)===String(teamId)&&String(x.position)===String(pos))}function lineupPlayers(pos,teamId){const seen=new Set();return entriesFor(pos,teamId).filter(e=>{const id=e.player_id||e.id;if(!id||seen.has(id))return false;seen.add(id);return true}).map(e=>(data.players||[]).find(p=>String(p.id)===String(e.player_id||e.id))||e)}function playersText(pos,teamId){const a=lineupPlayers(pos,teamId);return a.length?a.map(x=>((x.first_name||'')+' '+(x.last_name||'')).trim()).filter(Boolean).join(' / '):'Formazione non disponibile'}function viewerTeam(){const t=teams();return[t.home,t.away].find(x=>String(x.id)===String(viewerTeamId))||t.home}function opponentTeam(){const t=teams(),v=viewerTeam();return String(t.home.id)===String(v.id)?t.away:t.home}
+function winnerOf(m){const h=[m.h1,m.h2].filter(v=>v!=null).map(Number),a=[m.a1,m.a2].filter(v=>v!=null).map(Number);if(h.length<2||a.length<2)return null;const hw=(h[0]>a[0]?1:0)+(h[1]>a[1]?1:0),aw=(a[0]>h[0]?1:0)+(a[1]>h[1]?1:0);if(hw===2)return'home';if(aw===2)return'away';if(m.htb!=null&&m.atb!=null)return Number(m.htb)>Number(m.atb)?'home':'away';return null}function gameScore(m){const h=[m.h1,m.h2].filter(v=>v!=null),a=[m.a1,m.a2].filter(v=>v!=null);if(!h.length||!a.length)return'';let x=h.map(Number).join(' – '),y=a.map(Number).join(' – ');if(m.htb!=null||m.atb!=null)x+=' ['+(m.htb??'')+' – '+(m.atb??'')+']';return x+' | '+y}
+function publicUrl(path){return sb.storage.from('match-post-media').getPublicUrl(path).data.publicUrl}function showError(t){$('status').className='card';$('status').innerHTML='<div class="notice err"><b>Errore caricamento Post partita</b><br>'+esc(t)+'</div>'}
+function competitionMeta(){const f=data?.fixture||{};const comp=f.competition_name||f.competition||f.competition_title||f.competition_code||f.competition_type||'AICS PADEL CHAMPIONSHIP';const series=f.series||f.series_name||f.division||f.category||f.league||f.level||'';const day=f.matchday||f.giornata||f.round_name||f.round_label||f.round||f.jornada||'';return{comp:String(comp),series:String(series),day:String(day)}}
+function renderReport(){const {home,away}=teams();let h='<h3>Referto ufficiale</h3><div class="notice"><b>'+esc(home.name)+' '+scoreText()+' '+esc(away.name)+'</b></div>';matches().forEach(m=>{const p=labelPosition(m.label);h+='<div style="padding:12px;border-bottom:1px solid #dbe5ef"><b>'+esc(m.label||p)+'</b> · <b>'+esc(gameScore(m)||'Risultato registrato')+'</b><div class="muted">'+esc(home.name)+': '+esc(playersText(p,home.id))+'<br>'+esc(away.name)+': '+esc(playersText(p,away.id))+'</div></div>'});const sp=result().spareggio;if(sp)h+='<div class="notice warn"><b>SPAREGGIO MISTO</b><br>Risultato: '+esc((sp.home_games??'')+' – '+(sp.away_games??''))+'</div>';$('matchReport').innerHTML=h}
+function renderMedia(){$('mediaGrid').innerHTML=(data.media||[]).map(m=>'<div class="media"><img src="'+esc(publicUrl(m.storage_path))+'" alt=""><div class="meta"><b>'+esc(m.file_name)+'</b><br><button class="btn secondary" style="padding:6px 8px;margin-top:6px" onclick="selectMedia(\''+m.id+'\')">'+(m.id===selectedMedia?'✓ Foto principale':'Usa come principale')+'</button></div></div>').join('')||'<div class="notice">Nessuna foto caricata.</div>'}
+function loadBackground(){backgroundImage=null;if(!selectedMedia){drawGraphic();return}const m=(data.media||[]).find(x=>x.id===selectedMedia);if(!m){drawGraphic();return}const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{backgroundImage=img;drawGraphic()};img.onerror=()=>{backgroundImage=null;drawGraphic()};img.src=publicUrl(m.storage_path)}function selectMedia(id){selectedMedia=id;renderMedia();loadBackground()}
+function render(){const {home,away}=teams(),f=data.fixture||{},c=data.content||{};$('matchInfo').innerHTML='<h2>'+esc(home.name)+' – '+esc(away.name)+'</h2><div class="muted">'+(f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT'):'')+' · '+esc(f.competition_code||f.competition_type||'')+' · '+esc(f.venue||'')+'</div><div class="notice '+(data.is_homologated?'ok':'warn')+'"><b>'+(data.is_homologated?'Gara chiusa e omologata':'Gara chiusa · risultato salvato')+'</b></div>';renderReport();$('socialTitle').value=c.social_title||home.name+' – '+away.name;$('socialSubtitle').value=c.social_subtitle||'Risultato finale '+scoreText();$('articleTitle').value=c.article_title||home.name+' – '+away.name+': il racconto della gara';$('articleBody').value=c.article_body||'';if(!c.article_body)generateArticle();if((data.media||[]).length&&!selectedMedia)selectedMedia=c.selected_media_id||(data.media||[])[0].id;renderMedia();loadBackground()}
+async function uploadFiles(files){if(!files.length)return;const existing=data.media||[];if(existing.length+files.length>8)return saveMessage('Puoi avere massimo 8 foto.',true);for(const file of files){if(file.size>10*1024*1024)return saveMessage('Ogni foto deve essere massimo 10 MB.',true);const ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path=fixtureId+'/'+crypto.randomUUID()+'.'+ext;const up=await sb.storage.from('match-post-media').upload(path,file,{contentType:file.type,upsert:false});if(up.error)return saveMessage(up.error.message,true);const r=await sb.rpc('register_match_post_media',{p_fixture_id:fixtureId,p_storage_path:path,p_file_name:file.name,p_mime_type:file.type,p_caption:null});if(r.error)return saveMessage(r.error.message,true)}await loadData()}
+async function loadData(){const q=await timeout(sb.rpc('get_match_post_data',{p_fixture_id:fixtureId}),15000,'Timeout caricamento gara (15 secondi).');if(q.error)throw q.error;data=Array.isArray(q.data)?q.data[0]:q.data;if(!data||!data.is_closed){$('status').innerHTML='<div class="notice warn"><b>Post partita non ancora disponibile</b><br>'+esc(data?.message||'La gara deve avere un risultato salvato.')+'</div>';return false}const vt=await sb.rpc('get_match_post_viewer_team',{p_fixture_id:fixtureId});if(!vt.error)viewerTeamId=vt.data||null;if(!viewerTeamId)viewerTeamId=data.fixture?.home_team_id||data.teams?.[0]?.id||null;$('status').classList.add('hidden');$('main').classList.remove('hidden');render();return true}
+function generateArticle(){const {home,away}=teams(),f=data.fixture||{},lines=matches().map(m=>m.label+': '+gameScore(m)+'.');let b='Si è disputata '+(f.scheduled_at?'il '+new Date(f.scheduled_at).toLocaleDateString('it-IT'):'')+' la sfida '+home.name+' contro '+away.name+', valida per '+(f.competition_code||f.competition_type||'il campionato')+'.\n\nIl confronto si è chiuso sul '+scoreText()+'.\n\n'+lines.join('\n');const sp=result().spareggio;if(sp)b+='\n\nSul pari è stato necessario lo spareggio misto, con il punteggio '+sp.home_games+'-'+sp.away_games+'.';$('articleTitle').value=home.name+' – '+away.name+': il racconto della gara';$('articleBody').value=b}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}function fit(ctx,text,max,size,min=12){let s=size;while(s>min){ctx.font='900 '+s+'px system-ui';if(ctx.measureText(text).width<=max)return s;s--}return min}function drawCover(ctx,img,x,y,w,h){if(!img)return;const s=Math.max(w/img.width,h/img.height),iw=img.width*s,ih=img.height*s;ctx.drawImage(img,x+(w-iw)/2,y+(h-ih)/2,iw,ih)}
 function drawLogo(ctx,url,x,y,size){return new Promise(ok=>{if(!url)return ok();const i=new Image();i.crossOrigin='anonymous';i.onload=()=>{ctx.save();ctx.beginPath();ctx.arc(x,y,size/2,0,Math.PI*2);ctx.clip();ctx.fillStyle='#fff';ctx.fill();const s=Math.min(size/i.width,size/i.height),w=i.width*s,h=i.height*s;ctx.drawImage(i,x-w/2,y-h/2,w,h);ctx.restore();ok()};i.onerror=()=>ok();i.src=url})}
-function drawPlayer(ctx,p,x,y,w,h){return new Promise(ok=>{const fallback=()=>{ctx.save();roundRect(ctx,x,y,w,h,12);ctx.fillStyle='#294b70';ctx.fill();ctx.fillStyle='#8ee3ff';ctx.textAlign='center';ctx.font='900 24px system-ui';ctx.fillText(((p.first_name||'?')[0]||'?')+((p.last_name||'')[0]||''),x+w/2,y+h/2+8);ctx.restore();ok()};if(!p.photo_url)return fallback();const i=new Image();i.crossOrigin='anonymous';i.onload=()=>{ctx.save();roundRect(ctx,x,y,w,h,12);ctx.clip();const s=Math.max(w/i.width,h/i.height),iw=i.width*s,ih=i.height*s;ctx.drawImage(i,x+(w-iw)/2,y+(h-ih)/2,iw,ih);ctx.restore();ok()};i.onerror=fallback;i.src=p.photo_url})}
-
-async function drawGraphic(){
-if(!data)return;const c=$('socialCanvas'),ctx=c.getContext('2d'),viewer=viewerTeam(),op=opponentTeam(),ms=matches();ctx.clearRect(0,0,1080,1080);
-ctx.fillStyle='#062957';ctx.fillRect(0,0,1080,1080);
-if(backgroundImage){drawCover(ctx,backgroundImage,0,0,1080,405);ctx.fillStyle='rgba(4,30,65,.25)';ctx.fillRect(0,0,1080,405)}
-ctx.fillStyle='rgba(4,25,58,.94)';ctx.fillRect(0,0,1080,78);ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='900 35px system-ui';ctx.fillText('AICS PADEL CHAMPIONSHIP',32,47);
-ctx.fillStyle='rgba(4,30,65,.82)';ctx.fillRect(0,305,1080,100);
-await Promise.all([drawLogo(ctx,viewer.logo_url,90,354,82),drawLogo(ctx,op.logo_url,990,354,82)]);
-ctx.textAlign='center';ctx.fillStyle='#fff';fit(ctx,viewer.name,330,27,17);ctx.fillText(viewer.name,260,355);fit(ctx,op.name,330,27,17);ctx.fillText(op.name,820,355);
-ctx.fillStyle='#0879c9';roundRect(ctx,425,315,230,82,15);ctx.fill();ctx.strokeStyle='#12b9ff';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#fff';ctx.font='900 57px system-ui';ctx.fillText(scoreText(),540,375);
-ctx.fillStyle='#8ee3ff';ctx.font='900 17px system-ui';ctx.fillText(($('socialSubtitle').value||'RISULTATO FINALE').toUpperCase().slice(0,42),540,301);
-
-roundRect(ctx,24,425,1032,205,18);ctx.fillStyle='rgba(5,35,72,.96)';ctx.fill();ctx.strokeStyle='#12b9ff';ctx.lineWidth=3;ctx.stroke();
-ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='900 29px system-ui';ctx.fillText('FORMAZIONE · '+viewer.name.toUpperCase(),48,462);ctx.fillStyle='#12b9ff';ctx.fillRect(48,475,360,4);
-let slots=[];ms.forEach(m=>{const p=labelPosition(m.label);lineupPlayers(p,viewer.id).forEach(x=>{if(!slots.some(y=>String(y.id)===String(x.id)))slots.push(x)})});slots=slots.slice(0,8);
-const pw=108,ph=82,gap=14,startX=48;await Promise.all(slots.map((p,i)=>drawPlayer(ctx,p,startX+i*(pw+gap),492,pw,ph)));
-ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='800 12px system-ui';slots.forEach((p,i)=>ctx.fillText((((p.first_name||'')+' '+(p.last_name||'')).trim()||'Giocatore').slice(0,18),startX+i*(pw+gap)+pw/2,595));
-ctx.fillStyle='#d9ebff';ctx.textAlign='right';ctx.font='800 13px system-ui';ctx.fillText('AVVERSARIA · '+op.name.toUpperCase(),1032,462);ctx.fillStyle='#fff';ctx.font='900 19px system-ui';ctx.fillText('LOGO E RISULTATI DELLA GARA',1032,490);
-
-let y=655;const h=ms.length<=4?82:70;
-for(const m of ms){roundRect(ctx,24,y,1032,h-7,12);ctx.fillStyle='rgba(255,255,255,.08)';ctx.fill();ctx.fillStyle='#12b9ff';ctx.fillRect(24,y,6,h-7);ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='900 17px system-ui';ctx.fillText((m.label||labelPosition(m.label)).toUpperCase(),48,y+28);ctx.textAlign='right';ctx.font='900 22px system-ui';ctx.fillText(gameScore(m),1030,y+28);ctx.textAlign='left';ctx.fillStyle='#8ee3ff';ctx.font='800 12px system-ui';ctx.fillText(viewer.name+'  vs  '+op.name,48,y+52);y+=h}
-const sp=result().spareggio;if(sp){roundRect(ctx,24,y,1032,52,10);ctx.fillStyle='rgba(255,255,255,.08)';ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='900 14px system-ui';ctx.fillText('SPAREGGIO MISTO',48,y+31);ctx.textAlign='right';ctx.fillText((sp.home_games??'')+' – '+(sp.away_games??''),1030,y+31)}
-ctx.fillStyle='rgba(4,25,58,.98)';ctx.fillRect(0,1005,1080,75);ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='800 17px system-ui';ctx.fillText((data.fixture?.scheduled_at?new Date(data.fixture.scheduled_at).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'}):'').toUpperCase(),32,1035);ctx.textAlign='right';ctx.fillText((data.fixture?.venue||'PADEL ARENA').toUpperCase().slice(0,50),1048,1035);ctx.fillStyle='#8ee3ff';ctx.font='700 12px system-ui';ctx.fillText('PADEL ARENA MANAGER V9',1048,1058)
-}
-
-async function downloadGraphic(){await drawGraphic();try{const a=document.createElement('a');a.download='post-partita-'+fixtureId+'.png';a.href=$('socialCanvas').toDataURL('image/png');a.click()}catch(e){saveMessage('Grafica pronta. Il browser non consente l’esportazione della foto esterna.',true)}}
-async function copyArticle(){try{await navigator.clipboard.writeText($('articleTitle').value+'\n\n'+$('articleBody').value);saveMessage('Articolo copiato negli appunti.')}catch(e){saveMessage('Copia non disponibile.',true)}}
-function saveMessage(t,err=false){$('saveMsg').textContent=t;$('saveMsg').className='notice '+(err?'err':'ok');$('saveMsg').classList.remove('hidden')}
-async function saveAll(){const r=await sb.rpc('save_match_post_content',{p_fixture_id:fixtureId,p_social_title:$('socialTitle').value.trim(),p_social_subtitle:$('socialSubtitle').value.trim(),p_article_title:$('articleTitle').value.trim(),p_article_body:$('articleBody').value.trim(),p_selected_media_id:selectedMedia||null});if(r.error)return saveMessage(r.error.message,true);saveMessage('Post partita salvato correttamente.');await loadData()}
-async function init(){try{if(!fixtureId)return showError('Gara non indicata.');if(!cfg.supabaseUrl||!cfg.supabasePublishableKey)return showError('Configurazione Supabase non caricata.');sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);const s=await timeout(sb.auth.getSession(),15000,'Timeout verifica accesso.');if(!s.data.session){location.href='login.html';return}await loadData();$('mediaFiles').addEventListener('change',e=>uploadFiles([...e.target.files]))}catch(e){showError(e?.message||String(e))}}
-Object.assign(window,{selectMedia,drawGraphic,downloadGraphic,generateArticle,copyArticle,saveAll});init();
+function drawPlayer(ctx,p,x,y,w,h){return new Promise(ok=>{const fallback=()=>{ctx.save();roundRect(ctx,x,y,w,h,8);ctx.fillStyle='#294b70';ctx.fill();ctx.fillStyle='#8ee3ff';ctx.textAlign='center';ctx.font='900 16px system-ui';ctx.fillText(((p.first_name||'?')[0]||'?')+((p.last_name||'')[0]||''),x+w/2,y+h/2+6);ctx.restore();ok()};if(!p.photo_url)return fallback();const i=new Image();i.crossOrigin='anonymous';i.onload=()=>{ctx.save();roundRect(ctx,x,y,w,h,8);ctx.clip();const s=Math.max(w/i.width,h/i.height),iw=i.width*s,ih=i.height*s;ctx.drawImage(i,x+(w-iw)/2,y+(h-ih)/2,iw,ih);ctx.restore();ok()};i.onerror=fallback;i.src=p.photo_url})}
+function allTeamPlayers(teamId){const seen=new Set(),out=[];matches().forEach(m=>{const pos=labelPosition(m.label);lineupPlayers(pos,teamId).forEach(p=>{const id=String(p.id||p.player_id||((p.first_name||'')+'|'+(p.last_name||'')));if(!seen.has(id)){seen.add(id);out.push(p)}})});return out}
+function playerName(p){return (((p.first_name||'')+' '+(p.last_name||'')).trim()||'Giocatore')}
+function matchPlayers(m,teamId){const pos=labelPosition(m.label);return lineupPlayers(pos,teamId).slice(0,2)}
+async function drawMatchCard(ctx,m,home,away,x,y,w,h){const homePs=matchPlayers(m,home.id),awayPs=matchPlayers(m,away.id);roundRect(ctx,x,y,w,h,12);ctx.fillStyle='rgba(4,29,62,.93)';ctx.fill();ctx.strokeStyle='#0bbcff';ctx.lineWidth=2;ctx.stroke();ctx.textAlign='center';ctx.fillStyle=(String(m.label||'').toLowerCase().includes('femmin')?'#ff5b8a':'#12b9ff');ctx.font='900 15px system-ui';ctx.fillText((m.label||'').toUpperCase(),x+w/2,y+21);const py=y+29,pw=48,ph=39;for(let i=0;i<2;i++){if(homePs[i])await drawPlayer(ctx,homePs[i],x+10+i*54,py,pw,ph);if(awayPs[i])await drawPlayer(ctx,awayPs[i],x+w-106+i*54,py,pw,ph)}ctx.fillStyle='#fff';ctx.font='800 8px system-ui';for(let i=0;i<2;i++){if(homePs[i])ctx.fillText(playerName(homePs[i]).slice(0,13),x+34+i*54,y+80);if(awayPs[i])ctx.fillText(playerName(awayPs[i]).slice(0,13),x+w-82+i*54,y+80)}ctx.fillStyle='#12b9ff';ctx.font='900 13px system-ui';ctx.fillText('VS',x+w/2,y+53);ctx.fillStyle='#fff';ctx.font='900 16px system-ui';const sc=gameScore(m).split(' | ');ctx.fillText((sc[0]||'–').replaceAll(' – ',' - '),x+w/2-48,y+104);ctx.fillText((sc[1]||'–').replaceAll(' – ',' - '),x+w/2+48,y+104)}
+async function drawGraphic(){if(!data)return;const c=$('socialCanvas'),ctx=c.getContext('2d'),t=teams(),viewer=viewerTeam(),opponent=opponentTeam(),ms=matches(),meta=competitionMeta();ctx.clearRect(0,0,1080,1080);ctx.fillStyle='#031d42';ctx.fillRect(0,0,1080,1080);
+if(backgroundImage){drawCover(ctx,backgroundImage,0,0,1080,455);ctx.fillStyle='rgba(0,20,50,.20)';ctx.fillRect(0,0,1080,455)}
+// Header stile locandina
+ctx.fillStyle='rgba(1,20,48,.88)';ctx.fillRect(0,0,1080,108);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='italic 900 43px system-ui';ctx.fillText(meta.comp.toUpperCase().slice(0,36),540,49);ctx.fillStyle='#19c5ff';ctx.font='900 30px system-ui';let sub='';if(meta.series)sub+='SERIE '+meta.series.toUpperCase();if(meta.day)sub+=(sub?'  •  ':'')+(String(meta.day).toUpperCase().startsWith('GIORN')?String(meta.day).toUpperCase():'GIORNATA '+meta.day);if(!sub)sub='CAMPIONATO AICS PADEL';ctx.fillText(sub.slice(0,48),540,88);
+// Result overlay
+ctx.fillStyle='rgba(1,22,52,.91)';ctx.fillRect(0,365,1080,112);await Promise.all([drawLogo(ctx,t.home.logo_url,92,420,94),drawLogo(ctx,t.away.logo_url,988,420,94)]);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='900 '+fit(ctx,t.home.name,330,26,16)+'px system-ui';ctx.fillText(t.home.name,260,421);ctx.font='900 '+fit(ctx,t.away.name,330,26,16)+'px system-ui';ctx.fillText(t.away.name,820,421);ctx.fillStyle='#087ed0';roundRect(ctx,424,380,232,91,15);ctx.fill();ctx.strokeStyle='#12c4ff';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#fff';ctx.font='italic 900 57px system-ui';ctx.fillText(scoreText(),540,444);ctx.fillStyle='#a9eaff';ctx.font='900 15px system-ui';ctx.fillText('RISULTATO FINALE',540,375);
+// Formazioni complete, entrambe le squadre
+const formY=490,formH=205;roundRect(ctx,22,formY,1036,formH,18);ctx.fillStyle='rgba(3,30,67,.96)';ctx.fill();ctx.strokeStyle='#0bbcff';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#fff';ctx.font='italic 900 28px system-ui';ctx.fillText('FORMAZIONI',540,518);
+const boxes=[{team:t.home,x:35,w:490,accent:'#18c8ff'},{team:t.away,x:555,w:490,accent:'#ff4f83'}];for(const b of boxes){roundRect(ctx,b.x,530,b.w,148,12);ctx.fillStyle='rgba(7,43,82,.96)';ctx.fill();ctx.strokeStyle=b.accent;ctx.lineWidth=2;ctx.stroke();await drawLogo(ctx,b.team.logo_url,b.x+28,553,48);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='900 '+fit(ctx,b.team.name,b.w-110,19,12)+'px system-ui';ctx.fillText(b.team.name,b.x+b.w/2,559);const ps=allTeamPlayers(b.team.id).slice(0,4);const start=b.x+12;for(let i=0;i<4;i++){const px=start+i*118;if(ps[i])await drawPlayer(ctx,ps[i],px,575,104,63);ctx.fillStyle='#fff';ctx.font='800 9px system-ui';ctx.fillText(ps[i]?playerName(ps[i]).slice(0,17):'',px+52,653)}}
+// Risultati degli incontri
+ctx.fillStyle='#fff';ctx.font='italic 900 27px system-ui';ctx.fillText('RISULTATI DEGLI INCONTRI',540,720);const cardY=735, gap=10, cw=515,ch=135;for(let i=0;i<Math.min(ms.length,4);i++){const x=i%2===0?24:541,y=cardY+Math.floor(i/2)*(ch+8);await drawMatchCard(ctx,ms[i],t.home,t.away,x,y,cw,ch)}
+const sp=result().spareggio;if(sp){ctx.fillStyle='#fff';ctx.font='900 12px system-ui';ctx.fillText('SPAREGGIO MISTO  '+(sp.home_games??'')+' – '+(sp.away_games??''),540,1000)}
+// Footer
+ctx.fillStyle='rgba(1,20,48,.98)';ctx.fillRect(0,1015,1080,65);ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='900 15px system-ui';const date=data.fixture?.scheduled_at?new Date(data.fixture.scheduled_at).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'}).toUpperCase():'';ctx.fillText(date,28,1044);ctx.textAlign='center';ctx.fillText((data.fixture?.venue||'PADEL ARENA').toUpperCase().slice(0,44),540,1044);ctx.textAlign='right';ctx.fillStyle='#19c5ff';ctx.fillText('AICS PADEL CHAMPIONSHIP',1052,1044);ctx.fillStyle='#8ee3ff';ctx.font='700 10px system-ui';ctx.fillText('PADel ARENA MANAGER V9'.toUpperCase(),1052,1062)}
+async function downloadGraphic(){await drawGraphic();try{const a=document.createElement('a');a.download='post-partita-'+fixtureId+'.png';a.href=$('socialCanvas').toDataURL('image/png');a.click()}catch(e){saveMessage('Grafica pronta. Il browser non consente l’esportazione della foto esterna.',true)}}async function copyArticle(){try{await navigator.clipboard.writeText($('articleTitle').value+'\n\n'+$('articleBody').value);saveMessage('Articolo copiato negli appunti.')}catch(e){saveMessage('Copia non disponibile.',true)}}function saveMessage(t,err=false){$('saveMsg').textContent=t;$('saveMsg').className='notice '+(err?'err':'ok');$('saveMsg').classList.remove('hidden')}async function saveAll(){const r=await sb.rpc('save_match_post_content',{p_fixture_id:fixtureId,p_social_title:$('socialTitle').value.trim(),p_social_subtitle:$('socialSubtitle').value.trim(),p_article_title:$('articleTitle').value.trim(),p_article_body:$('articleBody').value.trim(),p_selected_media_id:selectedMedia||null});if(r.error)return saveMessage(r.error.message,true);saveMessage('Post partita salvato correttamente.');await loadData()}async function init(){try{if(!fixtureId)return showError('Gara non indicata.');if(!cfg.supabaseUrl||!cfg.supabasePublishableKey)return showError('Configurazione Supabase non caricata.');sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);const s=await timeout(sb.auth.getSession(),15000,'Timeout verifica accesso.');if(!s.data.session){location.href='login.html';return}await loadData();$('mediaFiles').addEventListener('change',e=>uploadFiles([...e.target.files]))}catch(e){showError(e?.message||String(e))}}Object.assign(window,{selectMedia,drawGraphic,downloadGraphic,generateArticle,copyArticle,saveAll});init();
 </script>
 </body></html>
