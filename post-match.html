@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AICS Padel Championship · Post partita</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script>
+<style>
+body{margin:0;background:#f4f8fc;color:#0a2e5e;font-family:system-ui,-apple-system,sans-serif}.shell{max-width:1100px;margin:auto;padding:18px 14px 60px}
+.top,.card{background:#fff;border:1px solid #b9cde3;border-radius:18px;padding:16px;margin:12px 0}.hero{background:linear-gradient(135deg,#164a95,#082f68);color:#fff;border-radius:20px;padding:18px}
+.btn{border:0;border-radius:10px;padding:10px 13px;font-weight:900;cursor:pointer}.primary{background:#164a95;color:#fff}.secondary{background:#fff;color:#164a95;border:1px solid #164a95}.success{background:#009246;color:#fff}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.notice{padding:12px;border:1px solid #b9cde3;border-radius:12px;background:#edf4fb;margin:8px 0}.ok{background:#eaf8f0}.warn{background:#fff7dc}.err{background:#fdecef;border-color:#dd7a85}.muted{color:#627b97}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin:9px 0}.field label{display:block;font-weight:900;margin-bottom:5px}.field input,.field textarea{width:100%;padding:10px;border:1px solid #b9cde3;border-radius:9px;font:inherit;box-sizing:border-box}
+.media-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.media{border:1px solid #b9cde3;border-radius:12px;overflow:hidden}.media img{width:100%;height:140px;object-fit:cover;display:block}.media .meta{padding:8px;font-size:12px}
+.match-row{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center;padding:12px;border-bottom:1px solid #dbe5ef}.match-row:last-child{border-bottom:0}.match-label{font-weight:1000}.players{font-size:12px;color:#627b97;margin-top:3px}.player-chip{display:inline-block;background:#edf4fb;border:1px solid #cbdbea;border-radius:999px;padding:4px 8px;margin:3px 3px 0 0;color:#0a2e5e}
+.hidden{display:none!important}#socialCanvas{width:min(100%,700px);aspect-ratio:1/1;border:1px solid #b9cde3;border-radius:14px;background:#fff;display:block}
+.social-note{font-size:13px;color:#627b97;margin-top:8px}
+@media(max-width:800px){.grid2{grid-template-columns:1fr}.media-grid{grid-template-columns:repeat(2,1fr)}.match-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="shell">
+<div class="top"><div class="actions"><button class="btn secondary" onclick="history.back()">← Indietro</button><button class="btn secondary" onclick="location.href='captain-home.html?v=10001'">Area Capitano</button></div></div>
+<header class="hero"><b>POST PARTITA</b><h1 style="margin:8px 0">Contenuti della giornata</h1><div>Foto · referto completo · formazioni · grafica social · articolo</div></header>
+<section id="status" class="card">Caricamento della gara…</section>
+<section id="main" class="hidden">
+<section class="card"><div id="matchInfo"></div><div id="matchReport"></div></section>
+<section class="card"><h2>1. Foto della giornata</h2><div class="notice">La foto principale viene usata come <b>sfondo della grafica social</b>. Puoi caricare fino a 8 immagini.</div><input id="mediaFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple><div id="mediaGrid" class="media-grid" style="margin-top:12px"></div></section>
+<section class="card"><h2>2. Grafica social quadrata 1:1</h2><div class="grid2"><div>
+<div class="field"><label>Titolo</label><input id="socialTitle"></div><div class="field"><label>Sottotitolo</label><input id="socialSubtitle"></div>
+<div class="notice">La foto principale fa da sfondo con un overlay scuro. Il risultato e i nomi degli schierati vengono inseriti direttamente dalla distinta ufficiale.</div>
+</div><div><canvas id="socialCanvas" width="1080" height="1080"></canvas><div class="actions" style="margin-top:10px"><button class="btn primary" onclick="drawGraphic()">Aggiorna</button><button class="btn secondary" onclick="downloadGraphic()">Scarica PNG</button></div></div></div></section>
+<section class="card"><h2>3. Articolo per il giornale / sito</h2><div class="field"><label>Titolo</label><input id="articleTitle"></div><div class="field"><label>Testo</label><textarea id="articleBody" rows="16"></textarea></div><div class="actions"><button class="btn secondary" onclick="generateArticle()">Rigenera dai dati gara</button><button class="btn secondary" onclick="copyArticle()">Copia articolo</button><button class="btn secondary" onclick="window.print()">Stampa / PDF</button></div></section>
+<section class="card"><button class="btn success" onclick="saveAll()">Salva tutto</button><div id="saveMsg" class="notice hidden"></div></section>
+</section>
+</main>
+<script>
+const cfg=window.PAM_V9_CONFIG||{};const $=x=>document.getElementById(x);const params=new URLSearchParams(location.search);const fixtureId=params.get('id')||params.get('fixture');
+let sb=null,data=null,selectedMedia=null,backgroundImage=null;
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function showError(t){$('status').className='card';$('status').innerHTML='<div class="notice err"><b>Errore caricamento Post Partita</b><br>'+esc(t)+'</div>';}
+function timeout(p,ms,label){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(label)),ms))]);}
+function teams(){const t=data?.teams||[];return{home:t[0]||{},away:t[1]||{}}} function result(){return data?.result||{}} function matches(){return Array.isArray(result().matches)?result().matches:[]}
+function scoreText(){const s=data?.result_summary||{};if(s.home_score!=null&&s.away_score!=null)return s.home_score+' – '+s.away_score;const m=matches();let h=0,a=0;m.forEach(x=>{const s=winnerOf(x);if(s==='home')h++;if(s==='away')a++});return h+' – '+a}
+function labelPosition(label){const x=String(label||'').toLowerCase();if(x.includes('femmin'))return'Femminile';if(x.includes('misto'))return'Misto';if(x.includes('2'))return'M2';return'M1'}
+function entriesFor(pos,teamId){return(data.lineup_entries||[]).filter(x=>String(x.team_id)===String(teamId)&&String(x.position)===String(pos))}
+function exactPlayers(pos,teamId){const seen=new Set();return entriesFor(pos,teamId).filter(x=>{if(!x.id||seen.has(x.id))return false;seen.add(x.id);return true}).slice(0,2)}
+function playersText(pos,teamId){const a=exactPlayers(pos,teamId);return a.length?a.map(x=>((x.first_name||'')+' '+(x.last_name||'')).trim()).filter(Boolean).join(' / '):'Formazione non disponibile'}
+function playerChips(pos,teamId){const a=exactPlayers(pos,teamId);return a.length?a.map(x=>'<span class="player-chip">'+esc(((x.first_name||'')+' '+(x.last_name||'')).trim())+'</span>').join(''):'<span class="muted">Formazione non disponibile</span>'}
+function gameScore(m){const h=[m.h1,m.h2].filter(v=>v!=null),a=[m.a1,m.a2].filter(v=>v!=null);if(!h.length||!a.length)return'';let x=h.map(Number).join(' – '),y=a.map(Number).join(' – ');if(m.htb!=null||m.atb!=null)x+=' ['+(m.htb??'')+' – '+(m.atb??'')+']';return x+' | '+y}
+function winnerOf(m){const h=[m.h1,m.h2].filter(v=>v!=null).map(Number),a=[m.a1,m.a2].filter(v=>v!=null).map(Number);if(h.length<2||a.length<2)return null;let hw=(h[0]>a[0]?1:0)+(h[1]>a[1]?1:0),aw=(a[0]>h[0]?1:0)+(a[1]>h[1]?1:0);if(hw===2)return'home';if(aw===2)return'away';if(m.htb!=null&&m.atb!=null)return Number(m.htb)>Number(m.atb)?'home':'away';return null}
+function renderReport(){const {home,away}=teams();let html='<h3>Referto ufficiale</h3><div class="notice"><b>'+esc(home.name)+' '+scoreText()+' '+esc(away.name)+'</b></div>';matches().forEach(m=>{const pos=labelPosition(m.label);html+='<div class="match-row"><div class="match-label">'+esc(m.label||pos)+'</div><div><b>'+esc(gameScore(m)||'Risultato registrato')+'</b><div class="players"><b>'+esc(home.name)+':</b> '+playerChips(pos,home.id)+'<br><b>'+esc(away.name)+':</b> '+playerChips(pos,away.id)+'</div></div></div>'});const sp=result().spareggio;if(sp)html+='<div class="notice warn"><b>SPAREGGIO MISTO</b><br>'+esc(home.name)+': '+playerChips('Misto',home.id)+'<br>'+esc(away.name)+': '+playerChips('Misto',away.id)+'<br>Risultato: '+esc((sp.home_games??'')+' – '+(sp.away_games??''))+'</div>';$('matchReport').innerHTML=html}
+function publicUrl(path){return sb.storage.from('match-post-media').getPublicUrl(path).data.publicUrl}
+function renderMedia(){$('mediaGrid').innerHTML=(data.media||[]).map(m=>{const url=publicUrl(m.storage_path);return'<div class="media"><img src="'+url+'" alt=""><div class="meta"><b>'+esc(m.file_name)+'</b><br><button class="btn secondary" style="padding:6px 8px;margin-top:6px" onclick="selectMedia(\''+m.id+'\')">'+(m.id===selectedMedia?'✓ Foto principale':'Usa come principale')+'</button></div></div>'}).join('')||'<div class="notice">Nessuna foto caricata. Caricane una per usarla come sfondo.</div>'}
+function loadBackground(){backgroundImage=null;if(!selectedMedia||!(data.media||[]).length){drawGraphic();return}const m=(data.media||[]).find(x=>x.id===selectedMedia);if(!m){drawGraphic();return}const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{backgroundImage=img;drawGraphic()};img.onerror=()=>{backgroundImage=null;drawGraphic()};img.src=publicUrl(m.storage_path)}
+function selectMedia(id){selectedMedia=id;renderMedia();loadBackground()}
+function render(){const {home,away}=teams(),f=data.fixture||{},c=data.content||{};$('matchInfo').innerHTML='<h2>'+esc(home.name)+' – '+esc(away.name)+'</h2><div class="muted">'+(f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT'):'')+' · '+esc(f.competition_code||f.competition_type||'')+' · '+esc(f.venue||'')+'</div><div class="notice '+(data.is_homologated?'ok':'warn')+'"><b>'+(data.is_homologated?'Gara chiusa e omologata':'Gara chiusa · risultato salvato')+'</b></div>';renderReport();$('socialTitle').value=c.social_title||home.name+' – '+away.name;$('socialSubtitle').value=c.social_subtitle||'Risultato finale '+scoreText();$('articleTitle').value=c.article_title||home.name+' – '+away.name+': il racconto della gara';$('articleBody').value=c.article_body||'';if(!c.article_body)generateArticle();if((data.media||[]).length&&!selectedMedia)selectedMedia=c.selected_media_id||(data.media||[])[0].id;renderMedia();loadBackground()}
+async function uploadFiles(files){if(!files.length)return;const existing=data.media||[];if(existing.length+files.length>8)return saveMessage('Puoi avere massimo 8 foto.',true);for(const file of files){if(file.size>10*1024*1024)return saveMessage('Ogni foto deve essere massimo 10 MB.',true);const ext=(file.name.split('.').pop()||'jpg').toLowerCase(),path=fixtureId+'/'+crypto.randomUUID()+'.'+ext;const up=await sb.storage.from('match-post-media').upload(path,file,{contentType:file.type,upsert:false});if(up.error)return saveMessage(up.error.message,true);const r=await sb.rpc('register_match_post_media',{p_fixture_id:fixtureId,p_storage_path:path,p_file_name:file.name,p_mime_type:file.type,p_caption:null});if(r.error)return saveMessage(r.error.message,true)}await loadData()}
+async function loadData(){const q=await timeout(sb.rpc('get_match_post_data',{p_fixture_id:fixtureId}),15000,'Timeout caricamento gara (15 secondi). La pagina non riceve risposta da Supabase.');if(q.error)throw q.error;data=Array.isArray(q.data)?q.data[0]:q.data;if(!data||!data.is_closed){$('status').innerHTML='<div class="notice warn"><b>Post partita non ancora disponibile</b><br>'+esc(data?.message||'La gara deve avere un risultato salvato.')+'</div>';return false}$('status').classList.add('hidden');$('main').classList.remove('hidden');render();return true}
+function generateArticle(){const {home,away}=teams(),f=data.fixture||{};const lines=matches().map(m=>{const pos=labelPosition(m.label);return (m.label||pos)+': '+gameScore(m)+' — '+home.name+': '+playersText(pos,home.id)+'; '+away.name+': '+playersText(pos,away.id)+'.'});let body='Si è disputata '+(f.scheduled_at?'il '+new Date(f.scheduled_at).toLocaleDateString('it-IT'):'')+' la sfida '+home.name+' contro '+away.name+', valida per '+(f.competition_code||f.competition_type||'il campionato')+'.\\n\\nIl confronto si è chiuso sul '+scoreText()+'.\\n\\n'+lines.join('\\n');const sp=result().spareggio;if(sp)body+='\\n\\nSul pari è stato necessario lo spareggio misto, con il punteggio '+sp.home_games+'-'+sp.away_games+'.';body+='\\n\\nIl referto digitale raccoglie risultati e formazioni ufficiali della gara.';$('articleTitle').value=home.name+' – '+away.name+': il racconto della gara';$('articleBody').value=body}
+function drawCover(ctx,img){
+ if(!img)return;
+ const scale=Math.max(1080/img.width,1080/img.height),w=img.width*scale,h=img.height*scale,x=(1080-w)/2,y=(1080-h)/2;
+ ctx.drawImage(img,x,y,w,h);
+ ctx.fillStyle='rgba(0,20,55,.48)';ctx.fillRect(0,0,1080,1080);
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function panel(ctx,x,y,w,h){roundRect(ctx,x,y,w,h,20);ctx.fillStyle='rgba(5,35,72,.91)';ctx.fill();ctx.strokeStyle='#12b9ff';ctx.lineWidth=3;ctx.stroke()}
+function fitText(ctx,text,maxWidth,maxSize,minSize=16){let size=maxSize;while(size>minSize){ctx.font='800 '+size+'px system-ui';if(ctx.measureText(text).width<=maxWidth)return size;size-=1}ctx.font='800 '+minSize+'px system-ui';return minSize}
+function drawLogo(ctx,url,x,y,size){return new Promise(resolve=>{if(!url)return resolve(false);const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{ctx.save();ctx.beginPath();ctx.arc(x,y,size/2,0,Math.PI*2);ctx.clip();ctx.fillStyle='rgba(255,255,255,.96)';ctx.fill();const scale=Math.min(size/img.width,size/img.height);const w=img.width*scale,h=img.height*scale;ctx.drawImage(img,x-w/2,y-h/2,w,h);ctx.restore();resolve(true)};img.onerror=()=>resolve(false);img.src=url})}
+function drawFormationBlock(ctx,x,y,w,match,pos,home,away){
+ const hp=playersText(pos,home.id),ap=playersText(pos,away.id);
+ ctx.fillStyle='rgba(255,255,255,.09)';roundRect(ctx,x,y,w,103,12);ctx.fill();
+ ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='900 19px system-ui';ctx.fillText(match.label||pos,x+16,y+25);
+ ctx.textAlign='right';ctx.font='900 19px system-ui';ctx.fillText(gameScore(match),x+w-16,y+25);
+ ctx.textAlign='left';ctx.font='700 16px system-ui';ctx.fillStyle='#8ee3ff';ctx.fillText(home.name.toUpperCase(),x+16,y+50);
+ ctx.fillStyle='#fff';fitText(ctx,hp,x+w-32,18,13);ctx.textAlign='right';ctx.fillText(hp,x+w-16,y+69);
+ ctx.textAlign='left';ctx.font='700 16px system-ui';ctx.fillStyle='#ff7890';ctx.fillText(away.name.toUpperCase(),x+16,y+89);
+ ctx.fillStyle='#fff';fitText(ctx,ap,x+w-32,18,13);ctx.textAlign='right';ctx.fillText(ap,x+w-16,y+108);
+}
+async function drawGraphic(){
+ if(!data)return;
+ const c=$('socialCanvas'),ctx=c.getContext('2d'),{home,away}=teams();
+ ctx.clearRect(0,0,1080,1080);
+ if(backgroundImage)drawCover(ctx,backgroundImage);else{ctx.fillStyle='#082f68';ctx.fillRect(0,0,1080,1080)}
+ // header
+ ctx.fillStyle='rgba(4,35,72,.96)';ctx.fillRect(0,0,1080,215);
+ ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='900 42px system-ui';ctx.fillText('AICS PADEL CHAMPIONSHIP',45,58);
+ ctx.fillStyle='#8ee3ff';ctx.font='900 24px system-ui';ctx.fillText(($('socialSubtitle').value||'').toUpperCase().slice(0,55),45,96);
+ // logos and teams
+ await Promise.all([drawLogo(ctx,home.logo_url,82,157,92),drawLogo(ctx,away.logo_url,998,157,92)]);
+ ctx.fillStyle='#fff';ctx.textAlign='center';fitText(ctx,home.name,350,29,18);ctx.fillText(home.name,290,155);
+ fitText(ctx,away.name,350,29,18);ctx.fillText(away.name,790,155);
+ ctx.fillStyle='#0879c9';roundRect(ctx,442,111,196,88,14);ctx.fill();ctx.strokeStyle='#12b9ff';ctx.lineWidth=3;ctx.stroke();
+ ctx.fillStyle='#fff';ctx.font='900 68px system-ui';ctx.fillText(scoreText(),540,176);
+ // formation and results panels
+ panel(ctx,20,245,420,675);panel(ctx,660,245,400,675);
+ ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='900 34px system-ui';ctx.fillText('FORMAZIONI',42,292);ctx.fillStyle='#12b9ff';ctx.fillRect(42,307,260,4);
+ ctx.font='900 34px system-ui';ctx.fillText('RISULTATI',682,292);ctx.fillRect(682,307,260,4);
+ let fy=330;
+ matches().forEach(m=>{const pos=labelPosition(m.label);drawFormationBlock(ctx,38,fy,384,m,pos,home,away);fy+=116});
+ const sp=result().spareggio;if(sp){ctx.fillStyle='rgba(255,255,255,.10)';roundRect(ctx,38,fy,384,76,12);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='900 18px system-ui';ctx.fillText('SPAREGGIO MISTO',54,fy+28);ctx.textAlign='right';ctx.fillText(sp.home_games+' – '+sp.away_games,406,fy+28);ctx.textAlign='left';ctx.font='700 14px system-ui';ctx.fillText(playersText('Misto',home.id)+'  /  '+playersText('Misto',away.id),54,fy+53)}
+ // results list
+ let ry=340;ctx.textAlign='left';matches().forEach(m=>{const pos=labelPosition(m.label);ctx.fillStyle='rgba(255,255,255,.10)';roundRect(ctx,678,ry,364,103,12);ctx.fill();ctx.fillStyle='#12b9ff';ctx.fillRect(678,ry,6,103);ctx.fillStyle='#fff';ctx.font='900 20px system-ui';ctx.fillText((m.label||pos).toUpperCase(),698,ry+28);ctx.textAlign='right';ctx.font='900 22px system-ui';ctx.fillText(gameScore(m),1025,ry+28);ctx.textAlign='left';ctx.font='700 16px system-ui';ctx.fillStyle='#8ee3ff';ctx.fillText(home.name,698,ry+58);ctx.fillStyle='#fff';fitText(ctx,playersText(pos,home.id),310,17,12);ctx.textAlign='right';ctx.fillText(playersText(pos,home.id),1025,ry+58);ctx.textAlign='left';ctx.fillStyle='#ff7890';ctx.font='700 16px system-ui';ctx.fillText(away.name,698,ry+84);ctx.fillStyle='#fff';fitText(ctx,playersText(pos,away.id),310,17,12);ctx.textAlign='right';ctx.fillText(playersText(pos,away.id),1025,ry+84);ry+=116});
+ if(sp){ctx.fillStyle='#fff';ctx.textAlign='left';ctx.font='900 18px system-ui';ctx.fillText('SPAREGGIO MISTO',698,ry+25);ctx.textAlign='right';ctx.fillText(sp.home_games+' – '+sp.away_games,1025,ry+25)}
+ // footer
+ ctx.fillStyle='rgba(4,35,72,.96)';ctx.fillRect(0,955,1080,125);ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='800 24px system-ui';const dt=data.fixture?.scheduled_at?new Date(data.fixture.scheduled_at).toLocaleDateString('it-IT',{day:'2-digit',month:'long',year:'numeric'}):'';ctx.fillText(dt.toUpperCase(),45,1018);ctx.textAlign='right';ctx.fillText((data.fixture?.venue||'').toUpperCase().slice(0,45),1035,1018);ctx.font='600 16px system-ui';ctx.fillStyle='#b9d9ef';ctx.fillText('PADEL ARENA MANAGER V9',1035,1050);
+}
+async function downloadGraphic(){await drawGraphic();try{const a=document.createElement('a');a.download='post-partita-'+fixtureId+'.png';a.href=$('socialCanvas').toDataURL('image/png');a.click()}catch(e){saveMessage('La grafica è visibile ma Safari non consente l’esportazione della foto di sfondo. Prova con una foto caricata direttamente e aggiorna.',true)}}
+async function copyArticle(){try{await navigator.clipboard.writeText($('articleTitle').value+'\\n\\n'+$('articleBody').value);saveMessage('Articolo copiato negli appunti.')}catch(e){saveMessage('Copia non disponibile.',true)}}
+function saveMessage(t,err=false){$('saveMsg').textContent=t;$('saveMsg').className='notice '+(err?'err':'ok');$('saveMsg').classList.remove('hidden')}
+async function saveAll(){const r=await sb.rpc('save_match_post_content',{p_fixture_id:fixtureId,p_social_title:$('socialTitle').value.trim(),p_social_subtitle:$('socialSubtitle').value.trim(),p_article_title:$('articleTitle').value.trim(),p_article_body:$('articleBody').value.trim(),p_selected_media_id:selectedMedia||null});if(r.error)return saveMessage(r.error.message,true);saveMessage('Post partita salvato correttamente.');await loadData()}
+async function init(){try{if(!fixtureId)return showError('Gara non indicata. Il link non contiene l’ID della partita.');if(!cfg.supabaseUrl||!cfg.supabasePublishableKey)return showError('Configurazione Supabase non caricata. Controlla config.js.');sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);$('status').innerHTML='Verifica accesso…';const s=await timeout(sb.auth.getSession(),15000,'Timeout verifica accesso (15 secondi).');if(!s.data.session){location.href='login.html';return}$('status').innerHTML='Caricamento dati della gara…';await loadData();$('mediaFiles').addEventListener('change',e=>uploadFiles([...e.target.files]))}catch(e){showError(e?.message||String(e))}}
+Object.assign(window,{selectMedia,drawGraphic,downloadGraphic,generateArticle,copyArticle,saveAll});init();
+</script>
+</body></html>
