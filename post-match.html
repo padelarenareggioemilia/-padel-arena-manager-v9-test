@@ -53,7 +53,7 @@ const fixtureId=params.get('id')||params.get('fixture');
 let sb=null,data=null,selectedMedia=null;
 
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function showError(t){status.className='card';status.innerHTML='<div class="notice err"><b>Errore caricamento Post Partita</b><br>'+esc(t)+'</div>';}
+function showError(t){$('status').className='card';$('status').innerHTML='<div class="notice err"><b>Errore caricamento Post Partita</b><br>'+esc(t)+'</div>';}
 function timeout(p,ms,label){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(label)),ms))]);}
 function teams(){const t=data?.teams||[];return{home:t[0]||{},away:t[1]||{}};}
 function result(){return data?.result||{};}
@@ -77,22 +77,22 @@ function renderReport(){
  });
  const sp=result().spareggio;
  if(sp)html+='<div class="notice warn"><b>SPAREGGIO MISTO</b><br>'+esc(home.name)+': '+esc(playersText('Misto',home.id))+'<br>'+esc(away.name)+': '+esc(playersText('Misto',away.id))+'<br>Risultato: '+esc((sp.home_games??'')+' – '+(sp.away_games??''))+'</div>';
- matchReport.innerHTML=html;
+ $('matchReport').innerHTML=html;
 }
 function renderMedia(){
- mediaGrid.innerHTML=(data.media||[]).map(m=>{
+ $('mediaGrid').innerHTML=(data.media||[]).map(m=>{
   const url=sb.storage.from('match-post-media').getPublicUrl(m.storage_path).data.publicUrl;
   return'<div class="media"><img src="'+url+'"><div class="meta"><b>'+esc(m.file_name)+'</b><br><button class="btn secondary" style="padding:6px 8px;margin-top:6px" onclick="selectMedia(\''+m.id+'\')">'+(m.id===selectedMedia?'Foto principale':'Usa come principale')+'</button></div></div>';
  }).join('')||'<div class="notice">Nessuna foto caricata.</div>';
 }
 function render(){
  const {home,away}=teams(),f=data.fixture||{},c=data.content||{};
- matchInfo.innerHTML='<h2>'+esc(home.name)+' – '+esc(away.name)+'</h2><div class="muted">'+(f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT'):'')+' · '+esc(f.competition_code||f.competition_type||'')+' · '+esc(f.venue||'')+'</div><div class="notice '+(data.is_homologated?'ok':'warn')+'"><b>'+(data.is_homologated?'Gara chiusa e omologata':'Gara chiusa · risultato salvato')+'</b></div>';
+ $('matchInfo').innerHTML='<h2>'+esc(home.name)+' – '+esc(away.name)+'</h2><div class="muted">'+(f.scheduled_at?new Date(f.scheduled_at).toLocaleString('it-IT'):'')+' · '+esc(f.competition_code||f.competition_type||'')+' · '+esc(f.venue||'')+'</div><div class="notice '+(data.is_homologated?'ok':'warn')+'"><b>'+(data.is_homologated?'Gara chiusa e omologata':'Gara chiusa · risultato salvato')+'</b></div>';
  renderReport();
- socialTitle.value=c.social_title||home.name+' – '+away.name;
- socialSubtitle.value=c.social_subtitle||'Risultato finale '+scoreText();
- articleTitle.value=c.article_title||home.name+' – '+away.name+': il racconto della gara';
- articleBody.value=c.article_body||'';
+ $('socialTitle').value=c.social_title||home.name+' – '+away.name;
+ $('socialSubtitle').value=c.social_subtitle||'Risultato finale '+scoreText();
+ $('articleTitle').value=c.article_title||home.name+' – '+away.name+': il racconto della gara';
+ $('articleBody').value=c.article_body||'';
  if(!c.article_body)generateArticle();
  if((data.media||[]).length&&!selectedMedia)selectedMedia=c.selected_media_id||(data.media||[])[0].id;
  renderMedia();drawGraphic();
@@ -116,8 +116,8 @@ async function loadData(){
  const q=await timeout(sb.rpc('get_match_post_data',{p_fixture_id:fixtureId}),15000,'Timeout caricamento gara (15 secondi). La pagina non riceve risposta da Supabase.');
  if(q.error)throw q.error;
  data=Array.isArray(q.data)?q.data[0]:q.data;
- if(!data||!data.is_closed){status.innerHTML='<div class="notice warn"><b>Post partita non ancora disponibile</b><br>'+esc(data?.message||'La gara deve avere un risultato salvato.')+'</div>';return false;}
- status.classList.add('hidden');main.classList.remove('hidden');render();return true;
+ if(!data||!data.is_closed){$('status').innerHTML='<div class="notice warn"><b>Post partita non ancora disponibile</b><br>'+esc(data?.message||'La gara deve avere un risultato salvato.')+'</div>';return false;}
+ $('status').classList.add('hidden');$('main').classList.remove('hidden');render();return true;
 }
 function generateArticle(){
  const {home,away}=teams(),f=data.fixture||{};
@@ -129,14 +129,14 @@ function generateArticle(){
  const sp=result().spareggio;
  if(sp)body+='\n\nSul pari è stato necessario lo spareggio misto, con il punteggio '+sp.home_games+'-'+sp.away_games+'.';
  body+='\n\nIl referto digitale raccoglie risultati e formazioni ufficiali della gara.';
- articleTitle.value=home.name+' – '+away.name+': il racconto della gara';articleBody.value=body;
+ $('articleTitle').value=home.name+' – '+away.name+': il racconto della gara';$('articleBody').value=body;
 }
 function drawGraphic(){
  if(!data)return;
  const c=$('socialCanvas'),ctx=c.getContext('2d'),{home,away}=teams();
  ctx.clearRect(0,0,1080,1080);ctx.fillStyle='#082f68';ctx.fillRect(0,0,1080,1080);ctx.fillStyle='#164a95';ctx.fillRect(0,0,1080,170);ctx.fillStyle='#fff';ctx.textAlign='center';
  ctx.font='900 42px system-ui';ctx.fillText('AICS PADEL',540,70);
- ctx.font='900 40px system-ui';ctx.fillText((socialTitle.value||home.name+' – '+away.name).slice(0,42),540,225);
+ ctx.font='900 40px system-ui';ctx.fillText(($('socialTitle').value||home.name+' – '+away.name).slice(0,42),540,225);
  ctx.font='900 105px system-ui';ctx.fillText(scoreText(),540,345);
  ctx.font='700 25px system-ui';let y=420;
  matches().forEach(m=>{ctx.fillText((m.label||'Match')+'  '+gameScore(m),540,y);y+=55;});
@@ -144,10 +144,10 @@ function drawGraphic(){
  ctx.font='700 25px system-ui';ctx.fillText((data.fixture?.competition_code||'GARA'),540,950);ctx.font='600 21px system-ui';ctx.fillText('Padel Arena Manager V9',540,1000);
 }
 function downloadGraphic(){drawGraphic();const a=document.createElement('a');a.download='post-partita-'+fixtureId+'.png';a.href=socialCanvas.toDataURL('image/png');a.click();}
-async function copyArticle(){try{await navigator.clipboard.writeText(articleTitle.value+'\n\n'+articleBody.value);saveMessage('Articolo copiato negli appunti.')}catch(e){saveMessage('Copia non disponibile.',true);}}
-function saveMessage(t,err=false){saveMsg.textContent=t;saveMsg.className='notice '+(err?'err':'ok');saveMsg.classList.remove('hidden');}
+async function copyArticle(){try{await navigator.clipboard.writeText($('articleTitle').value+'\n\n'+$('articleBody').value);saveMessage('Articolo copiato negli appunti.')}catch(e){saveMessage('Copia non disponibile.',true);}}
+function saveMessage(t,err=false){$('saveMsg').textContent=t;$('saveMsg').className='notice '+(err?'err':'ok');$('saveMsg').classList.remove('hidden');}
 async function saveAll(){
- const r=await sb.rpc('save_match_post_content',{p_fixture_id:fixtureId,p_social_title:socialTitle.value.trim(),p_social_subtitle:socialSubtitle.value.trim(),p_article_title:articleTitle.value.trim(),p_article_body:articleBody.value.trim(),p_selected_media_id:selectedMedia||null});
+ const r=await sb.rpc('save_match_post_content',{p_fixture_id:fixtureId,p_social_title:$('socialTitle').value.trim(),p_social_subtitle:$('socialSubtitle').value.trim(),p_article_title:$('articleTitle').value.trim(),p_article_body:$('articleBody').value.trim(),p_selected_media_id:selectedMedia||null});
  if(r.error)return saveMessage(r.error.message,true);
  saveMessage('Post partita salvato correttamente.');await loadData();
 }
@@ -156,12 +156,12 @@ async function init(){
   if(!fixtureId){showError('Gara non indicata. Il link non contiene l’ID della partita.');return;}
   if(!cfg.supabaseUrl||!cfg.supabasePublishableKey){showError('Configurazione Supabase non caricata. Controlla config.js.');return;}
   sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
-  status.innerHTML='Verifica accesso…';
+  $('status').innerHTML='Verifica accesso…';
   const s=await timeout(sb.auth.getSession(),15000,'Timeout verifica accesso (15 secondi).');
   if(!s.data.session){location.href='login.html';return;}
-  status.innerHTML='Caricamento dati della gara…';
+  $('status').innerHTML='Caricamento dati della gara…';
   await loadData();
-  mediaFiles.addEventListener('change',e=>uploadFiles([...e.target.files]));
+  $('mediaFiles').addEventListener('change',e=>uploadFiles([...e.target.files]));
  }catch(e){showError(e?.message||String(e));}
 }
 Object.assign(window,{selectMedia,drawGraphic,downloadGraphic,generateArticle,copyArticle,saveAll});
