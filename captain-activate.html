@@ -26,6 +26,7 @@ main{width:min(620px,calc(100% - 24px));margin:24px auto 70px}.hero,.card{border
   <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" minlength="8" placeholder="Almeno 8 caratteri"></div>
   <button id="createBtn" class="btn primary">Crea il mio account Capitano</button>
   <button id="loginBtn" class="btn secondary">Ho già un account: accedi</button>
+  <button id="forgotBtn" class="btn secondary">Password dimenticata? Recupera accesso</button>
   <button id="resendBtn" class="btn secondary">Invia di nuovo email di conferma</button>
   <p class="small">Hai già creato l’account ma non trovi più l’email di conferma? Puoi fartela inviare nuovamente.</p>
   <p class="small">Il collegamento è personale. L’account può essere associato esclusivamente all’email del capitano registrata per questa squadra.</p>
@@ -38,7 +39,7 @@ let invite=null,resendCooldownUntil=0;
 if(!cfg?.supabaseUrl||!cfg?.supabasePublishableKey){show('Configurazione Supabase non disponibile.',true);throw new Error('Configurazione mancante')}
 const sb=supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 function show(text,error=false,ok=false){$('status').textContent=text;$('status').className='notice '+(error?'err':ok?'ok':'')}
-function busy(value){$('createBtn').disabled=value;$('loginBtn').disabled=value;$('resendBtn').disabled=value||Date.now()<resendCooldownUntil}
+function busy(value){$('createBtn').disabled=value;$('loginBtn').disabled=value;$('forgotBtn').disabled=value;$('resendBtn').disabled=value||Date.now()<resendCooldownUntil}
 function updateResendButton(){const b=$('resendBtn'),remaining=Math.max(0,Math.ceil((resendCooldownUntil-Date.now())/1000));if(remaining>0){b.disabled=true;b.textContent=`Puoi reinviare tra ${remaining}s`;setTimeout(updateResendButton,1000)}else{b.disabled=false;b.textContent='Invia di nuovo email di conferma'}}
 async function claimAndEnter(){const result=await sb.rpc('captain_claim_invite',{p_token:token});if(result.error)throw result.error;show('Account collegato correttamente. Apertura Area Capitano…',false,true);setTimeout(()=>location.replace('captain-home.html?v=9935'),500)}
 async function start(){
@@ -55,10 +56,22 @@ $('createBtn').onclick=async()=>{
   const password=$('password').value;if(password.length<8)return show('La password deve contenere almeno 8 caratteri.',true);
   busy(true);show('Creazione dell’account in corso…');
   try{await sb.auth.signOut({scope:'local'});const redirect=new URL('captain-activate.html',location.href);redirect.searchParams.set('invite',token);const result=await sb.auth.signUp({email:invite.captain_email,password,options:{emailRedirectTo:redirect.href,data:{captain_invite:token}}});if(result.error)throw result.error;if(result.data.session)await claimAndEnter();else show('Account creato. Controlla la posta e conferma l’email; poi riapri questo collegamento.',false,true)}
-  catch(e){const msg=e.message||String(e);show(/already registered|already been registered/i.test(msg)?'Questa email possiede già un account. Usa “Ho già un account: accedi” oppure “Invia di nuovo email di conferma”.':msg,true)}
+  catch(e){const msg=e.message||String(e);show(/already registered|already been registered/i.test(msg)?'Questa email possiede già un account. Usa “Ho già un account: accedi” oppure “Password dimenticata? Recupera accesso”.':msg,true)}
   finally{busy(false)}
 };
-$('loginBtn').onclick=async()=>{const password=$('password').value;if(!password)return show('Inserisci la password del tuo account.',true);busy(true);show('Accesso in corso…');try{await sb.auth.signOut({scope:'local'});const result=await sb.auth.signInWithPassword({email:invite.captain_email,password});if(result.error)throw result.error;await claimAndEnter()}catch(e){show(e.message||String(e),true);busy(false)}};
+$('loginBtn').onclick=()=>{location.href='login.html?email='+encodeURIComponent(invite?.captain_email||'')};
+$('forgotBtn').onclick=async()=>{
+  const email=invite?.captain_email;
+  if(!email)return show('Email del capitano non disponibile.',true);
+  busy(true);show('Invio della mail per reimpostare la password…');
+  try{
+    const redirect=new URL('reset-password.html',location.href);
+    const result=await sb.auth.resetPasswordForEmail(email,{redirectTo:redirect.href});
+    if(result.error)throw result.error;
+    show('Email inviata. Controlla la posta e anche Spam/Posta indesiderata. Apri il link per creare una nuova password.',false,true);
+  }catch(e){show('Recupero password non riuscito: '+(e.message||String(e)),true)}
+  finally{busy(false)}
+};
 $('resendBtn').onclick=async()=>{
  if(!invite?.captain_email)return show('Email del capitano non disponibile.',true);
  if(Date.now()<resendCooldownUntil)return;
@@ -68,5 +81,5 @@ $('resendBtn').onclick=async()=>{
 };
 start().catch(e=>show(e.message||String(e),true));
 </script>
-<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.35 RECUPERO ATTIVAZIONE</div>
+<div style="margin:12px auto 24px;width:max-content;max-width:calc(100% - 24px);padding:5px 8px;border-radius:999px;background:#082f68;color:white;font:700 10px system-ui">V9.9.99 FIX ACCESSO CAPITANO</div>
 </body></html>
