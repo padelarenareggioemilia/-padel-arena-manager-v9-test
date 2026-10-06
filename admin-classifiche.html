@@ -18,6 +18,7 @@ h1,h2{margin-top:0}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.f
 table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:center;font-size:13px}th{background:#edf4fb;font-weight:900}td:nth-child(2),th:nth-child(2){text-align:left}
 .badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#e6eff9;border:1px solid var(--line);font-size:11px;font-weight:900}
 .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.stat{padding:13px;border:1px solid var(--line);border-radius:13px;text-align:center}.stat b{display:block;font-size:24px}
+.group-title td{background:#dfeeff;color:#082f68;text-align:left!important;font-size:15px;font-weight:900;padding:12px 8px;border-top:2px solid #9dbbe0}
 @media(max-width:800px){.grid2,.statgrid{grid-template-columns:1fr}.card{padding:14px}table{font-size:12px}th,td{padding:7px 4px}}
 </style>
 </head>
@@ -53,7 +54,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:9px 7px;
 
 <section class="card">
 <div class="actions" style="justify-content:space-between;align-items:center">
-<div><h2 style="margin-bottom:4px">📊 Classifica ufficiale</h2><div class="muted">La classifica viene ricostruita dai risultati validi inviati al centrale.</div></div>
+<div><h2 style="margin-bottom:4px">📊 Classifica ufficiale</h2><div class="muted">Le classifiche vengono ricostruite dai risultati validi inviati al centrale e mostrate separate per girone.</div></div>
 <div class="actions">
 <select id="standCompetition" style="width:auto;min-width:180px">
 <option value="COPPA_ITALIA">Coppa Italia</option>
@@ -86,10 +87,10 @@ async function guard(){
   if(!q.data.session){location.href='login.html';return false}
   const p=await sb.from('profiles').select('role').eq('id',q.data.session.user.id).maybeSingle();
   if(p.data?.role!=='admin'){location.href='public.html';return false}
-  return true;
+  return true
 }
 function show(id,msg,type=''){
-  const e=$(id);e.textContent=msg;e.className='notice '+type;e.classList.remove('hidden');
+  const e=$(id);e.textContent=msg;e.className='notice '+type;e.classList.remove('hidden')
 }
 async function runDiagnostic(){
   const code=$('diagCompetition').value;
@@ -99,7 +100,7 @@ async function runDiagnostic(){
   if(r.error){show('diagMsg','Diagnostica non riuscita: '+r.error.message,'err');return}
   const d=r.data||{};
   const ok=d.ok===true;
-  show('diagMsg',d.message|| (ok?'Nessuna anomalia rilevata.':'Sono state rilevate anomalie.'),ok?'ok':'warn');
+  show('diagMsg',d.message||(ok?'Nessuna anomalia rilevata.':'Sono state rilevate anomalie.'),ok?'ok':'warn');
   $('diagStats').innerHTML=[
     ['Partite',d.total_fixtures??0],
     ['Risultati',d.results??0],
@@ -110,20 +111,53 @@ async function runDiagnostic(){
   const issues=[...(d.missing_results||[]).map(x=>'Risultato mancante: '+x),...(d.invalid_results||[]).map(x=>'Risultato non valido: '+x)];
   if(issues.length)show('diagIssues',issues.join('\n'),'err');
   else show('diagIssues',d.standings_rebuilt?'Classifica ricostruita automaticamente. Nessuna omologazione manuale necessaria.':'Nessuna anomalia rilevata.','ok');
-  await loadStandings();
+  await loadStandings()
 }
 async function loadStandings(){
   const code=$('standCompetition').value;
   $('standingsBody').innerHTML='<tr><td colspan="10">Caricamento…</td></tr>';
-  const r=await sb.from('official_standings').select('group_id,team_id,played,won,lost,points,matches_won,matches_lost,matches_difference,sets_difference,games_difference,position,teams:team_id(name)').eq('competition_code',code).order('position',{ascending:true,nullsFirst:false});
-  if(r.error){$('standingsBody').innerHTML='<tr><td colspan="10">'+r.error.message+'</td></tr>';show('standMsg','Impossibile leggere la classifica: '+r.error.message,'err');return}
-  const rows=r.data||[];
-  $('standingsBody').innerHTML=rows.length?rows.map(x=>`<tr>
+  const [sr,gr]=await Promise.all([
+    sb.from('official_standings')
+      .select('group_id,team_id,played,won,lost,points,matches_won,matches_lost,matches_difference,sets_difference,games_difference,position,teams:team_id(name)')
+      .eq('competition_code',code),
+    sb.from('competition_groups')
+      .select('id,group_name,sort_order')
+      .eq('competition_code',code)
+      .order('sort_order',{ascending:true})
+  ]);
+  if(sr.error){
+    $('standingsBody').innerHTML='<tr><td colspan="10">'+sr.error.message+'</td></tr>';
+    show('standMsg','Impossibile leggere la classifica: '+sr.error.message,'err');return
+  }
+  if(gr.error){
+    $('standingsBody').innerHTML='<tr><td colspan="10">'+gr.error.message+'</td></tr>';
+    show('standMsg','Impossibile leggere i gironi: '+gr.error.message,'err');return
+  }
+
+  const rows=sr.data||[];
+  const groups=gr.data||[];
+  const groupMap=new Map(groups.map(g=>[g.id,g]));
+
+  rows.sort((a,b)=>{
+    const ga=groupMap.get(a.group_id)?.sort_order??999;
+    const gb=groupMap.get(b.group_id)?.sort_order??999;
+    if(ga!==gb)return ga-gb;
+    return (a.position??999)-(b.position??999)
+  });
+
+  let html='';
+  for(const g of groups){
+    const rs=rows.filter(x=>x.group_id===g.id);
+    if(!rs.length)continue;
+    html+=`<tr class="group-title"><td colspan="10">🏆 ${g.group_name}</td></tr>`;
+    html+=rs.map(x=>`<tr>
 <td>${x.position??'—'}</td><td><b>${x.teams?.name||x.team_id}</b></td>
 <td>${x.played??0}</td><td>${x.won??0}</td><td>${x.lost??0}</td><td><b>${x.points??0}</b></td>
 <td>${x.matches_won??0}</td><td>${x.matches_lost??0}</td><td>${x.sets_difference??0}</td><td>${x.games_difference??0}</td>
-</tr>`).join(''):'<tr><td colspan="10">Nessuna classifica disponibile.</td></tr>';
-  show('standMsg',`${labels[code]||code}: ${rows.length} squadre in classifica.`,'ok');
+</tr>`).join('')
+  }
+  $('standingsBody').innerHTML=html||'<tr><td colspan="10">Nessuna classifica disponibile.</td></tr>';
+  show('standMsg',`${labels[code]||code}: ${rows.length} squadre in classifica, suddivise per girone.`,'ok')
 }
 $('standCompetition').addEventListener('change',loadStandings);
 guard().then(ok=>{if(ok)loadStandings()});
