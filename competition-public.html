@@ -61,7 +61,7 @@ const logos={
   SUPERCOPPA:'assets/supercoppa.png?v=987'
 };
 
-let teams=[],groups=[],members=[],fixtures=[],statuses=[],adjustments=[],officialStandings=[];
+let teams=[],groups=[],members=[],fixtures=[],statuses=[],adjustments=[];
 let view=params.get('view')||'current';
 if(!['previous','current','next','standings'].includes(view))view='current';
 
@@ -174,26 +174,25 @@ function standingsFor(group){
 
 function renderStandings(){
   const html=groups.map(g=>{
-    const rows=officialStandings
-      .filter(r=>r.group_id===g.id)
-      .sort((a,b)=>(Number(a.position??9999)-Number(b.position??9999))||String(a.team_name||'').localeCompare(String(b.team_name||''),'it'));
-    return `<h3 class="group-title">${esc(g.group_name||rows[0]?.group_name||'Girone')}</h3>
+    const rows=standingsFor(g);
+    return `<h3 class="group-title">${esc(g.group_name||'Girone')}</h3>
       <div class="table-wrap">
       <table>
-        <thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>P</th><th>Pt</th><th>MP</th><th>MS</th><th>Diff. M</th><th>Diff. S</th><th>Diff. G</th></tr></thead>
+        <thead><tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>MF</th><th>MS</th><th>Diff.</th><th>Pt</th></tr></thead>
         <tbody>
           ${rows.map((r,i)=>`<tr>
-            <td>${r.position??i+1}</td><td><b>${esc(r.team_name||teamName(r.team_id))}</b></td>
-            <td>${Number(r.played||0)}</td><td>${Number(r.won||0)}</td><td>${Number(r.lost||0)}</td>
-            <td><b>${Number(r.points||0)}</b></td><td>${Number(r.matches_won||0)}</td><td>${Number(r.matches_lost||0)}</td>
-            <td>${Number(r.matches_difference||0)}</td><td>${Number(r.sets_difference||0)}</td><td>${Number(r.games_difference||0)}</td>
+            <td>${i+1}</td><td><b>${esc(teamName(r.id))}</b></td>
+            <td>${r.g}</td><td>${r.v}</td><td>${r.n}</td><td>${r.p}</td>
+            <td>${r.mf}</td><td>${r.ms}</td><td>${r.mf-r.ms}</td><td><b>${r.pt}</b></td>
           </tr>`).join('')}
         </tbody>
       </table>
       </div>`;
   }).join('');
-  $('content').innerHTML=html||'<div class="notice">Classifica ufficiale non disponibile.</div>';
+
+  $('content').innerHTML=html||'<div class="notice">Classifica non disponibile.</div>';
 }
+
 function render(){
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
 
@@ -226,17 +225,16 @@ async function init(){
   $('competitionTitle').textContent=labels[code]||code;
   $('competitionLogo').src=logos[code]||'assets/aics-logo.png';
 
-  const [t,g,m,f,w,a,o]=await Promise.all([
+  const [t,g,m,f,w,a]=await Promise.all([
     sb.from('public_championship_teams').select('*'),
     sb.from('public_championship_groups').select('*').eq('competition_code',code),
     sb.from('public_championship_group_teams').select('*'),
     sb.from('public_championship_fixtures').select('*').eq('competition_code',code).order('scheduled_at'),
     sb.from('public_championship_status').select('*'),
-    sb.from('public_standing_adjustments').select('*').eq('competition_code',code),
-    sb.from('public_championship_official_standings').select('*').eq('competition_code',code).order('position')
+    sb.from('public_standing_adjustments').select('*').eq('competition_code',code)
   ]);
 
-  const e=t.error||g.error||m.error||f.error||w.error||(view==='standings'?o.error:null);
+  const e=t.error||g.error||m.error||f.error||w.error;
   if(e){
     $('content').innerHTML=`<div class="notice">${esc(e.message)}</div>`;
     return;
@@ -248,7 +246,6 @@ async function init(){
   fixtures=f.data||[];
   statuses=w.data||[];
   adjustments=a.error?[]:(a.data||[]);
-  officialStandings=o.error?[]:(o.data||[]);
 
   render();
 }
