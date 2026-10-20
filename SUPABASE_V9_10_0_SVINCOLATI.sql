@@ -158,8 +158,7 @@ begin
   from public.roster_requests rr
   join public.roster_requests original on original.id=v_entry.player_id
   where rr.team_id=p_recruited_team_id
-    and lower(trim(rr.first_name))=lower(trim(original.first_name))
-    and lower(trim(rr.last_name))=lower(trim(original.last_name))
+    and lower(trim(coalesce(rr.email,'')))=lower(trim(coalesce(original.email,'')))
     and lower(coalesce(rr.status,''))='approved'
   order by rr.created_at desc limit 1;
 
