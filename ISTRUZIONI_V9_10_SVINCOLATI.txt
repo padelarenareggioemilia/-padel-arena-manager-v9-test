@@ -1,0 +1,36 @@
+V9.10 - MODULO SVINCOLATI (RAMO DI TEST)
+========================================
+
+File aggiunti:
+- SUPABASE_V9_10_0_SVINCOLATI.sql
+  Crea lo storico amministrativo e le funzioni per mettere un giocatore sul mercato,
+  leggere l'elenco e registrare l'acquisizione dopo l'inserimento ordinario nella nuova squadra.
+- SUPABASE_V9_10_1_CONTATORE_TRASFERIMENTI.sql
+  Aggiunge il contatore informativo dei trasferimenti in uscita per squadra.
+- SUPABASE_V9_10_2_SVINCOLATI_STATISTICHE.sql
+  Aggiunge il calcolo delle partite individuali giocate/vinte/perse dalla distinta e dai risultati.
+- player-transfers.html
+  Aggiunge SVINCOLATI come destinazione nella schermata amministrativa Trasferimenti.
+- svincolati.html
+  Prima versione della sezione mercato condiviso.
+- admin-transfer-counters.html
+  Vista amministrativa del contatore per squadra.
+
+Ordine di installazione nel solo progetto Supabase di TEST:
+1. SUPABASE_V9_10_0_SVINCOLATI.sql
+2. SUPABASE_V9_10_1_CONTATORE_TRASFERIMENTI.sql
+3. SUPABASE_V9_10_2_SVINCOLATI_STATISTICHE.sql
+
+IMPORTANTE:
+- Non eseguire in produzione prima del collaudo.
+- La procedura di inserimento ordinario dei giocatori non viene sostituita.
+- L'operazione verso SVINCOLATI conserva la scheda originale, imposta lo stato esistente 'rejected'
+  per liberare lo slot approvato e registra l'entrata in player_market_entries.
+- Quando il giocatore viene inserito nella nuova squadra con la procedura ordinaria, l'amministratore
+  deve registrare l'acquisizione nella sezione SVINCOLATI per rimuoverlo dall'elenco disponibile.
+- Le statistiche dipendono dai valori position delle distinte e dalla struttura result_data.matches.
+  Verificarle con casi reali nel database di test prima di considerarle definitive.
+- La schermata svincolati.html richiede ancora l'aggiornamento della visualizzazione delle statistiche
+  restituite dalla nuova funzione SQL; la prima versione della pagina mostra i campi ma non li popola.
+- Prima del rilascio vanno collaudati: liberazione slot, storico, contatore, accesso ruoli, statistiche,
+  e permanenza dei dati amministrativi del giocatore.
