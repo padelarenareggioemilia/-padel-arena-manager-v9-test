@@ -9,6 +9,8 @@ File aggiunti:
   Aggiunge il contatore informativo dei trasferimenti in uscita per squadra.
 - SUPABASE_V9_10_2_SVINCOLATI_STATISTICHE.sql
   Aggiunge il calcolo delle partite individuali giocate/vinte/perse dalla distinta e dai risultati.
+- SUPABASE_V9_10_3_ACQUISIZIONE_SVINCOLATI_EMAIL.sql
+  Verifica l'acquisizione nella nuova squadra usando la stessa email del giocatore, evitando omonimie.
 - player-transfers.html
   Aggiunge SVINCOLATI come destinazione nella schermata amministrativa Trasferimenti.
 - svincolati.html
@@ -20,6 +22,7 @@ Ordine di installazione nel solo progetto Supabase di TEST:
 1. SUPABASE_V9_10_0_SVINCOLATI.sql
 2. SUPABASE_V9_10_1_CONTATORE_TRASFERIMENTI.sql
 3. SUPABASE_V9_10_2_SVINCOLATI_STATISTICHE.sql
+4. SUPABASE_V9_10_3_ACQUISIZIONE_SVINCOLATI_EMAIL.sql
 
 IMPORTANTE:
 - Non eseguire in produzione prima del collaudo.
@@ -30,7 +33,6 @@ IMPORTANTE:
   deve registrare l'acquisizione nella sezione SVINCOLATI per rimuoverlo dall'elenco disponibile.
 - Le statistiche dipendono dai valori position delle distinte e dalla struttura result_data.matches.
   Verificarle con casi reali nel database di test prima di considerarle definitive.
-- La schermata svincolati.html richiede ancora l'aggiornamento della visualizzazione delle statistiche
-  restituite dalla nuova funzione SQL; la prima versione della pagina mostra i campi ma non li popola.
+- La pagina svincolati.html visualizza ora le statistiche restituite dalla funzione SQL.
 - Prima del rilascio vanno collaudati: liberazione slot, storico, contatore, accesso ruoli, statistiche,
   e permanenza dei dati amministrativi del giocatore.
