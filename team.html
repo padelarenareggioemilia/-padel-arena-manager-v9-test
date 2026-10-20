@@ -577,7 +577,7 @@ function adminPlayerMessage(text,error=false){
 function renderAdminRoster(items){
   const host=document.getElementById('adminRosterList');
   if(!host)return;
-  adminRosterCache=items||[];
+  adminRosterCache=(items||[]).filter(p=>String(p.status||'approved').toLowerCase()==='approved');
   host.innerHTML=adminRosterCache.map(p=>`
     <div class="roster-row">
       <div>
@@ -594,7 +594,7 @@ function renderAdminRoster(items){
 }
 async function reloadAdminRoster(){
   if(!currentTeam?.id)return;
-  const r=await sb.from('roster_requests').select('*').eq('team_id',currentTeam.id).order('last_name',{ascending:true});
+  const r=await sb.from('roster_requests').select('*').eq('team_id',currentTeam.id).eq('status','approved').order('last_name',{ascending:true});
   if(r.error)return adminPlayerMessage(r.error.message,true);
   renderAdminRoster(r.data||[]);
 }
