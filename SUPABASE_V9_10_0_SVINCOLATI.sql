@@ -154,13 +154,17 @@ begin
   where id=p_market_entry_id and status='available' for update;
   if not found then raise exception 'Giocatore non disponibile nel mercato.'; end if;
 
-  select * into v_player from public.roster_requests
-  where team_id=p_recruited_team_id
-    and lower(trim(first_name))=lower(trim(split_part(v_entry.player_name,' ',1)))
-    and lower(coalesce(status,''))='approved'
-  order by created_at desc limit 1;
+  select rr.* into v_player
+  from public.roster_requests rr
+  join public.roster_requests original on original.id=v_entry.player_id
+  where rr.team_id=p_recruited_team_id
+    and lower(trim(rr.first_name))=lower(trim(original.first_name))
+    and lower(trim(rr.last_name))=lower(trim(original.last_name))
+    and lower(coalesce(rr.status,''))='approved'
+  order by rr.created_at desc limit 1;
 
-  -- Non si chiude il mercato senza una scheda approvata nella squadra di destinazione.
+  -- Non si chiude il mercato senza una scheda approvata del medesimo giocatore
+  -- nella squadra di destinazione, inserita tramite il flusso ordinario V9.
   if v_player.id is null then
     raise exception 'Prima completa l’inserimento ordinario del giocatore nella nuova squadra, poi registra l’acquisizione.';
   end if;
